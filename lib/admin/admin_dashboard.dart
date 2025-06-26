@@ -1,75 +1,392 @@
 import 'package:flutter/material.dart';
 import 'manage_departments.dart';
 import '../logout.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'admin_dashboard_page.dart';
 
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+// Placeholder screens for other admin features
+class AdminStatsDashboard extends StatelessWidget {
+  final void Function(int) onCardTap;
+  const AdminStatsDashboard({Key? key, required this.onCardTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0F2027), Color(0xFF2C5364)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.deepPurple,
+            const Text(
+              'Analytics',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFB2EBF2)),
+            ),
+            const SizedBox(height: 24),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 280,
+                    child: _StatCard(
+                      title: 'Total Visitors',
+                      value: '--',
+                      icon: Icons.groups,
+                      color: Colors.deepPurple,
+                      onTap: () => onCardTap(3), // 3 = Visitor Management
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 280,
+                    child: _StatCard(
+                      title: 'Total Employees',
+                      value: '--',
+                      icon: Icons.people_alt,
+                      color: Colors.blue,
+                      onTap: () => onCardTap(4), // 4 = Employee Management
+                    ),
+                  ),
+                ],
               ),
-              child: Text(
-                'Admin Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
+            ),
+            const SizedBox(height: 32),
+            _ResponsiveAnalyticsCard(
+              title: 'Visitor Trends',
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SizedBox(
+                    width: constraints.maxWidth,
+                    child: _VisitorTrendsChart(),
+                  );
+                },
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.business),
-              title: const Text('Manage Departments'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ManageDepartments()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.people),
-              title: const Text('View Visitors'),
-              onTap: () {
-                // TODO: Navigate to View Visitors page
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('View Visitors tapped')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.bar_chart),
-              title: const Text('View Report'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('View Report tapped')),
-                );
-              },
-            ),
-            const Divider(),
-            const LogoutTile(),
           ],
         ),
       ),
-      body: const Center(
-        child: Text(
-          'Welcome to the Admin Dashboard!',
-          style: TextStyle(fontSize: 20),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: color,
+              child: Icon(icon, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _ResponsiveAnalyticsCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _ResponsiveAnalyticsCard({required this.title, required this.child, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD), // Very light blue
+        borderRadius: BorderRadius.circular(28), // More pronounced rounded corners
+        border: Border.all(color: const Color(0xFFBBDEFB), width: 1), // Subtle border
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28), // Extra padding
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitorTrendsChart extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 200,
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(days[value.toInt() % 7], style: const TextStyle(fontSize: 12)),
+                  );
+                },
+                interval: 1,
+              ),
+            ),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: 6,
+          minY: 0,
+          maxY: 6,
+          lineBarsData: [
+            LineChartBarData(
+              spots: const [
+                FlSpot(0, 3),
+                FlSpot(1, 1),
+                FlSpot(2, 4),
+                FlSpot(3, 2),
+                FlSpot(4, 5),
+                FlSpot(5, 3),
+                FlSpot(6, 4),
+              ],
+              isCurved: true,
+              color: Colors.blueAccent,
+              barWidth: 4,
+              dotData: FlDotData(show: true),
+              belowBarData: BarAreaData(show: true, color: Colors.blueAccent.withOpacity(0.1)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class UserManagementScreen extends StatelessWidget {
+  const UserManagementScreen({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.people, size: 64, color: Colors.deepPurple),
+          SizedBox(height: 16),
+          Text('User Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Manage hosts and receptionists.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+}
+class VisitorManagementScreen extends StatelessWidget {
+  const VisitorManagementScreen({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.badge, size: 64, color: Colors.deepPurple),
+          SizedBox(height: 16),
+          Text('Visitor Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Monitor and view all visitors.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+}
+class ReportsScreen extends StatelessWidget {
+  const ReportsScreen({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.bar_chart, size: 64, color: Colors.deepPurple),
+          SizedBox(height: 16),
+          Text('Reports', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Generate and view reports.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+}
+
+// Add Employee Management screen stub
+class EmployeeManagementScreen extends StatelessWidget {
+  const EmployeeManagementScreen({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.people_alt, size: 64, color: Colors.blue),
+          SizedBox(height: 16),
+          Text('Employee Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Manage all employees here.', style: TextStyle(fontSize: 16, color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminDashboard extends StatefulWidget {
+  const AdminDashboard({Key? key}) : super(key: key);
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  int _selectedIndex = 0;
+  final List<String> _titles = [
+    'Admin Dashboard',
+    'Manage Departments',
+    'User Management',
+    'Visitor Management',
+    'Employee Management',
+    'Reports',
+  ];
+
+  void _onSelect(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> _screens = [
+      AdminDashboardPage(onCardTap: _onSelect),
+      const ManageDepartments(),
+      const UserManagementScreen(),
+      const VisitorManagementScreen(),
+      const EmployeeManagementScreen(),
+      const ReportsScreen(),
+    ];
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.deepPurple,
+        title: Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Colors.deepPurple),
+            ),
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              decoration: const BoxDecoration(
+                color: Colors.deepPurple,
+              ),
+              accountName: const Text('Admin', style: TextStyle(fontWeight: FontWeight.bold)),
+              accountEmail: const Text('admin@gmail.com'),
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 36),
+              ),
+            ),
+            _buildDrawerItem(icon: Icons.dashboard, text: 'Admin Dashboard', selected: _selectedIndex == 0, onTap: () => _onSelect(0)),
+            _buildDrawerItem(icon: Icons.business, text: 'Manage Departments', selected: _selectedIndex == 1, onTap: () => _onSelect(1)),
+            _buildDrawerItem(icon: Icons.people, text: 'User Management', selected: _selectedIndex == 2, onTap: () => _onSelect(2)),
+            _buildDrawerItem(icon: Icons.badge, text: 'Visitor Management', selected: _selectedIndex == 3, onTap: () => _onSelect(3)),
+            _buildDrawerItem(icon: Icons.people_alt, text: 'Employee Management', selected: _selectedIndex == 4, onTap: () => _onSelect(4)),
+            _buildDrawerItem(icon: Icons.bar_chart, text: 'Reports', selected: _selectedIndex == 5, onTap: () => _onSelect(5)),
+            const Spacer(),
+            const Divider(),
+            const LogoutTile(),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+      body: _screens[_selectedIndex],
+    );
+  }
+
+  Widget _buildDrawerItem({required IconData icon, required String text, required bool selected, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: selected ? Colors.deepPurple : Colors.black54),
+      title: Text(text, style: TextStyle(fontWeight: FontWeight.w500, color: selected ? Colors.deepPurple : Colors.black87)),
+      selected: selected,
+      selectedTileColor: Colors.deepPurple.shade50,
+      hoverColor: Colors.deepPurple.shade50,
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
     );
   }
 } 
