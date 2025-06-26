@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/dept_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageVisitors extends StatefulWidget {
@@ -155,51 +156,73 @@ class _ManageVisitorsState extends State<ManageVisitors> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Visitors'),
-        automaticallyImplyLeading: false,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
-              final totalVisitors = doc['v_totalno'] ?? 1;
-              final hostId = doc['emp_id'];
-              return ListTile(
-                title: Text(doc['v_name']),
-                subtitle: FutureBuilder<String>(
-                  future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
-                  builder: (context, hostSnapshot) {
-                    if (hostSnapshot.connectionState == ConnectionState.waiting) {
-                      return const Text("Loading host...");
-                    }
-                    if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
-                      return Text("Host not found | Total Visitors: $totalVisitors");
-                    }
-                    return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors');
-                  }
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(icon: const Icon(Icons.edit), onPressed: () => _showAddEditVisitorDialog(visitor: doc)),
-                    IconButton(icon: const Icon(Icons.delete), onPressed: () => doc.reference.delete()),
-                    IconButton(icon: const Icon(Icons.visibility), onPressed: () => _showVisitorDetailsDialog(doc)),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditVisitorDialog(),
-        child: const Icon(Icons.add),
+    return Container(
+      decoration: DeptTheme.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Manage Visitors', style: DeptTheme.heading),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: DeptTheme.deptPrimary),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            color: DeptTheme.deptLight.withOpacity(0.95),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 6,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = snapshot.data!.docs[index];
+                      final totalVisitors = doc['v_totalno'] ?? 1;
+                      final hostId = doc['emp_id'];
+                      return Card(
+                        color: DeptTheme.deptAccent.withOpacity(0.2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          title: Text(doc['v_name'], style: DeptTheme.body),
+                          subtitle: FutureBuilder<String>(
+                            future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
+                            builder: (context, hostSnapshot) {
+                              if (hostSnapshot.connectionState == ConnectionState.waiting) {
+                                return const Text("Loading host...");
+                              }
+                              if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
+                                return Text("Host not found | Total Visitors: $totalVisitors", style: DeptTheme.body);
+                              }
+                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: DeptTheme.body);
+                            }
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary), onPressed: () => _showAddEditVisitorDialog(visitor: doc)),
+                              IconButton(icon: const Icon(Icons.delete, color: DeptTheme.deptDark), onPressed: () => doc.reference.delete()),
+                              IconButton(icon: const Icon(Icons.visibility, color: DeptTheme.deptPrimary), onPressed: () => _showVisitorDetailsDialog(doc)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: DeptTheme.deptPrimary,
+          onPressed: () => _showAddEditVisitorDialog(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
