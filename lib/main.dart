@@ -3,14 +3,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
-import 'host/host_dashboa<<<<<<< feature/sanjana
 import 'receptionist/dashboard.dart';
 import 'receptionist/host_passes_page.dart';
 import 'receptionist/manual_entry_page.dart';
 import 'receptionist/kiosk_qr_page.dart';
 import 'receptionist/visitor_tracking_page.dart';
-import 'receptionist/receptionist_dashboard.dart';
 import 'splash_screen.dart';
+import 'host/host_dashboard.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -61,7 +60,6 @@ class MyApp extends StatelessWidget {
         '/kiosk_qr': (context) => const KioskQRPage(),
         '/visitor_tracking': (context) => const VisitorTrackingPage(),
       },
-      home: const SplashScreen(),
     );
   }
 }

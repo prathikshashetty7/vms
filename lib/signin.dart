@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
 import 'host/host_dashboard.dart';
-import 'receptionist/receptionist_dashboard.dart';
+import 'receptionist/dashboard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignInPage extends StatefulWidget {

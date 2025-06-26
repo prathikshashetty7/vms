@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'manage_departments.dart';
 import '../logout.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'admin_dashboard_page.dart';
 
 // Placeholder screens for other admin features
 class AdminStatsDashboard extends StatelessWidget {
@@ -308,7 +307,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<String> _titles = [
     'Admin Dashboard',
     'Manage Departments',
-    'User Management',
     'Visitor Management',
     'Employee Management',
     'Reports',
@@ -324,9 +322,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _screens = [
-      AdminDashboardPage(onCardTap: _onSelect),
+      Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Admin Dashboard',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            ),
+            const SizedBox(height: 24),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 280,
+                    child: _StatCard(
+                      title: 'Total Visitors',
+                      value: '--',
+                      icon: Icons.groups,
+                      color: Colors.deepPurple,
+                      onTap: () => _onSelect(2), // 2 = Visitor Management
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 280,
+                    child: _StatCard(
+                      title: 'Total Employees',
+                      value: '--',
+                      icon: Icons.people_alt,
+                      color: Colors.blue,
+                      onTap: () => _onSelect(3), // 3 = Employee Management
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Center(
+              child: Text('Admin Dashboard Content Goes Here', style: TextStyle(fontSize: 20)),
+            ),
+          ],
+        ),
+      ),
       const ManageDepartments(),
-      const UserManagementScreen(),
       const VisitorManagementScreen(),
       const EmployeeManagementScreen(),
       const ReportsScreen(),
@@ -349,27 +390,54 @@ class _AdminDashboardState extends State<AdminDashboard> {
       drawer: Drawer(
         child: Column(
           children: [
-            UserAccountsDrawerHeader(
+            Container(
               decoration: const BoxDecoration(
-                color: Colors.deepPurple,
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple, Colors.deepPurpleAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
               ),
-              accountName: const Text('Admin', style: TextStyle(fontWeight: FontWeight.bold)),
-              accountEmail: const Text('admin@gmail.com'),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 36),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              width: double.infinity,
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                ],
               ),
             ),
+            const SizedBox(height: 16),
             _buildDrawerItem(icon: Icons.dashboard, text: 'Admin Dashboard', selected: _selectedIndex == 0, onTap: () => _onSelect(0)),
             _buildDrawerItem(icon: Icons.business, text: 'Manage Departments', selected: _selectedIndex == 1, onTap: () => _onSelect(1)),
-            _buildDrawerItem(icon: Icons.people, text: 'User Management', selected: _selectedIndex == 2, onTap: () => _onSelect(2)),
-            _buildDrawerItem(icon: Icons.badge, text: 'Visitor Management', selected: _selectedIndex == 3, onTap: () => _onSelect(3)),
-            _buildDrawerItem(icon: Icons.people_alt, text: 'Employee Management', selected: _selectedIndex == 4, onTap: () => _onSelect(4)),
-            _buildDrawerItem(icon: Icons.bar_chart, text: 'Reports', selected: _selectedIndex == 5, onTap: () => _onSelect(5)),
+            _buildDrawerItem(icon: Icons.badge, text: 'Visitor Management', selected: _selectedIndex == 2, onTap: () => _onSelect(2)),
+            _buildDrawerItem(icon: Icons.people_alt, text: 'Employee Management', selected: _selectedIndex == 3, onTap: () => _onSelect(3)),
+            _buildDrawerItem(icon: Icons.bar_chart, text: 'Reports', selected: _selectedIndex == 4, onTap: () => _onSelect(4)),
             const Spacer(),
-            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(thickness: 1.2, color: Colors.deepPurple.shade100),
+            ),
             const LogoutTile(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
         ),
       ),
