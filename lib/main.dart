@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'signin.dart';
+import 'admin/admin_dashboard.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async{          
+  WidgetsFlutterBinding.ensureInitialized();        
+  await Firebase.initializeApp(                     
+    options: const FirebaseOptions(                 
+      apiKey: 'AIzaSyByxS4j4y-tOx1AbTqxm7kv8zTOj-P1wNc',
+      appId: '1:262645349308:android:473868969c622d4ac089b9',
+      messagingSenderId: '262645349308',
+      projectId: 'visitor-management-d97ea',
+    ),
+  );
+  // Print the Firebase project ID for debugging
+  print('FIREBASE PROJECT ID: ' + Firebase.app().options.projectId);
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -108,6 +122,25 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                );
+              },
+              child: const Text('Go to Sign In'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                );
+              },
+              child: const Text('Go to Admin Dashboard'),
             ),
           ],
         ),
