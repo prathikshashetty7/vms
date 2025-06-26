@@ -3,14 +3,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
-import 'host/host_dashboa<<<<<<< feature/sanjana
+import 'host/host_dashboard.dart';
 import 'receptionist/dashboard.dart';
 import 'receptionist/host_passes_page.dart';
 import 'receptionist/manual_entry_page.dart';
 import 'receptionist/kiosk_qr_page.dart';
 import 'receptionist/visitor_tracking_page.dart';
 import 'splash_screen.dart';
-import 'host/host_dashboard.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -53,6 +52,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: SplashScreen(),
       routes: {
         '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
         '/host_passes': (context) => const HostPassesPage(),

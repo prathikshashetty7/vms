@@ -47,6 +47,7 @@ class AdminStatsDashboard extends StatelessWidget {
                       icon: Icons.groups,
                       color: Colors.deepPurple,
                       onTap: () => onCardTap(3), // 3 = Visitor Management
+                      width: 160,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -58,6 +59,7 @@ class AdminStatsDashboard extends StatelessWidget {
                       icon: Icons.people_alt,
                       color: Colors.blue,
                       onTap: () => onCardTap(4), // 4 = Employee Management
+                      width: 160,
                     ),
                   ),
                 ],
@@ -93,12 +95,14 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final double width;
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
     required this.onTap,
+    required this.width,
     Key? key,
   }) : super(key: key);
 
@@ -107,60 +111,55 @@ class _StatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: Container(
-        width: 160,
-        height: 160,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double cardWidth = constraints.maxWidth;
+          double valueFontSize = (cardWidth * 0.22).clamp(24, 38);
+          double titleFontSize = (cardWidth * 0.13).clamp(16, 26);
+          return Container(
+            width: width,
+            margin: const EdgeInsets.all(2),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(
-                  child: CircleAvatar(
-                    backgroundColor: color.withOpacity(0.12),
-                    radius: 24,
-                    child: Icon(icon, color: color, size: 28),
-                  ),
+                CircleAvatar(
+                  backgroundColor: color.withOpacity(0.12),
+                  radius: cardWidth * 0.15,
+                  child: Icon(icon, color: color, size: cardWidth * 0.18),
                 ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
+                SizedBox(height: cardWidth * 0.08),
+                Text(
                   value,
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                  ),
+                  style: TextStyle(fontSize: valueFontSize, fontWeight: FontWeight.normal, color: Colors.black),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
+                SizedBox(height: cardWidth * 0.06),
+                Text(
                   title,
-                      style: const TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                  style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.normal, color: Colors.black),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.visible,
+                  softWrap: true,
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -375,44 +374,92 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               const SizedBox(height: 24),
-              Container(
-                constraints: const BoxConstraints(minHeight: 180),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth < 600) {
-                      // Small screens: horizontal scroll
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  double gridSpacing = 16;
+                  double cardWidth = (constraints.maxWidth - gridSpacing) / 2;
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            SizedBox(
-                              width: 280,
+                            Expanded(
                               child: StreamBuilder(
-                                stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
+                                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
                                 builder: (context, AsyncSnapshot snapshot) {
                                   int total = 0;
                                   if (snapshot.hasData) {
                                     total = snapshot.data!.docs.length;
                                   }
-                                  return _StatCard(
-                                    title: 'Total Visitors',
-                                    value: total.toString(),
-                                    icon: Icons.groups,
-                                    color: Colors.deepPurple,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
-                                      );
-                                    },
+                                  return Padding(
+                                    padding: EdgeInsets.only(right: gridSpacing / 2, bottom: gridSpacing),
+                                    child: _StatCard(
+                                      title: 'Visitors Today',
+                                      value: total.toString(),
+                                      icon: Icons.groups,
+                                      color: Colors.deepPurple,
+                                      onTap: () {
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
+                                      },
+                                      width: cardWidth,
+                                    ),
                                   );
                                 },
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            SizedBox(
-                              width: 280,
+                            Expanded(
+                              child: StreamBuilder(
+                                stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
+                                builder: (context, AsyncSnapshot snapshot) {
+                                  int checkedIn = 0;
+                                  if (snapshot.hasData) {
+                                    checkedIn = snapshot.data!.docs.length;
+                                  }
+                                  return Padding(
+                                    padding: EdgeInsets.only(left: gridSpacing / 2, bottom: gridSpacing),
+                                    child: _StatCard(
+                                      title: 'Checked-in',
+                                      value: checkedIn.toString(),
+                                      icon: Icons.how_to_reg,
+                                      color: Colors.green,
+                                      onTap: () {
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
+                                      },
+                                      width: cardWidth,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StreamBuilder(
+                                stream: FirebaseFirestore.instance.collection('department').snapshots(),
+                                builder: (context, AsyncSnapshot snapshot) {
+                                  int departments = 0;
+                                  if (snapshot.hasData) {
+                                    departments = snapshot.data!.docs.length;
+                                  }
+                                  return Padding(
+                                    padding: EdgeInsets.only(right: gridSpacing / 2),
+                                    child: _StatCard(
+                                      title: 'Departments',
+                                      value: departments.toString(),
+                                      icon: Icons.apartment,
+                                      color: Colors.orange,
+                                      onTap: () {
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageDepartments()));
+                                      },
+                                      width: cardWidth,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Expanded(
                               child: StreamBuilder(
                                 stream: FirebaseFirestore.instance.collection('host').snapshots(),
                                 builder: (context, AsyncSnapshot hostSnapshot) {
@@ -426,17 +473,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       if (recSnapshot.hasData) {
                                         total += (recSnapshot.data!.docs.length as int);
                                       }
-                                      return _StatCard(
-                                        title: 'Total Employees',
-                                        value: total.toString(),
-                                        icon: Icons.people_alt,
-                                        color: Colors.blue,
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
-                                          );
-                                        },
+                                      return Padding(
+                                        padding: EdgeInsets.only(left: gridSpacing / 2),
+                                        child: _StatCard(
+                                          title: 'Employees',
+                                          value: total.toString(),
+                                          icon: Icons.people_alt,
+                                          color: Colors.blue,
+                                          onTap: () {
+                                            Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployeeManagementPage()));
+                                          },
+                                          width: cardWidth,
+                                        ),
                                       );
                                     },
                                   );
@@ -445,72 +493,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             ),
                           ],
                         ),
-                      );
-                    } else {
-                      // Large screens: grid layout
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: StreamBuilder(
-                              stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
-                              builder: (context, AsyncSnapshot snapshot) {
-                                int total = 0;
-                                if (snapshot.hasData) {
-                                  total = snapshot.data!.docs.length;
-                                }
-                                return _StatCard(
-                                  title: 'Total Visitors',
-                                  value: total.toString(),
-                                  icon: Icons.groups,
-                                  color: Colors.deepPurple,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: StreamBuilder(
-                              stream: FirebaseFirestore.instance.collection('host').snapshots(),
-                              builder: (context, AsyncSnapshot hostSnapshot) {
-                                return StreamBuilder(
-                                  stream: FirebaseFirestore.instance.collection('receptionist').snapshots(),
-                                  builder: (context, AsyncSnapshot recSnapshot) {
-                                    int total = 0;
-                                    if (hostSnapshot.hasData) {
-                                      total += (hostSnapshot.data!.docs.length as int);
-                                    }
-                                    if (recSnapshot.hasData) {
-                                      total += (recSnapshot.data!.docs.length as int);
-                                    }
-                                    return _StatCard(
-                                      title: 'Total Employees',
-                                      value: total.toString(),
-                                      icon: Icons.people_alt,
-                                      color: Colors.blue,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                  },
-                ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 32),
               Padding(
@@ -538,7 +524,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         elevation: 0,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        title: Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 48),
+            const SizedBox(width: 10),
+            Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -575,10 +567,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
               width: double.infinity,
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 38,
-                backgroundColor: Colors.white,
-                    child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.asset('assets/images/rdl.png'),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),

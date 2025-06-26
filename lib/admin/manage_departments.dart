@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'settings_page.dart';
+import 'admin_dashboard.dart';
 
 class ManageDepartments extends StatefulWidget {
   const ManageDepartments({Key? key}) : super(key: key);
@@ -14,6 +16,8 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   String? _editingId;
 
   // TODO: Replace with your actual admin credentials
@@ -111,7 +115,13 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
         elevation: 0,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        title: const Text(' Management Department', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 56),
+            const SizedBox(width: 10),
+            const Text(' Management Department', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+          ],
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -126,6 +136,18 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
               child: Icon(Icons.person, color: Colors.deepPurple),
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Color(0xFF081735)),
+            tooltip: 'Add New Department',
+            onPressed: () {
+              setState(() {
+                _editingId = null;
+                _nameController.clear();
+                _emailController.clear();
+                _passwordController.clear();
+              });
+            },
+          ),
         ],
       ),
       backgroundColor: Colors.transparent,
@@ -138,6 +160,31 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search departments...',
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.08),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 0.0),
               child: Column(
@@ -196,10 +243,17 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
                       return const Center(child: Text('No departments found.', style: TextStyle(color: AdminTheme.textLight)));
                     }
                     final docs = snapshot.data!.docs;
+                    final filteredDocs = _searchQuery.isEmpty
+                        ? docs
+                        : docs.where((doc) {
+                            final data = doc.data() as Map<String, dynamic>? ?? {};
+                            final name = (data['d_name'] ?? '').toString().toLowerCase();
+                            return name.contains(_searchQuery);
+                          }).toList();
                     return ListView.builder(
-                      itemCount: docs.length,
+                      itemCount: filteredDocs.length,
                       itemBuilder: (context, index) {
-                        final doc = docs[index];
+                        final doc = filteredDocs[index];
                         final id = doc.id;
                         final data = doc.data() as Map<String, dynamic>? ?? {};
                         final name = data['d_name'] ?? '';
@@ -251,6 +305,86 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
           ],
         ),
       ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              width: double.infinity,
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildDrawerItem(
+              icon: Icons.settings,
+              text: 'Settings',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.dashboard,
+              text: 'Admin Dashboard',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String text,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(text),
+      selected: selected,
+      onTap: onTap,
     );
   }
 } 
