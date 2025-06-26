@@ -144,6 +144,43 @@ class _SignInPageState extends State<SignInPage> {
                         : const Text('Sign In'),
                   ),
                 ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                    );
+                  },
+                  child: const Text('Go to Admin Dashboard'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DeptDashboard()),
+                    );
+                  },
+                  child: const Text('Go to Department Dashboard'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HostDashboard()),
+                    );
+                  },
+                  child: const Text('Go to Host Dashboard'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
+                    );
+                  },
+                  child: const Text('Go to Receptionist Dashboard'),
+                ),
               ],
             ),
           ),
