@@ -45,93 +45,141 @@ class _ManageRolesState extends State<ManageRoles> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: DeptTheme.backgroundGradient,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Manage Roles', style: DeptTheme.heading),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: DeptTheme.deptPrimary),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            color: DeptTheme.deptLight.withOpacity(0.95),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 6,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 600;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Manage Roles', style: DeptTheme.appBarTitle),
+        backgroundColor: DeptTheme.deptPrimary,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Add Role Section
+            Container(
+              padding: EdgeInsets.all(isLargeScreen ? 20 : 16),
+              decoration: BoxDecoration(
+                gradient: DeptTheme.deptGradient,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: DeptTheme.deptPrimary.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _roleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Role Name',
-                          ),
-                        ),
+                  Text(
+                    _editingId == null ? 'Add Role' : 'Edit Role',
+                    style: DeptTheme.heading.copyWith(fontSize: 18, color: Colors.white),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _roleController,
+                    style: const TextStyle(color: Colors.black),
+                    decoration: InputDecoration(
+                      hintText: 'Enter role name...',
+                      filled: true,
+                      fillColor: DeptTheme.deptLight,
+                      hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: DeptTheme.deptPrimary,
-                        ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton.icon(
                         onPressed: _addOrUpdateRole,
-                        child: Text(_editingId == null ? 'Add' : 'Update'),
+                        icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
+                        label: Text(_editingId == null ? 'Add' : 'Update', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _editingId == null ? DeptTheme.deptPrimary : DeptTheme.deptDark,
+                          padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('roles').snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(child: Text('No roles found.', style: DeptTheme.body));
-                        }
-                        final docs = snapshot.data!.docs;
-                        return ListView.builder(
-                          itemCount: docs.length,
-                          itemBuilder: (context, index) {
-                            final doc = docs[index];
-                            final id = doc.id;
-                            final name = doc['role_name'] ?? '';
-                            return Card(
-                              color: DeptTheme.deptAccent.withOpacity(0.2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              child: ListTile(
-                                title: Text(name, style: DeptTheme.subheading),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary),
-                                      onPressed: () => _startEdit(id, name),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: DeptTheme.deptDark),
-                                      onPressed: () => _deleteRole(id),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 24),
+            // List of Roles
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('roles').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(child: Text('No roles added yet.', style: DeptTheme.body.copyWith(color: DeptTheme.deptDark)));
+                  }
+                  final docs = snapshot.data!.docs;
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final id = doc.id;
+                      final name = doc['role_name'] ?? '';
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          gradient: DeptTheme.deptGradient,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: DeptTheme.deptPrimary.withOpacity(0.10),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          leading: const Icon(Icons.security, color: Colors.white),
+                          title: Text(name, style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary),
+                                onPressed: () => _startEdit(id, name),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: DeptTheme.deptPrimary),
+                                onPressed: () => _deleteRole(id),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

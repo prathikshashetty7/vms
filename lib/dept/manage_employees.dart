@@ -98,58 +98,204 @@ class _ManageEmployeesState extends State<ManageEmployees> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: DeptTheme.backgroundGradient,
-      child: Scaffold(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 600;
+
+    void showEmployeeForm([DocumentSnapshot? doc, String? collectionName]) {
+      if (doc != null && collectionName != null) {
+        _startEdit(doc, collectionName);
+      } else {
+        _editingId = null;
+        _editingCollection = null;
+        _empIdController.clear();
+        _empNameController.clear();
+        _empEmailController.clear();
+        _empPasswordController.clear();
+        _empContNoController.clear();
+        _empAddressController.clear();
+        _selectedRole = null;
+      }
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Manage Employees', style: DeptTheme.heading),
-          backgroundColor: DeptTheme.deptPrimary.withOpacity(0.9),
-          elevation: 0,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            color: DeptTheme.deptLight.withOpacity(0.95),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 6,
+        builder: (context) {
+          return SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  FutureBuilder<List<DropdownMenuItem<String>>>(
+              padding: EdgeInsets.only(
+                left: isLargeScreen ? 32 : 16,
+                right: isLargeScreen ? 32 : 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: DeptTheme.deptGradient,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: DeptTheme.deptPrimary.withOpacity(0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+                  child: FutureBuilder<List<DropdownMenuItem<String>>>(
                     future: _getRoleDropdownItems(),
                     builder: (context, snapshot) {
                       final items = snapshot.data ?? [];
                       return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Text(
+                            _editingId == null ? 'Add Employee' : 'Edit Employee',
+                            style: DeptTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                          ),
+                          const SizedBox(height: 16),
                           TextField(
                             controller: _empIdController,
-                            decoration: const InputDecoration(labelText: 'Employee ID'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Employee ID',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _empNameController,
-                            decoration: const InputDecoration(labelText: 'Employee Name'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Employee Name',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _empEmailController,
-                            decoration: const InputDecoration(labelText: 'Email'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Email',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                             keyboardType: TextInputType.emailAddress,
                           ),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _empPasswordController,
-                            decoration: const InputDecoration(labelText: 'Password'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Password',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                             obscureText: true,
                           ),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _empContNoController,
-                            decoration: const InputDecoration(labelText: 'Contact Number'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Contact Number',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                             keyboardType: TextInputType.phone,
                           ),
+                          const SizedBox(height: 10),
                           TextField(
                             controller: _empAddressController,
-                            decoration: const InputDecoration(labelText: 'Address'),
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Address',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: 10),
                           DropdownButtonFormField<String>(
                             value: _selectedRole,
                             items: items,
@@ -158,36 +304,91 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                                 _selectedRole = val;
                               });
                             },
-                            decoration: const InputDecoration(labelText: 'Role'),
+                            decoration: InputDecoration(
+                              hintText: 'Role',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: _addOrUpdateEmployee,
-                            child: Text(_editingId == null ? 'Add' : 'Update'),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _addOrUpdateEmployee();
+                                  Navigator.of(context).pop();
+                                },
+                                icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
+                                label: Text(_editingId == null ? 'Add' : 'Update', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _editingId == null ? DeptTheme.deptPrimary : DeptTheme.deptDark,
+                                  padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _buildEmployeeList('host', 'Hosts'),
-                        _buildEmployeeList('receptionist', 'Receptionists'),
-                      ],
-                    ),
-                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Manage Employees', style: DeptTheme.appBarTitle),
+        backgroundColor: DeptTheme.deptPrimary,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Employee Lists
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildEmployeeList('host', 'Hosts', showEmployeeForm),
+                  _buildEmployeeList('receptionist', 'Receptionists', showEmployeeForm),
                 ],
               ),
             ),
-          ),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: DeptTheme.deptPrimary,
+        onPressed: () => showEmployeeForm(),
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Employee',
       ),
     );
   }
 
-  Widget _buildEmployeeList(String collectionName, String title) {
+  Widget _buildEmployeeList(String collectionName, String title, void Function([DocumentSnapshot?, String?]) showEmployeeForm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -211,21 +412,32 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final doc = docs[index];
-                return Card(
-                  color: DeptTheme.deptAccent.withOpacity(0.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    gradient: DeptTheme.deptGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DeptTheme.deptPrimary.withOpacity(0.10),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: ListTile(
-                    title: Text(doc['emp_name'] ?? '', style: DeptTheme.body),
-                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: DeptTheme.body),
+                    leading: const Icon(Icons.person, color: Colors.white),
+                    title: Text(doc['emp_name'] ?? '', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: DeptTheme.body.copyWith(color: Colors.white70)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary),
-                          onPressed: () => _startEdit(doc, collectionName),
+                          onPressed: () => showEmployeeForm(doc, collectionName),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, color: DeptTheme.deptDark),
+                          icon: const Icon(Icons.delete, color: DeptTheme.deptPrimary),
                           onPressed: () => _deleteEmployee(doc.id, collectionName),
                         ),
                       ],
