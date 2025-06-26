@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'manage_roles.dart';
 import 'manage_employees.dart';
+import 'manage_visitors.dart';
 import '../logout.dart';
 
 class DeptDashboard extends StatelessWidget {
@@ -52,10 +53,13 @@ class DeptDashboard extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.people),
-              title: const Text('View Visitors'),
+              title: const Text('Manage Visitors'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to View Visitors page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ManageVisitors()),
+                );
               },
             ),
             ListTile(
