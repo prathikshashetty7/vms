@@ -17,6 +17,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
   final TextEditingController _empAddressController = TextEditingController();
   String? _selectedRole;
   String? _editingId;
+  String? _editingCollection;
 
   Future<void> _addOrUpdateEmployee() async {
     final empId = _empIdController.text.trim();
@@ -27,30 +28,35 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     final empAddress = _empAddressController.text.trim();
     final role = _selectedRole;
     if ([empId, empName, empEmail, empPassword, empContNo, empAddress, role].any((e) => e == null || e.isEmpty)) return;
+    
+    final collectionName = role == 'Host' ? 'host' : 'receptionist';
+
+    final employeeData = {
+      'emp_id': empId,
+      'emp_name': empName,
+      'emp_email': empEmail,
+      'emp_password': empPassword,
+      'emp_contno': empContNo,
+      'emp_address': empAddress,
+      'role': role,
+    };
+
     if (_editingId == null) {
       // Add new employee
-      await FirebaseFirestore.instance.collection('employee').add({
-        'emp_id': empId,
-        'emp_name': empName,
-        'emp_email': empEmail,
-        'emp_password': empPassword,
-        'emp_contno': empContNo,
-        'emp_address': empAddress,
-        'role': role,
-      });
+      await FirebaseFirestore.instance.collection(collectionName).add(employeeData);
     } else {
       // Update existing employee
-      await FirebaseFirestore.instance.collection('employee').doc(_editingId).update({
-        'emp_id': empId,
-        'emp_name': empName,
-        'emp_email': empEmail,
-        'emp_password': empPassword,
-        'emp_contno': empContNo,
-        'emp_address': empAddress,
-        'role': role,
-      });
+      if (_editingCollection != null && _editingCollection != collectionName) {
+        // Role has changed, so move the document
+        await FirebaseFirestore.instance.collection(_editingCollection!).doc(_editingId!).delete();
+        await FirebaseFirestore.instance.collection(collectionName).doc(_editingId!).set(employeeData);
+      } else {
+        await FirebaseFirestore.instance.collection(collectionName).doc(_editingId!).update(employeeData);
+      }
       _editingId = null;
+      _editingCollection = null;
     }
+
     _empIdController.clear();
     _empNameController.clear();
     _empEmailController.clear();
@@ -61,13 +67,14 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     setState(() {});
   }
 
-  Future<void> _deleteEmployee(String id) async {
-    await FirebaseFirestore.instance.collection('employee').doc(id).delete();
+  Future<void> _deleteEmployee(String id, String collectionName) async {
+    await FirebaseFirestore.instance.collection(collectionName).doc(id).delete();
     setState(() {});
   }
 
-  void _startEdit(DocumentSnapshot doc) {
+  void _startEdit(DocumentSnapshot doc, String collectionName) {
     _editingId = doc.id;
+    _editingCollection = collectionName;
     _empIdController.text = doc['emp_id'] ?? '';
     _empNameController.text = doc['emp_name'] ?? '';
     _empEmailController.text = doc['emp_email'] ?? '';
@@ -150,45 +157,65 @@ class _ManageEmployeesState extends State<ManageEmployees> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('employee').snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No employees found.'));
-                  }
-                  final docs = snapshot.data!.docs;
-                  return ListView.builder(
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final doc = docs[index];
-                      return ListTile(
-                        title: Text(doc['emp_name'] ?? ''),
-                        subtitle: Text('ID: ${doc['emp_id']}, Email: ${doc['emp_email']}, Role: ${doc['role']}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _startEdit(doc),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _deleteEmployee(doc.id),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                },
+              child: ListView(
+                children: [
+                  _buildEmployeeList('host', 'Hosts'),
+                  _buildEmployeeList('receptionist', 'Receptionists'),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEmployeeList(String collectionName, String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        ),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection(collectionName).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(child: Text('No $title found.'));
+            }
+            final docs = snapshot.data!.docs;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                final doc = docs[index];
+                return ListTile(
+                  title: Text(doc['emp_name'] ?? ''),
+                  subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _startEdit(doc, collectionName),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _deleteEmployee(doc.id, collectionName),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 } 

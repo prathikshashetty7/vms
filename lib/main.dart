@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
+import 'dept/dept_dashboard.dart';
+import 'host/host_dashboard.dart';
+import 'receptionist/receptionist_dashboard.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -141,6 +144,33 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
               child: const Text('Go to Admin Dashboard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DeptDashboard()),
+                );
+              },
+              child: const Text('Go to Department Dashboard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HostDashboard()),
+                );
+              },
+              child: const Text('Go to Host Dashboard'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
+                );
+              },
+              child: const Text('Go to Receptionist Dashboard'),
             ),
           ],
         ),
