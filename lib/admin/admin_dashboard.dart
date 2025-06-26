@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'manage_departments.dart';
 import '../logout.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'employee_management.dart';
+import 'visitor_management.dart';
+import 'reports_page.dart';
+import 'admin_theme.dart';
 
 // Placeholder screens for other admin features
 class AdminStatsDashboard extends StatelessWidget {
@@ -14,13 +19,14 @@ class AdminStatsDashboard extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0F2027), Color(0xFF2C5364)],
+          colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -58,8 +64,12 @@ class AdminStatsDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
+              Padding(
+                padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+                child: Text('Analytics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
             _ResponsiveAnalyticsCard(
-              title: 'Visitor Trends',
+                title: 'Overview',
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return SizedBox(
@@ -70,6 +80,7 @@ class AdminStatsDashboard extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -97,33 +108,58 @@ class _StatCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
+        width: 160,
+        height: 160,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: color,
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 16, color: Colors.black87),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: CircleAvatar(
+                    backgroundColor: color.withOpacity(0.12),
+                    radius: 24,
+                    child: Icon(icon, color: color, size: 28),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                  value,
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                  title,
+                      style: const TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -307,8 +343,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<String> _titles = [
     'Admin Dashboard',
     'Manage Departments',
-    'Visitor Management',
-    'Employee Management',
+    'View Employees',
+    'View Visitors',
     'Reports',
   ];
 
@@ -324,59 +360,185 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final List<Widget> _screens = [
       Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Admin Dashboard',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.deepPurple),
-            ),
-            const SizedBox(height: 24),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 280,
-                    child: _StatCard(
-                      title: 'Total Visitors',
-                      value: '--',
-                      icon: Icons.groups,
-                      color: Colors.deepPurple,
-                      onTap: () => _onSelect(2), // 2 = Visitor Management
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 280,
-                    child: _StatCard(
-                      title: 'Total Employees',
-                      value: '--',
-                      icon: Icons.people_alt,
-                      color: Colors.blue,
-                      onTap: () => _onSelect(3), // 3 = Employee Management
-                    ),
-                  ),
-                ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              Center(
+                child: Column(
+                  children: [
+                    Text('Welcome, Admin', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 8),
+                    Text("Here's what's happening today", style: TextStyle(fontSize: 18, color: Colors.white70)),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            const Center(
-              child: Text('Admin Dashboard Content Goes Here', style: TextStyle(fontSize: 20)),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Container(
+                constraints: const BoxConstraints(minHeight: 180),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 600) {
+                      // Small screens: horizontal scroll
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 280,
+                              child: StreamBuilder(
+                                stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
+                                builder: (context, AsyncSnapshot snapshot) {
+                                  int total = 0;
+                                  if (snapshot.hasData) {
+                                    total = snapshot.data!.docs.length;
+                                  }
+                                  return _StatCard(
+                                    title: 'Total Visitors',
+                                    value: total.toString(),
+                                    icon: Icons.groups,
+                                    color: Colors.deepPurple,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            SizedBox(
+                              width: 280,
+                              child: StreamBuilder(
+                                stream: FirebaseFirestore.instance.collection('host').snapshots(),
+                                builder: (context, AsyncSnapshot hostSnapshot) {
+                                  return StreamBuilder(
+                                    stream: FirebaseFirestore.instance.collection('receptionist').snapshots(),
+                                    builder: (context, AsyncSnapshot recSnapshot) {
+                                      int total = 0;
+                                      if (hostSnapshot.hasData) {
+                                        total += (hostSnapshot.data!.docs.length as int);
+                                      }
+                                      if (recSnapshot.hasData) {
+                                        total += (recSnapshot.data!.docs.length as int);
+                                      }
+                                      return _StatCard(
+                                        title: 'Total Employees',
+                                        value: total.toString(),
+                                        icon: Icons.people_alt,
+                                        color: Colors.blue,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      // Large screens: grid layout
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: StreamBuilder(
+                              stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
+                              builder: (context, AsyncSnapshot snapshot) {
+                                int total = 0;
+                                if (snapshot.hasData) {
+                                  total = snapshot.data!.docs.length;
+                                }
+                                return _StatCard(
+                                  title: 'Total Visitors',
+                                  value: total.toString(),
+                                  icon: Icons.groups,
+                                  color: Colors.deepPurple,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: StreamBuilder(
+                              stream: FirebaseFirestore.instance.collection('host').snapshots(),
+                              builder: (context, AsyncSnapshot hostSnapshot) {
+                                return StreamBuilder(
+                                  stream: FirebaseFirestore.instance.collection('receptionist').snapshots(),
+                                  builder: (context, AsyncSnapshot recSnapshot) {
+                                    int total = 0;
+                                    if (hostSnapshot.hasData) {
+                                      total += (hostSnapshot.data!.docs.length as int);
+                                    }
+                                    if (recSnapshot.hasData) {
+                                      total += (recSnapshot.data!.docs.length as int);
+                                    }
+                                    return _StatCard(
+                                      title: 'Total Employees',
+                                      value: total.toString(),
+                                      icon: Icons.people_alt,
+                                      color: Colors.blue,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 32),
+              Padding(
+                padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
+                child: Text('Analytics', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              _ResponsiveAnalyticsCard(
+                title: 'Overview',
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      child: _VisitorTrendsChart(),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      const ManageDepartments(),
-      const VisitorManagementScreen(),
-      const EmployeeManagementScreen(),
-      const ReportsScreen(),
     ];
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.deepPurple,
-        title: Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Color(0xFF081735)),
+        title: Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -393,7 +555,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple, Colors.deepPurpleAccent],
+                  colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -415,7 +577,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 children: [
                   CircleAvatar(
                     radius: 38,
-                    backgroundColor: Colors.white,
+                backgroundColor: Colors.white,
                     child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
                   ),
                   const SizedBox(height: 12),
@@ -427,10 +589,54 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 16),
             _buildDrawerItem(icon: Icons.dashboard, text: 'Admin Dashboard', selected: _selectedIndex == 0, onTap: () => _onSelect(0)),
-            _buildDrawerItem(icon: Icons.business, text: 'Manage Departments', selected: _selectedIndex == 1, onTap: () => _onSelect(1)),
-            _buildDrawerItem(icon: Icons.badge, text: 'Visitor Management', selected: _selectedIndex == 2, onTap: () => _onSelect(2)),
-            _buildDrawerItem(icon: Icons.people_alt, text: 'Employee Management', selected: _selectedIndex == 3, onTap: () => _onSelect(3)),
-            _buildDrawerItem(icon: Icons.bar_chart, text: 'Reports', selected: _selectedIndex == 4, onTap: () => _onSelect(4)),
+            _buildDrawerItem(
+              icon: Icons.business,
+              text: 'Manage Departments',
+              selected: false, // Always false so it doesn't highlight
+              onTap: () {
+                Navigator.pop(context); // Close the drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ManageDepartments()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.people_alt,
+              text: 'View Employees',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.badge,
+              text: 'View Visitors',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.bar_chart,
+              text: 'Reports',
+              selected: false,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ReportsPage()),
+                );
+              },
+            ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -441,7 +647,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         ),
       ),
-      body: _screens[_selectedIndex],
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: AdminTheme.adminBackgroundGradient,
+        ),
+        child: _screens[_selectedIndex],
+      ),
     );
   }
 

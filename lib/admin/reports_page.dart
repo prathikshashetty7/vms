@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'admin_theme.dart';
 
-class VisitorManagementPage extends StatelessWidget {
-  const VisitorManagementPage({Key? key}) : super(key: key);
+class ReportsPage extends StatelessWidget {
+  const ReportsPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +11,8 @@ class VisitorManagementPage extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        title: const Text('Visitor Management', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+        title: const Text('Reports', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
