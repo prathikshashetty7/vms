@@ -10,7 +10,8 @@ class ManageVisitors extends StatefulWidget {
 }
 
 class _ManageVisitorsState extends State<ManageVisitors> {
-  Future<void> _showAddEditVisitorDialog({DocumentSnapshot? visitor}) async {
+  void _showVisitorForm([DocumentSnapshot? visitor]) {
+    final isEditing = visitor != null;
     final _formKey = GlobalKey<FormState>();
     final vNameController = TextEditingController(text: visitor?['v_name']);
     final vEmailController = TextEditingController(text: visitor?['v_email']);
@@ -19,46 +20,306 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final vContactNoController = TextEditingController(text: visitor?['v_contactno']);
     final vTotalNoController = TextEditingController(text: visitor?['v_totalno']?.toString() ?? '1');
     String? selectedHostId = visitor?['emp_id'];
+    DateTime selectedDate = (visitor?['v_date'] as Timestamp?)?.toDate() ?? DateTime.now();
+    TimeOfDay selectedTime = visitor != null && visitor['v_time'] != null
+      ? _parseTime(visitor['v_time'])
+      : TimeOfDay.now();
 
-    await showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return AlertDialog(
-          title: Text(visitor == null ? 'Add Visitor' : 'Edit Visitor'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(controller: vNameController, decoration: const InputDecoration(labelText: 'Name')),
-                  TextFormField(controller: vEmailController, decoration: const InputDecoration(labelText: 'Email')),
-                  TextFormField(controller: vDesignationController, decoration: const InputDecoration(labelText: 'Designation')),
-                  TextFormField(controller: vCompanyNameController, decoration: const InputDecoration(labelText: 'Company Name')),
-                  TextFormField(controller: vContactNoController, decoration: const InputDecoration(labelText: 'Contact No')),
-                  TextFormField(
-                    controller: vTotalNoController,
-                    decoration: const InputDecoration(labelText: 'Total Visitors'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  FutureBuilder<List<DropdownMenuItem<String>>>(
-                    future: _getHostDropdownItems(),
-                    builder: (context, snapshot) {
-                      return DropdownButtonFormField<String>(
-                        value: selectedHostId,
-                        items: snapshot.data ?? [],
-                        onChanged: (val) => selectedHostId = val,
-                        decoration: const InputDecoration(labelText: 'Host'),
-                      );
-                    },
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isLargeScreen = screenWidth > 600;
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: isLargeScreen ? 32 : 16,
+              right: isLargeScreen ? 32 : 16,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: DeptTheme.deptGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: DeptTheme.deptPrimary.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+                child: FutureBuilder<List<DropdownMenuItem<String>>>(
+                  future: _getHostDropdownItems(),
+                  builder: (context, snapshot) {
+                    final items = snapshot.data ?? [];
+                    return Form(
+              key: _formKey,
+              child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                          Text(
+                            isEditing ? 'Edit Visitor' : 'Add Visitor',
+                            style: DeptTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: vNameController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Name',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vEmailController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Email',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vDesignationController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Designation',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vCompanyNameController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Company Name',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vContactNoController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Contact No',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                  TextFormField(
+                    controller: vTotalNoController,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Total Visitors',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                              ),
+                            ),
+                    keyboardType: TextInputType.number,
+                  ),
+                          const SizedBox(height: 10),
+                          // Date Picker
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                selectedDate = picked;
+                                (context as Element).markNeedsBuild();
+                              }
+                            },
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Select Date',
+                                  filled: true,
+                                  fillColor: DeptTheme.deptLight,
+                                  hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.white, width: 2),
+                                  ),
+                                ),
+                                controller: TextEditingController(
+                                  text: '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Time Picker
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: selectedTime,
+                              );
+                              if (picked != null) {
+                                selectedTime = picked;
+                                (context as Element).markNeedsBuild();
+                              }
+                            },
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Select Time',
+                                  filled: true,
+                                  fillColor: DeptTheme.deptLight,
+                                  hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.white, width: 2),
+                                  ),
+                                ),
+                                controller: TextEditingController(
+                                  text: selectedTime.format(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                        value: selectedHostId,
+                            items: items,
+                        onChanged: (val) => selectedHostId = val,
+                            decoration: InputDecoration(
+                              hintText: 'Host',
+                              filled: true,
+                              fillColor: DeptTheme.deptLight,
+                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Colors.white, width: 2),
+              ),
             ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-            ElevatedButton(
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton.icon(
               onPressed: () async {
                 if (_formKey.currentState!.validate()) {
                   final visitorData = {
@@ -68,28 +329,39 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     'v_company_name': vCompanyNameController.text,
                     'v_contactno': vContactNoController.text,
                     'v_totalno': int.tryParse(vTotalNoController.text) ?? 1,
-                    'v_date': Timestamp.now(),
-                    'v_time': TimeOfDay.now().format(context),
+                                      'v_date': Timestamp.fromDate(selectedDate),
+                                      'v_time': selectedTime.format(context),
                     'emp_id': selectedHostId,
                   };
-
-                  if (visitor == null) {
+                                    if (!isEditing) {
                     await FirebaseFirestore.instance.collection('visitor').add(visitorData);
                   } else {
-                    await visitor.reference.update(visitorData);
+                                      await visitor!.reference.update(visitorData);
                   }
                   Navigator.of(context).pop();
                 }
               },
-              child: Text(visitor == null ? 'Add' : 'Update'),
+                                icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
+                                label: Text(isEditing ? 'Update' : 'Add', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isEditing ? DeptTheme.deptDark : DeptTheme.deptPrimary,
+                                  padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ],
+          ),
         );
       },
-    ).whenComplete(() {
-      // Dispose controllers when dialog is closed
-      [vNameController, vEmailController, vDesignationController, vCompanyNameController, vContactNoController, vTotalNoController].forEach((c) => c.dispose());
-    });
+    );
   }
 
   void _showVisitorDetailsDialog(DocumentSnapshot visitor) {
@@ -154,26 +426,31 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     return 'Unknown Host';
   }
 
+  TimeOfDay _parseTime(String? timeStr) {
+    if (timeStr == null) return TimeOfDay.now();
+    final parts = timeStr.split(":");
+    if (parts.length < 2) return TimeOfDay.now();
+    return TimeOfDay(hour: int.tryParse(parts[0]) ?? 0, minute: int.tryParse(parts[1]) ?? 0);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: DeptTheme.backgroundGradient,
-      child: Scaffold(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 600;
+    return Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Manage Visitors', style: DeptTheme.heading),
-          backgroundColor: Colors.white,
+        title: const Text('Manage Visitors', style: DeptTheme.appBarTitle),
+        backgroundColor: DeptTheme.deptPrimary,
           elevation: 0,
-          iconTheme: const IconThemeData(color: DeptTheme.deptPrimary),
+        iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            color: DeptTheme.deptLight.withOpacity(0.95),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            elevation: 6,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
                 builder: (context, snapshot) {
@@ -184,11 +461,22 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                       final doc = snapshot.data!.docs[index];
                       final totalVisitors = doc['v_totalno'] ?? 1;
                       final hostId = doc['emp_id'];
-                      return Card(
-                        color: DeptTheme.deptAccent.withOpacity(0.2),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          gradient: DeptTheme.deptGradient,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: DeptTheme.deptPrimary.withOpacity(0.10),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: ListTile(
-                          title: Text(doc['v_name'], style: DeptTheme.body),
+                          leading: const Icon(Icons.person, color: Colors.white),
+                          title: Text(doc['v_name'], style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                           subtitle: FutureBuilder<String>(
                             future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
                             builder: (context, hostSnapshot) {
@@ -196,16 +484,16 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 return const Text("Loading host...");
                               }
                               if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
-                                return Text("Host not found | Total Visitors: $totalVisitors", style: DeptTheme.body);
+                                return Text("Host not found | Total Visitors: $totalVisitors", style: DeptTheme.body.copyWith(color: Colors.white70));
                               }
-                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: DeptTheme.body);
+                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: DeptTheme.body.copyWith(color: Colors.white70));
                             }
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary), onPressed: () => _showAddEditVisitorDialog(visitor: doc)),
-                              IconButton(icon: const Icon(Icons.delete, color: DeptTheme.deptDark), onPressed: () => doc.reference.delete()),
+                              IconButton(icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary), onPressed: () => _showVisitorForm(doc)),
+                              IconButton(icon: const Icon(Icons.delete, color: DeptTheme.deptPrimary), onPressed: () => doc.reference.delete()),
                               IconButton(icon: const Icon(Icons.visibility, color: DeptTheme.deptPrimary), onPressed: () => _showVisitorDetailsDialog(doc)),
                             ],
                           ),
@@ -216,13 +504,14 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 },
               ),
             ),
+          ],
           ),
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: DeptTheme.deptPrimary,
-          onPressed: () => _showAddEditVisitorDialog(),
-          child: const Icon(Icons.add),
-        ),
+        onPressed: () => _showVisitorForm(),
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Visitor',
       ),
     );
   }

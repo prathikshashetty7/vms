@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
+import 'host/host_dashboa<<<<<<< feature/sanjana
 import 'receptionist/dashboard.dart';
 import 'receptionist/host_passes_page.dart';
 import 'receptionist/manual_entry_page.dart';
@@ -52,7 +53,6 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
       routes: {
         '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
         '/host_passes': (context) => const HostPassesPage(),

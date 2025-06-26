@@ -17,10 +17,10 @@ class DeptDashboard extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Welcome to the Department Dashboard!', style: DeptTheme.heading),
-          backgroundColor: Colors.white,
+          title: const Text('Welcome to the Department Dashboard!', style: DeptTheme.appBarTitle),
+          backgroundColor: DeptTheme.deptPrimary,
           elevation: 0,
-          iconTheme: const IconThemeData(color: DeptTheme.deptPrimary),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         drawer: Drawer(
           child: ListView(
@@ -30,9 +30,12 @@ class DeptDashboard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: DeptTheme.deptGradient,
                 ),
-                child: const Text(
-                  'Department Menu',
-                  style: DeptTheme.heading,
+                child: const Center(
+                  child: Text(
+                    'Department Menu',
+                    style: DeptTheme.heading
+                  
+                  ),
                 ),
               ),
               ListTile(
@@ -104,18 +107,18 @@ class DeptDashboard extends StatelessWidget {
                       children: [
                         const Icon(Icons.apartment, size: 64, color: DeptTheme.deptPrimary),
                         const SizedBox(height: 16),
-                        const Text('Welcome to the Department Dashboard!', style: DeptTheme.heading, textAlign: TextAlign.center),
+                        const Text('Department Dashboard!', style: DeptTheme.heading, textAlign: TextAlign.center),
                         const SizedBox(height: 12),
                         const Text('Manage your department roles, employees, and visitors efficiently.', style: DeptTheme.body, textAlign: TextAlign.center),
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Chip(label: Text('Secure', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptAccent),
+                            Chip(label: Text('Secure', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptSecondary),
                             SizedBox(width: 8),
-                            Chip(label: Text('Efficient', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptAccent),
+                            Chip(label: Text('Efficient', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptSecondary),
                             SizedBox(width: 8),
-                            Chip(label: Text('Professional', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptAccent),
+                            Chip(label: Text('Professional', style: TextStyle(color: DeptTheme.deptDark)), backgroundColor: DeptTheme.deptSecondary),
                           ],
                         ),
                       ],
