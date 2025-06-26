@@ -3,7 +3,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
-import 'host/host_dashboard.dart';
+import 'host/host_dashboa<<<<<<< feature/sanjana
+import 'receptionist/dashboard.dart';
+import 'receptionist/host_passes_page.dart';
+import 'receptionist/manual_entry_page.dart';
+import 'receptionist/kiosk_qr_page.dart';
+import 'receptionist/visitor_tracking_page.dart';
 import 'receptionist/receptionist_dashboard.dart';
 import 'splash_screen.dart';
 
@@ -48,6 +53,14 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      routes: {
+        '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
+        '/host_passes': (context) => const HostPassesPage(),
+        '/manual_entry': (context) => const ManualEntryPage(),
+        '/kiosk_qr': (context) => const KioskQRPage(),
+        '/visitor_tracking': (context) => const VisitorTrackingPage(),
+      },
       home: const SplashScreen(),
     );
   }
@@ -166,10 +179,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
-                );
+                Navigator.pushNamed(context, '/receptionist_dashboard');
               },
               child: const Text('Go to Receptionist Dashboard'),
             ),
