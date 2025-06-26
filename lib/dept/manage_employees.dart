@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/dept_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageEmployees extends StatefulWidget {
@@ -97,74 +98,90 @@ class _ManageEmployeesState extends State<ManageEmployees> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Manage Employees')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            FutureBuilder<List<DropdownMenuItem<String>>>(
-              future: _getRoleDropdownItems(),
-              builder: (context, snapshot) {
-                final items = snapshot.data ?? [];
-                return Column(
-                  children: [
-                    TextField(
-                      controller: _empIdController,
-                      decoration: const InputDecoration(labelText: 'Employee ID'),
-                    ),
-                    TextField(
-                      controller: _empNameController,
-                      decoration: const InputDecoration(labelText: 'Employee Name'),
-                    ),
-                    TextField(
-                      controller: _empEmailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    TextField(
-                      controller: _empPasswordController,
-                      decoration: const InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                    ),
-                    TextField(
-                      controller: _empContNoController,
-                      decoration: const InputDecoration(labelText: 'Contact Number'),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    TextField(
-                      controller: _empAddressController,
-                      decoration: const InputDecoration(labelText: 'Address'),
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: _selectedRole,
-                      items: items,
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedRole = val;
-                        });
-                      },
-                      decoration: const InputDecoration(labelText: 'Role'),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _addOrUpdateEmployee,
-                      child: Text(_editingId == null ? 'Add' : 'Update'),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: ListView(
+    return Container(
+      decoration: DeptTheme.backgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Manage Employees', style: DeptTheme.heading),
+          backgroundColor: DeptTheme.deptPrimary.withOpacity(0.9),
+          elevation: 0,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            color: DeptTheme.deptLight.withOpacity(0.95),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 6,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
                 children: [
-                  _buildEmployeeList('host', 'Hosts'),
-                  _buildEmployeeList('receptionist', 'Receptionists'),
+                  FutureBuilder<List<DropdownMenuItem<String>>>(
+                    future: _getRoleDropdownItems(),
+                    builder: (context, snapshot) {
+                      final items = snapshot.data ?? [];
+                      return Column(
+                        children: [
+                          TextField(
+                            controller: _empIdController,
+                            decoration: const InputDecoration(labelText: 'Employee ID'),
+                          ),
+                          TextField(
+                            controller: _empNameController,
+                            decoration: const InputDecoration(labelText: 'Employee Name'),
+                          ),
+                          TextField(
+                            controller: _empEmailController,
+                            decoration: const InputDecoration(labelText: 'Email'),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          TextField(
+                            controller: _empPasswordController,
+                            decoration: const InputDecoration(labelText: 'Password'),
+                            obscureText: true,
+                          ),
+                          TextField(
+                            controller: _empContNoController,
+                            decoration: const InputDecoration(labelText: 'Contact Number'),
+                            keyboardType: TextInputType.phone,
+                          ),
+                          TextField(
+                            controller: _empAddressController,
+                            decoration: const InputDecoration(labelText: 'Address'),
+                          ),
+                          DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            items: items,
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedRole = val;
+                              });
+                            },
+                            decoration: const InputDecoration(labelText: 'Role'),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: _addOrUpdateEmployee,
+                            child: Text(_editingId == null ? 'Add' : 'Update'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildEmployeeList('host', 'Hosts'),
+                        _buildEmployeeList('receptionist', 'Receptionists'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -176,7 +193,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          child: Text(title, style: DeptTheme.subheading),
         ),
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection(collectionName).snapshots(),
@@ -194,21 +211,25 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final doc = docs[index];
-                return ListTile(
-                  title: Text(doc['emp_name'] ?? ''),
-                  subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _startEdit(doc, collectionName),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _deleteEmployee(doc.id, collectionName),
-                      ),
-                    ],
+                return Card(
+                  color: DeptTheme.deptAccent.withOpacity(0.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    title: Text(doc['emp_name'] ?? '', style: DeptTheme.body),
+                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: DeptTheme.body),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary),
+                          onPressed: () => _startEdit(doc, collectionName),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: DeptTheme.deptDark),
+                          onPressed: () => _deleteEmployee(doc.id, collectionName),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

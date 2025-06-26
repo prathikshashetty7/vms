@@ -5,6 +5,7 @@ import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
 import 'host/host_dashboard.dart';
 import 'receptionist/receptionist_dashboard.dart';
+import 'splash_screen.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -47,7 +48,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const SplashScreen(),
     );
   }
 }
