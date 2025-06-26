@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/dept_theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DeptReport extends StatelessWidget {
   const DeptReport({Key? key}) : super(key: key);
@@ -11,22 +12,71 @@ class DeptReport extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Department Report', style: DeptTheme.heading),
-          backgroundColor: DeptTheme.deptPrimary.withOpacity(0.9),
+          title: const Text('Department Report', style: DeptTheme.appBarTitle),
+          backgroundColor: DeptTheme.deptPrimary,
           elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Center(
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Card(
             color: DeptTheme.deptLight.withOpacity(0.95),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 6,
-            margin: const EdgeInsets.all(32),
-            child: const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text(
-                'Reports will be shown here. (Coming soon!)',
-                style: DeptTheme.body,
-                textAlign: TextAlign.center,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Visitor Visit Reports', style: DeptTheme.heading.copyWith(fontSize: 22)),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text('No visitor reports found.', style: DeptTheme.body));
+                        }
+                        final docs = snapshot.data!.docs;
+                        return ListView.builder(
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final doc = docs[index];
+                            final name = doc['v_name'] ?? '';
+                            final email = doc['v_email'] ?? '';
+                            final date = (doc['v_date'] as Timestamp?)?.toDate();
+                            final total = doc['v_totalno']?.toString() ?? '1';
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                gradient: DeptTheme.deptGradient,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: DeptTheme.deptPrimary.withOpacity(0.10),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ListTile(
+                                leading: const Icon(Icons.person, color: Colors.white),
+                                title: Text(name, style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                subtitle: Text(
+                                  'Email: $email\nDate: ${date != null ? '${date.day}/${date.month}/${date.year}' : 'N/A'}\nTotal Visitors: $total',
+                                  style: DeptTheme.body.copyWith(color: Colors.white70),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
