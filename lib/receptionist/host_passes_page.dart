@@ -13,10 +13,10 @@ class HostPassesPage extends StatelessWidget {
       {'visitor': 'Jane Smith', 'host': 'Bob', 'passcode': 'B456', 'status': 'Used'},
     ];
     return Scaffold(
-      backgroundColor: ReceptionistTheme.background,
+      backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: const Text('Host-Generated Passes'),
-        backgroundColor: ReceptionistTheme.primary,
+        backgroundColor: Color(0xFF6CA4FE),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(20),

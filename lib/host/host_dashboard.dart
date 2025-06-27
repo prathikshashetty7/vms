@@ -67,6 +67,7 @@ class HostDashboard extends StatelessWidget {
             },
           ),
         ],
+        backgroundColor: Color(0xFF6CA4FE),
       ),
       drawer: Drawer(
         child: ListView(
@@ -111,6 +112,7 @@ class HostDashboard extends StatelessWidget {
           style: TextStyle(fontSize: 20),
         ),
       ),
+      backgroundColor: Color(0xFFD4E9FF),
     );
   }
 } 

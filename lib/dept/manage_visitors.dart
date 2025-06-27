@@ -28,7 +28,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Color(0xFFD4E9FF),
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isLargeScreen = screenWidth > 600;
@@ -438,10 +438,10 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 600;
     return Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Color(0xFFD4E9FF),
         appBar: AppBar(
         title: const Text('Manage Visitors', style: DeptTheme.appBarTitle),
-        backgroundColor: DeptTheme.deptPrimary,
+        backgroundColor: Color(0xFF6CA4FE),
           elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         ),
