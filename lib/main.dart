@@ -52,6 +52,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: SplashScreen(),
       routes: {
         '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
         '/host_passes': (context) => const HostPassesPage(),
@@ -59,7 +60,6 @@ class MyApp extends StatelessWidget {
         '/kiosk_qr': (context) => const KioskQRPage(),
         '/visitor_tracking': (context) => const VisitorTrackingPage(),
       },
-      home: const SplashScreen(),
     );
   }
 }
