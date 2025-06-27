@@ -521,8 +521,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 40),
-            const SizedBox(width: 10),
+            Image.asset('assets/images/rdl.png', height: 56),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 _titles[_selectedIndex],
