@@ -7,10 +7,10 @@ class KioskQRPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ReceptionistTheme.background,
+      backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: const Text('Kiosk QR Registration'),
-        backgroundColor: ReceptionistTheme.primary,
+        backgroundColor: Color(0xFF6CA4FE),
       ),
       body: Center(
         child: Column(

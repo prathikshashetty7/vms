@@ -13,10 +13,10 @@ class VisitorTrackingPage extends StatelessWidget {
       {'name': 'Jane Smith', 'status': 'Checked Out'},
     ];
     return Scaffold(
-      backgroundColor: ReceptionistTheme.background,
+      backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: const Text('Visitor Tracking'),
-        backgroundColor: ReceptionistTheme.primary,
+        backgroundColor: Color(0xFF6CA4FE),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(20),

@@ -355,10 +355,10 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: const Text('Manage Employees', style: DeptTheme.appBarTitle),
-        backgroundColor: DeptTheme.deptPrimary,
+        backgroundColor: Color(0xFF6CA4FE),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
