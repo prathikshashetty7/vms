@@ -10,6 +10,7 @@ import 'receptionist/manual_entry_page.dart';
 import 'receptionist/kiosk_qr_page.dart';
 import 'receptionist/visitor_tracking_page.dart';
 import 'splash_screen.dart';
+import 'receptionist/receptionist_reports_page.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -54,11 +55,14 @@ class MyApp extends StatelessWidget {
       ),
       home: SplashScreen(),
       routes: {
+        '/dashboard': (context) => const ReceptionistDashboard(),
         '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
         '/host_passes': (context) => const HostPassesPage(),
         '/manual_entry': (context) => const ManualEntryPage(),
+        '/receptionist_reports': (context) => ReceptionistReportsPage(),
         '/kiosk_qr': (context) => const KioskQRPage(),
         '/visitor_tracking': (context) => const VisitorTrackingPage(),
+        '/signin': (context) => const SignInPage(),
       },
     );
   }
