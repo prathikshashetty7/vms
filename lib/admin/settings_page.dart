@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'admin_theme.dart';
+import '../theme/admin_theme.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({Key? key}) : super(key: key);

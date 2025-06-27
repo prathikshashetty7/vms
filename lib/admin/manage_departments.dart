@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'admin_theme.dart';
+import '../theme/admin_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'settings_page.dart';
 import 'admin_dashboard.dart';

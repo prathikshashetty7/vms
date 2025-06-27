@@ -7,7 +7,7 @@ import 'employee_management.dart';
 import 'visitor_management.dart';
 import 'reports_page.dart';
 import 'settings_page.dart';
-import 'admin_theme.dart';
+import '../theme/admin_theme.dart';
 
 // Placeholder screens for other admin features
 class AdminStatsDashboard extends StatelessWidget {
