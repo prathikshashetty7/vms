@@ -36,6 +36,7 @@ class ThemedVisitorListPage extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        automaticallyImplyLeading: false,
       ),
       backgroundColor: const Color(0xFFD4E9FF),
       body: Padding(
@@ -119,6 +120,50 @@ class ThemedVisitorListPage extends StatelessWidget {
             },
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Color(0xFF6CA4FE),
+        unselectedItemColor: Color(0xFF091016),
+        currentIndex: 3,
+        onTap: (index) {
+          if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/signin');
+            return;
+          }
+          if (index == 0) {
+            Navigator.pushReplacementNamed(context, '/dashboard');
+          } else if (index == 1) {
+            Navigator.pushReplacementNamed(context, '/host_passes');
+          } else if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/manual_entry');
+          } else if (index == 3) {
+            // Already here
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.vpn_key_rounded),
+            label: 'Host Passes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_add_alt_1_rounded),
+            label: 'Add Visitor',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_rounded),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout_rounded),
+            label: 'Logout',
+          ),
+        ],
       ),
     );
   }

@@ -75,15 +75,22 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF6CA4FE),
-        title: const Text('Manual Entry', style: TextStyle(color: Colors.white)),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 36),
+            const SizedBox(width: 12),
+            const Text('Manual Entry', style: TextStyle(color: Colors.white)),
+          ],
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
+        automaticallyImplyLeading: false,
       ),
       backgroundColor: Color(0xFFD4E9FF),
       body: Stack(
         children: [
           // Wavy blue header
           Container(
-            height: 180,
+              height: 180,
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -97,16 +104,16 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                   offset: Offset(0, 8),
                 ),
               ],
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  SizedBox(height: 30),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    SizedBox(height: 30),
                   Icon(Icons.emoji_people, color: Color(0xFF005FFE), size: 48),
-                  SizedBox(height: 10),
+                    SizedBox(height: 10),
                   Text('Welcome Visitor!', style: TextStyle(color: Color(0xFF091016), fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                ],
+                  ],
               ),
             ),
           ),
@@ -128,13 +135,13 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
                               child: ShaderMask(
                                 shaderCallback: (Rect bounds) {
                                   return const LinearGradient(
@@ -143,12 +150,12 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                     end: Alignment.bottomRight,
                                   ).createShader(bounds);
                                 },
-                          child: Text(
-                            'Visitor Registration',
+                            child: Text(
+                              'Visitor Registration',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontSize: 32,
-                                fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
                                   color: Colors.white,
                                   shadows: [
@@ -210,7 +217,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_mobileFocus),
                             ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                             _buildTextField('Visitor Mobile No',
                               onSaved: (v) => mobile = v!,
                               validator: _required,
@@ -220,7 +227,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocus),
                             ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                             _buildTextField('Visitor Email ID',
                               onSaved: (v) => email = v!,
                               validator: _required,
@@ -230,7 +237,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_companyFocus),
                             ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                             _buildTextField('Company/Organization Name',
                               onSaved: (v) => company = v!,
                               validator: _required,
@@ -239,8 +246,8 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
                             ),
-                        const SizedBox(height: 16),
-                        _buildDropdown('Purpose of the Visit', purposes, purpose, (v) => setState(() => purpose = v!)),
+                          const SizedBox(height: 16),
+                          _buildDropdown('Purpose of the Visit', purposes, purpose, (v) => setState(() => purpose = v!)),
                             if (purpose == 'Other')
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
@@ -253,9 +260,9 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                   onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
                                 ),
                               ),
-                        const SizedBox(height: 16),
-                        _buildDropdown('Do you have an appointment', yesNo, appointment, (v) => setState(() => appointment = v!)),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
+                          _buildDropdown('Do you have an appointment', yesNo, appointment, (v) => setState(() => appointment = v!)),
+                          const SizedBox(height: 16),
                             _departmentsLoading
                                 ? Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 12), child: CircularProgressIndicator()))
                                 : _buildDropdown(
@@ -268,7 +275,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                       }
                                     },
                                   ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
                             _buildTextField('Host Name',
                               onSaved: (v) => host = v!,
                               validator: _required,
@@ -277,10 +284,10 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
                             ),
-                        const SizedBox(height: 16),
-                        _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
-                        const SizedBox(height: 16),
-                        if (accompanying == 'Yes')
+                          const SizedBox(height: 16),
+                          _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
+                          const SizedBox(height: 16),
+                          if (accompanying == 'Yes')
                               _buildTextField('Number of Accompanying Visitors',
                                 onSaved: (v) => accompanyingCount = v!,
                                 validator: _required,
@@ -290,10 +297,10 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                 textInputAction: TextInputAction.next,
                                 onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
                               ),
-                        if (accompanying == 'Yes') const SizedBox(height: 16),
-                        _buildDropdown('Do you carrying a laptop?', yesNo, laptop, (v) => setState(() => laptop = v!)),
-                        const SizedBox(height: 16),
-                        if (laptop == 'Yes')
+                          if (accompanying == 'Yes') const SizedBox(height: 16),
+                          _buildDropdown('Do you carrying a laptop?', yesNo, laptop, (v) => setState(() => laptop = v!)),
+                          const SizedBox(height: 16),
+                          if (laptop == 'Yes')
                               _buildTextField('Enter the laptop model & serial number',
                                 onSaved: (v) => laptopDetails = v!,
                                 validator: _required,
@@ -302,26 +309,26 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
                               ),
-                        if (laptop == 'Yes') const SizedBox(height: 16),
-                        const SizedBox(height: 24),
-                        Center(
-                          child: ScaleTransition(
-                            scale: _buttonScale,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
+                          if (laptop == 'Yes') const SizedBox(height: 16),
+                          const SizedBox(height: 24),
+                          Center(
+                            child: ScaleTransition(
+                              scale: _buttonScale,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
                                     backgroundColor: Color(0xFF64B5F6),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                                elevation: 6,
-                              ),
-                              icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Register Visitor', style: TextStyle(fontSize: 18)),
-                              onPressed: () async {
-                                await _buttonController.forward();
-                                await Future.delayed(const Duration(milliseconds: 80));
-                                _buttonController.reverse();
-                                if (_formKey.currentState!.validate()) {
-                                  _formKey.currentState!.save();
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                                  elevation: 6,
+                                ),
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: const Text('Register Visitor', style: TextStyle(fontSize: 18)),
+                                onPressed: () async {
+                                  await _buttonController.forward();
+                                  await Future.delayed(const Duration(milliseconds: 80));
+                                  _buttonController.reverse();
+                                  if (_formKey.currentState!.validate()) {
+                                    _formKey.currentState!.save();
                                       // Store in Firestore
                                       await FirebaseFirestore.instance.collection('manual_registrations').add({
                                         'fullName': fullName,
@@ -340,25 +347,66 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                         'timestamp': FieldValue.serverTimestamp(),
                                         'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
                                       });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Visitor registered!')),
-                                  );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Visitor registered!')),
+                                    );
                                       await Future.delayed(const Duration(milliseconds: 600));
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const ReceptionistReportsPage()),
-                                  );
-                                }
-                              },
+                                      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+                                  }
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
                     ),
                   ),
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Color(0xFF6CA4FE),
+        unselectedItemColor: Color(0xFF091016),
+        currentIndex: 2,
+        onTap: (index) {
+          if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/signin');
+            return;
+          }
+          if (index == 0) {
+            Navigator.pushReplacementNamed(context, '/dashboard');
+          } else if (index == 1) {
+            Navigator.pushReplacementNamed(context, '/host_passes');
+          } else if (index == 2) {
+            // Already here
+          } else if (index == 3) {
+            Navigator.pushReplacementNamed(context, '/receptionist_reports');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.vpn_key_rounded),
+            label: 'Host Passes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_add_alt_1_rounded),
+            label: 'Add Visitor',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_rounded),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout_rounded),
+            label: 'Logout',
           ),
         ],
       ),
