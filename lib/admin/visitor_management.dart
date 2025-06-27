@@ -30,9 +30,18 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
     final deptSnap = await FirebaseFirestore.instance.collection('department').get();
     final visitorSnap = await FirebaseFirestore.instance.collection('visitor').get();
     setState(() {
-      _hosts = ['All', ...hostSnap.docs.map((doc) => doc['name'].toString()).toSet()];
-      _departments = ['All', ...deptSnap.docs.map((doc) => doc['d_name'].toString()).toSet()];
-      _types = ['All', ...visitorSnap.docs.map((doc) => doc['type']?.toString() ?? '').where((t) => t.isNotEmpty).toSet()];
+      _hosts = ['All', ...hostSnap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['name']?.toString() ?? data['host_name']?.toString() ?? 'Unknown Host';
+      }).toSet()];
+      _departments = ['All', ...deptSnap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['d_name']?.toString() ?? data['name']?.toString() ?? 'Unknown Department';
+      }).toSet()];
+      _types = ['All', ...visitorSnap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['type']?.toString() ?? '';
+      }).where((t) => t.isNotEmpty).toSet()];
     });
   }
 
@@ -43,25 +52,32 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        title: Row(
-          children: [
-            Image.asset('assets/images/rdl.png', height: 56),
-            const SizedBox(width: 10),
-            const Text('Visitor Management', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
-          ],
-        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 56),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'View Visitors',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+          ],
+        ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: const EdgeInsets.only(right: 8.0),
             child: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple),
+              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
             ),
           ),
         ],

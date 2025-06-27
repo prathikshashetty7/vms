@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'employee_management.dart';
 import 'visitor_management.dart';
 import 'reports_page.dart';
+import 'settings_page.dart';
 import 'admin_theme.dart';
 
 // Placeholder screens for other admin features
@@ -111,55 +112,49 @@ class _StatCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          double cardWidth = constraints.maxWidth;
-          double valueFontSize = (cardWidth * 0.22).clamp(24, 38);
-          double titleFontSize = (cardWidth * 0.13).clamp(16, 26);
-          return Container(
-            width: width,
-            margin: const EdgeInsets.all(2),
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      child: Container(
+        width: width,
+        height: 180, // Fixed height for consistency
+        margin: const EdgeInsets.all(2),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-            child: Column(
+          ],
+        ),
+        child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircleAvatar(
-                  backgroundColor: color.withOpacity(0.12),
-                  radius: cardWidth * 0.15,
-                  child: Icon(icon, color: color, size: cardWidth * 0.18),
+            CircleAvatar(
+                    backgroundColor: color.withOpacity(0.12),
+                    radius: 24,
+                    child: Icon(icon, color: color, size: 28),
                 ),
-                SizedBox(height: cardWidth * 0.08),
-                Text(
+                const SizedBox(height: 12),
+            Text(
                   value,
-                  style: TextStyle(fontSize: valueFontSize, fontWeight: FontWeight.normal, color: Colors.black),
-                  textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
+              textAlign: TextAlign.center,
                 ),
-                SizedBox(height: cardWidth * 0.06),
-                Text(
+                const SizedBox(height: 8),
+            Text(
                   title,
-                  style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.normal, color: Colors.black),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.visible,
-                  softWrap: true,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
+                      textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              softWrap: true,
                 ),
               ],
-            ),
-          );
-        },
+        ),
       ),
     );
   }
@@ -375,128 +370,128 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               const SizedBox(height: 24),
               LayoutBuilder(
-                builder: (context, constraints) {
-                  double gridSpacing = 16;
-                  double cardWidth = (constraints.maxWidth - gridSpacing) / 2;
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Row(
+                  builder: (context, constraints) {
+                  double cardSpacing = 16;
+                  double cardWidth = 200; // Fixed width for each card
+                  double cardHeight = 180; // Fixed height for consistency
+                  
+                  return SizedBox(
+                    height: cardHeight + 32, // Add padding for the cards
+                    child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
                           children: [
-                            Expanded(
+                            SizedBox(
+                            width: cardWidth,
                               child: StreamBuilder(
-                                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+                              stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
                                 builder: (context, AsyncSnapshot snapshot) {
                                   int total = 0;
                                   if (snapshot.hasData) {
                                     total = snapshot.data!.docs.length;
                                   }
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: gridSpacing / 2, bottom: gridSpacing),
-                                    child: _StatCard(
-                                      title: 'Visitors Today',
-                                      value: total.toString(),
-                                      icon: Icons.groups,
-                                      color: Colors.deepPurple,
-                                      onTap: () {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
-                                      },
-                                      width: cardWidth,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: StreamBuilder(
-                                stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
-                                builder: (context, AsyncSnapshot snapshot) {
-                                  int checkedIn = 0;
-                                  if (snapshot.hasData) {
-                                    checkedIn = snapshot.data!.docs.length;
-                                  }
-                                  return Padding(
-                                    padding: EdgeInsets.only(left: gridSpacing / 2, bottom: gridSpacing),
-                                    child: _StatCard(
-                                      title: 'Checked-in',
-                                      value: checkedIn.toString(),
-                                      icon: Icons.how_to_reg,
-                                      color: Colors.green,
-                                      onTap: () {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
-                                      },
-                                      width: cardWidth,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: StreamBuilder(
-                                stream: FirebaseFirestore.instance.collection('department').snapshots(),
-                                builder: (context, AsyncSnapshot snapshot) {
-                                  int departments = 0;
-                                  if (snapshot.hasData) {
-                                    departments = snapshot.data!.docs.length;
-                                  }
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: gridSpacing / 2),
-                                    child: _StatCard(
-                                      title: 'Departments',
-                                      value: departments.toString(),
-                                      icon: Icons.apartment,
-                                      color: Colors.orange,
-                                      onTap: () {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageDepartments()));
-                                      },
-                                      width: cardWidth,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: StreamBuilder(
-                                stream: FirebaseFirestore.instance.collection('host').snapshots(),
-                                builder: (context, AsyncSnapshot hostSnapshot) {
-                                  return StreamBuilder(
-                                    stream: FirebaseFirestore.instance.collection('receptionist').snapshots(),
-                                    builder: (context, AsyncSnapshot recSnapshot) {
-                                      int total = 0;
-                                      if (hostSnapshot.hasData) {
-                                        total += (hostSnapshot.data!.docs.length as int);
-                                      }
-                                      if (recSnapshot.hasData) {
-                                        total += (recSnapshot.data!.docs.length as int);
-                                      }
-                                      return Padding(
-                                        padding: EdgeInsets.only(left: gridSpacing / 2),
-                                        child: _StatCard(
-                                          title: 'Employees',
-                                          value: total.toString(),
-                                          icon: Icons.people_alt,
-                                          color: Colors.blue,
-                                          onTap: () {
-                                            Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployeeManagementPage()));
-                                          },
-                                          width: cardWidth,
-                                        ),
-                                      );
+                                return Padding(
+                                  padding: EdgeInsets.only(right: cardSpacing),
+                                  child: _StatCard(
+                                    title: 'Visitors Today',
+                                    value: total.toString(),
+                                    icon: Icons.groups,
+                                    color: Colors.deepPurple,
+                                    onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
                                     },
+                                    width: cardWidth,
+                                  ),
                                   );
                                 },
                               ),
                             ),
-                          ],
-                        ),
-                      ],
+                            SizedBox(
+                            width: cardWidth,
+                              child: StreamBuilder(
+                              stream: FirebaseFirestore.instance.collection('visitor').where('status', isEqualTo: 'Checked In').snapshots(),
+                              builder: (context, AsyncSnapshot snapshot) {
+                                int checkedIn = 0;
+                                if (snapshot.hasData) {
+                                  checkedIn = snapshot.data!.docs.length;
+                                      }
+                                return Padding(
+                                  padding: EdgeInsets.only(right: cardSpacing),
+                                  child: _StatCard(
+                                    title: 'Checked-in',
+                                    value: checkedIn.toString(),
+                                    icon: Icons.how_to_reg,
+                                    color: Colors.green,
+                                        onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const VisitorManagementPage()));
+                                        },
+                                    width: cardWidth,
+                                  ),
+                                  );
+                                },
+                              ),
+                            ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: StreamBuilder(
+                              stream: FirebaseFirestore.instance.collection('department').snapshots(),
+                              builder: (context, AsyncSnapshot snapshot) {
+                                int departments = 0;
+                                if (snapshot.hasData) {
+                                  departments = snapshot.data!.docs.length;
+                                }
+                                return Padding(
+                                  padding: EdgeInsets.only(right: cardSpacing),
+                                  child: _StatCard(
+                                    title: 'Departments',
+                                    value: departments.toString(),
+                                    icon: Icons.apartment,
+                                    color: Colors.orange,
+                                  onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageDepartments()));
+                                  },
+                                    width: cardWidth,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: cardWidth,
+                            child: StreamBuilder(
+                              stream: FirebaseFirestore.instance.collection('host').snapshots(),
+                              builder: (context, AsyncSnapshot hostSnapshot) {
+                                return StreamBuilder(
+                                  stream: FirebaseFirestore.instance.collection('receptionist').snapshots(),
+                                  builder: (context, AsyncSnapshot recSnapshot) {
+                                    int total = 0;
+                                    if (hostSnapshot.hasData) {
+                                      total += (hostSnapshot.data!.docs.length as int);
+                                    }
+                                    if (recSnapshot.hasData) {
+                                      total += (recSnapshot.data!.docs.length as int);
+                                    }
+                                    return _StatCard(
+                                      title: 'Employees',
+                                      value: total.toString(),
+                                      icon: Icons.people_alt,
+                                      color: Colors.blue,
+                                      onTap: () {
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployeeManagementPage()));
+                                      },
+                                      width: cardWidth,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
+                      );
+                  },
               ),
               const SizedBox(height: 32),
               Padding(
@@ -526,9 +521,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 48),
+            Image.asset('assets/images/rdl.png', height: 40),
             const SizedBox(width: 10),
-            Text(_titles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
+            Expanded(
+              child: Text(
+                _titles[_selectedIndex],
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735)),
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -544,6 +546,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       drawer: Drawer(
         child: Column(
           children: [
+            // Header section - fixed at top
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -563,86 +566,107 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               width: double.infinity,
               child: Column(
                 children: [
                   Container(
-                    width: 76,
-                    height: 76,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(6.0),
                       child: Image.asset('assets/images/rdl.png'),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            _buildDrawerItem(icon: Icons.dashboard, text: 'Admin Dashboard', selected: _selectedIndex == 0, onTap: () => _onSelect(0)),
-            _buildDrawerItem(
-              icon: Icons.business,
-              text: 'Manage Departments',
-              selected: false, // Always false so it doesn't highlight
-              onTap: () {
-                Navigator.pop(context); // Close the drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ManageDepartments()),
-                );
-              },
+            const SizedBox(height: 12),
+            // Scrollable menu items
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildDrawerItem(icon: Icons.dashboard, text: 'Admin Dashboard', selected: _selectedIndex == 0, onTap: () => _onSelect(0)),
+                    _buildDrawerItem(
+                      icon: Icons.business,
+                      text: 'Manage Departments',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ManageDepartments()),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.people_alt,
+                      text: 'View Employees',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.badge,
+                      text: 'View Visitors',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.bar_chart,
+                      text: 'Reports',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ReportsPage()),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.settings,
+                      text: 'Settings',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SettingsPage()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _buildDrawerItem(
-              icon: Icons.people_alt,
-              text: 'View Employees',
-              selected: false,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EmployeeManagementPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.badge,
-              text: 'View Visitors',
-              selected: false,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const VisitorManagementPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.bar_chart,
-              text: 'Reports',
-              selected: false,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ReportsPage()),
-                );
-              },
-            ),
-            const Spacer(),
+            // Footer section - fixed at bottom
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Divider(thickness: 1.2, color: Colors.deepPurple.shade100),
             ),
             const LogoutTile(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -660,14 +684,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildDrawerItem({required IconData icon, required String text, required bool selected, required VoidCallback onTap}) {
     return ListTile(
-      leading: Icon(icon, color: selected ? Colors.deepPurple : Colors.black54),
-      title: Text(text, style: TextStyle(fontWeight: FontWeight.w500, color: selected ? Colors.deepPurple : Colors.black87)),
+      leading: Icon(icon, color: selected ? Colors.deepPurple : Colors.black54, size: 20),
+      title: Text(
+        text, 
+        style: TextStyle(
+          fontWeight: FontWeight.w500, 
+          color: selected ? Colors.deepPurple : Colors.black87,
+          fontSize: 14,
+        ),
+      ),
       selected: selected,
       selectedTileColor: Colors.deepPurple.shade50,
       hoverColor: Colors.deepPurple.shade50,
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      dense: true,
     );
   }
 } 

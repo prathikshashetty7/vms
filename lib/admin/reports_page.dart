@@ -22,26 +22,32 @@ class _ReportsPageState extends State<ReportsPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        title: Row(
-          children: [
-            Image.asset('assets/images/rdl.png', height: 56),
-            const SizedBox(width: 10),
-            const Text('Reports', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735))),
-          ],
-        ),
-        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 56),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Reports',
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+          ],
+        ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: const EdgeInsets.only(right: 8.0),
             child: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple),
+              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
             ),
           ),
         ],
