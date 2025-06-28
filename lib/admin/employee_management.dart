@@ -2,6 +2,20 @@ import 'package:flutter/material.dart';
 import '../theme/admin_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+class Employee {
+  final String name;
+  final String role;
+  final String department;
+  final String email;
+
+  Employee({
+    required this.name,
+    required this.role,
+    required this.department,
+    required this.email,
+  });
+}
+
 class EmployeeManagementPage extends StatefulWidget {
   const EmployeeManagementPage({Key? key}) : super(key: key);
 
@@ -13,17 +27,90 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
   String _filterType = 'All';
   String _selectedDepartment = 'All';
   List<String> _departments = ['All'];
+  String _selectedRole = 'All';
+  List<String> _roles = ['All'];
+  TextEditingController _searchController = TextEditingController();
+  List<Employee> _employees = [];
+  List<Employee> _filteredEmployees = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  String _selectedType = 'Host'; // Host or Receptionist
 
   @override
   void initState() {
     super.initState();
     _fetchDepartments();
+    _fetchRoles();
+    _fetchEmployees();
+    _searchController.addListener(_applyFilters);
   }
 
   Future<void> _fetchDepartments() async {
     final snapshot = await FirebaseFirestore.instance.collection('department').get();
     setState(() {
       _departments = ['All', ...snapshot.docs.map((doc) => doc['d_name'].toString()).toList()];
+    });
+  }
+
+  Future<void> _fetchRoles() async {
+    final snapshot = await FirebaseFirestore.instance.collection('role').get();
+    // Collect roles from Firestore
+    final firestoreRoles = snapshot.docs.map((doc) => doc['r_name'].toString()).toSet();
+    // Always include 'Host' and 'Receptionist'
+    firestoreRoles.addAll(['Host', 'Receptionist']);
+    setState(() {
+      _roles = ['All', ...firestoreRoles];
+    });
+  }
+
+  Future<void> _fetchEmployees() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final hostSnap = await FirebaseFirestore.instance.collection('host').get();
+      final recSnap = await FirebaseFirestore.instance.collection('receptionist').get();
+      List<Employee> all = [];
+      for (var doc in hostSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        all.add(Employee(
+          name: data['emp_name'] ?? '',
+          role: 'Host',
+          department: data['departmentId'] ?? '',
+          email: data['emp_email'] ?? '',
+        ));
+      }
+      for (var doc in recSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        all.add(Employee(
+          name: data['emp_name'] ?? '',
+          role: 'Receptionist',
+          department: data['departmentId'] ?? '',
+          email: data['emp_email'] ?? '',
+        ));
+      }
+      setState(() {
+        _employees = all;
+        _applyFilters();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load employees:\n\n${e.toString()}';
+      });
+    }
+  }
+
+  void _applyFilters() {
+    setState(() {
+      _filteredEmployees = _employees.where((e) {
+        final matchesName = _searchController.text.isEmpty || e.name.toLowerCase().contains(_searchController.text.toLowerCase());
+        final matchesRole = _selectedRole == 'All' || e.role == _selectedRole;
+        final matchesDept = _selectedDepartment == 'All' || e.department == _selectedDepartment;
+        return matchesName && matchesRole && matchesDept;
+      }).toList();
     });
   }
 
@@ -65,15 +152,6 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
               ),
             ),
           ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.person), text: 'Hosts'),
-              Tab(icon: Icon(Icons.person_outline), text: 'Receptionists'),
-            ],
-            labelColor: Color(0xFF081735),
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFF081735),
-          ),
         ),
         backgroundColor: Colors.transparent,
         body: Container(
@@ -82,131 +160,166 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
           decoration: BoxDecoration(
             gradient: AdminTheme.adminBackgroundGradient,
           ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    const Text('Filter by:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                    const SizedBox(width: 12),
-                    DropdownButton<String>(
-                      value: _selectedDepartment,
-                      dropdownColor: Colors.white,
-                      style: const TextStyle(color: Colors.black),
-                      items: _departments.map((dept) {
-                        return DropdownMenuItem<String>(
-                          value: dept,
-                          child: Text(dept),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedDepartment = val ?? 'All';
-                        });
-                      },
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage != null
+                  ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 16)))
+                  : Column(
+                      children: [
+                        // Search bar below AppBar
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF181F2C), // dark background
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                                hintText: 'Search by name...',
+                                hintStyle: const TextStyle(color: Colors.white54),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                              ),
+                              onChanged: (value) {
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        ),
+                        // Custom tab-like toggle for Host/Receptionist
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                          child: Row(
+                            children: [
+                              _buildCustomTab('Host'),
+                              _buildCustomTab('Receptionist'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Cards for filtered employees
+                        Expanded(
+                          child: _buildEmployeeList(_selectedType),
+                        ),
+                      ],
                     ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmployeeList(String role) {
+    final employees = role == 'All'
+        ? _filteredEmployees
+        : _filteredEmployees.where((e) => e.role == role).toList();
+    if (employees.isEmpty) {
+      return Center(
+        child: Text('No employees found.', style: const TextStyle(color: Colors.black, fontSize: 18)),
+      );
+    }
+    return ListView.builder(
+      itemCount: employees.length,
+      itemBuilder: (context, index) {
+        final emp = employees[index];
+        return Card(
+          color: Colors.white,
+          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
                   ],
                 ),
-              ),
-              Expanded(
-                child: TabBarView(
+                SizedBox(height: 8),
+                Row(
                   children: [
-                    _EmployeeListView(
-                      collection: 'host',
-                      filterDepartment: _selectedDepartment,
-                    ),
-                    _EmployeeListView(
-                      collection: 'receptionist',
-                      filterDepartment: _selectedDepartment,
-                    ),
+                    Icon(Icons.badge, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.role, style: TextStyle(fontSize: 16, color: Colors.black87)),
                   ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.apartment, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.email, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.email, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCustomTab(String type) {
+    final isSelected = _selectedType == type;
+    IconData icon = type == 'Host' ? Icons.person : Icons.badge;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(0),
+        onTap: () {
+          setState(() {
+            _selectedType = type;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? Colors.white : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              isSelected
+                  ? CircleAvatar(
+                      backgroundColor: Colors.white,
+                      radius: 16,
+                      child: Icon(icon, color: const Color(0xFF181F2C), size: 22),
+                    )
+                  : Icon(icon, color: Colors.grey, size: 24),
+              const SizedBox(height: 2),
+              Text(
+                type == 'Host' ? 'Hosts' : 'Receptionists',
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : Colors.grey,
+                  fontSize: 15,
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _EmployeeListView extends StatelessWidget {
-  final String collection;
-  final String filterDepartment;
-  const _EmployeeListView({required this.collection, required this.filterDepartment, Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection(collection).snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No users found.', style: TextStyle(color: Colors.white70)));
-        }
-        final docs = snapshot.data!.docs.where((doc) {
-          if (filterDepartment == 'All') return true;
-          final data = doc.data() as Map<String, dynamic>? ?? {};
-          return (data['department'] ?? '').toString() == filterDepartment;
-        }).toList();
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: const [
-                  Expanded(flex: 2, child: Text('Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(flex: 2, child: Text('Email', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Role', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Department', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Status', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  SizedBox(width: 40),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            ...docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>? ?? {};
-              final name = data['name'] ?? '';
-              final email = data['email'] ?? '';
-              final role = data['role'] ?? (collection == 'host' ? 'Host' : 'Receptionist');
-              final department = data['department'] ?? '';
-              final status = (data['isActive'] ?? true) ? 'Active' : 'Inactive';
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 2, child: Text(name, style: const TextStyle(color: Colors.black))),
-                      Expanded(flex: 2, child: Text(email, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(role, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(department, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(status, style: TextStyle(color: status == 'Active' ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.deepPurple),
-                        onPressed: () {
-                          // TODO: Implement edit user info
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ],
-        );
-      },
     );
   }
 } 

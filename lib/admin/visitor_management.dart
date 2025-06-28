@@ -101,7 +101,7 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.deepPurple),
                     icon: const Icon(Icons.date_range),
-                    label: Text(_selectedDate == null ? 'Date' : DateFormat('yyyy-MM-dd').format(_selectedDate!)),
+                    label: Text(_selectedDate == null ? 'Date' : DateFormat('yyyy-MM-dd').format(_selectedDate!), style: TextStyle(color: Colors.black)),
                     onPressed: () async {
                       final picked = await showDatePicker(
                         context: context,
@@ -123,7 +123,7 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                     items: _hosts.map((host) {
                       return DropdownMenuItem<String>(
                         value: host,
-                        child: Text(host),
+                        child: Text(host, style: TextStyle(color: Colors.black)),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -135,11 +135,11 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                   DropdownButton<String>(
                     value: _selectedDepartment,
                     dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.white),
                     items: _departments.map((dept) {
                       return DropdownMenuItem<String>(
                         value: dept,
-                        child: Text(dept),
+                        child: Text(dept, style: TextStyle(color: Colors.white)),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -151,11 +151,11 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                   DropdownButton<String>(
                     value: _selectedType,
                     dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.white),
                     items: _types.map((type) {
                       return DropdownMenuItem<String>(
                         value: type,
-                        child: Text(type),
+                        child: Text(type, style: TextStyle(color: Colors.white)),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -213,59 +213,202 @@ class _VisitorListView extends StatelessWidget {
           if (type != 'All' && (data['type'] ?? '') != type) return false;
           return true;
         }).toList();
+        // Manual grouping by date
+        Map<String, List<QueryDocumentSnapshot>> grouped = {};
+        for (var doc in docs) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          final vDateRaw = data['v_date'];
+          String vDate = '';
+          if (vDateRaw != null) {
+            if (vDateRaw is String) {
+              vDate = vDateRaw.split(' ')[0];
+            } else if (vDateRaw is Timestamp) {
+              vDate = DateFormat('yyyy-MM-dd').format(vDateRaw.toDate());
+            }
+          }
+          grouped.putIfAbsent(vDate, () => []).add(doc);
+        }
+        // Sort groups: today first, then yesterday, then older
+        final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        final yesterday = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
+        final sortedKeys = grouped.keys.toList()
+          ..sort((a, b) {
+            if (a == today) return -1;
+            if (b == today) return 1;
+            if (a == yesterday) return -1;
+            if (b == yesterday) return 1;
+            return b.compareTo(a); // newest first
+          });
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: const [
-                  Expanded(flex: 2, child: Text('Visitor Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(flex: 2, child: Text('Host Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Department', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Time In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Time Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Duration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  Expanded(child: Text('Status', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            ...docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>? ?? {};
-              final visitorName = data['visitor_name'] ?? '';
-              final hostName = data['host_name'] ?? '';
-              final dept = data['department'] ?? '';
-              final timeIn = (data['time_in'] as Timestamp?)?.toDate();
-              final timeOut = (data['time_out'] as Timestamp?)?.toDate();
-              final duration = (timeIn != null && timeOut != null)
-                  ? _formatDuration(timeIn, timeOut)
-                  : '-';
-              final status = data['status'] ?? 'In';
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 2, child: Text(visitorName, style: const TextStyle(color: Colors.black))),
-                      Expanded(flex: 2, child: Text(hostName, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(dept, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(timeIn != null ? DateFormat('HH:mm').format(timeIn) : '-', style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(timeOut != null ? DateFormat('HH:mm').format(timeOut) : '-', style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(duration, style: const TextStyle(color: Colors.black))),
-                      Expanded(child: Text(status, style: TextStyle(color: status == 'In' ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                    ],
-                  ),
+            for (final key in sortedKeys) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      key == today
+                          ? 'Today'
+                          : key == yesterday
+                              ? 'Yesterday'
+                              : key,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      height: 2,
+                      color: Colors.white24,
+                    ),
+                  ],
                 ),
-              );
-            }).toList(),
+              ),
+              ...grouped[key]!.map((doc) {
+                final data = doc.data() as Map<String, dynamic>? ?? {};
+                final visitorName = data['v_name'] ?? '';
+                final vDateRaw = data['v_date'];
+                String vDate = '-';
+                if (vDateRaw != null) {
+                  if (vDateRaw is String) {
+                    vDate = vDateRaw.split(' ')[0];
+                  } else if (vDateRaw is Timestamp) {
+                    vDate = DateFormat('yyyy-MM-dd').format(vDateRaw.toDate());
+                  }
+                }
+                final vTime = data['v_time'] ?? '-';
+                final vTimeOut = data['v_time_out'] ?? '-';
+                final vEmail = data['v_email'] ?? '-';
+                final vCompany = data['v_company_name'] ?? '-';
+                final vDesignation = data['v_designation'] ?? '-';
+                final vContact = data['v_contactno'] ?? '-';
+                final department = data['department'] ?? '-';
+                final host = data['host_name'] ?? data['emp_name'] ?? '-';
+                final empId = data['emp_id'] ?? '';
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 3,
+                  color: Colors.white.withOpacity(0.95),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.person, color: Colors.deepPurple),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                visitorName,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove_red_eye, color: Colors.deepPurple),
+                              tooltip: 'View Details',
+                              onPressed: () async {
+                                String hostName = host;
+                                if (hostName == '-' && empId.isNotEmpty) {
+                                  try {
+                                    final hostSnap = await FirebaseFirestore.instance.collection('host').doc(empId).get();
+                                    final hostData = hostSnap.data() as Map<String, dynamic>?;
+                                    if (hostData != null) {
+                                      hostName = hostData['emp_name'] ?? hostData['name'] ?? '-';
+                                    }
+                                  } catch (_) {}
+                                }
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      title: const Text('Visitor Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _visitorDetailRow('Name', visitorName),
+                                          _visitorDetailRow('Host', hostName),
+                                          _visitorDetailRow('Company', vCompany),
+                                          _visitorDetailRow('Designation', vDesignation),
+                                          _visitorDetailRow('Email', vEmail),
+                                          _visitorDetailRow('Contact', vContact),
+                                          _visitorDetailRow('Date', vDate),
+                                          _visitorDetailRow('Time', vTime),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: const Text('Close'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete Visitor',
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Visitor'),
+                                    content: const Text("Are you sure you want to delete this visitor's record?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await doc.reference.delete();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time, color: Colors.grey, size: 18),
+                            const SizedBox(width: 4),
+                            Text('$vTime - $vTimeOut', style: const TextStyle(color: Colors.black87)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.apartment, color: Colors.grey, size: 18),
+                            const SizedBox(width: 4),
+                            Text('Department: $department', style: const TextStyle(color: Colors.black87)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline, color: Colors.grey, size: 18),
+                            const SizedBox(width: 4),
+                            Text('Host: $host', style: const TextStyle(color: Colors.black87)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ],
           ],
         );
       },
@@ -281,5 +424,18 @@ class _VisitorListView extends StatelessWidget {
     } else {
       return '${minutes}m';
     }
+  }
+
+  Widget _visitorDetailRow(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+          Expanded(child: Text(value, style: TextStyle(color: valueColor ?? Colors.black87))),
+        ],
+      ),
+    );
   }
 } 
