@@ -157,14 +157,19 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 30),
               // Activity List
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      topRight: Radius.circular(18),
+                      bottomLeft: Radius.circular(0),
+                      bottomRight: Radius.circular(0),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Color(0x226CA4FE),
@@ -173,7 +178,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                  padding: const EdgeInsets.only(top: 6, left: 12, right: 12, bottom: 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -187,17 +192,17 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                             onPressed: () {
                               showModalBottomSheet(
                                 context: context,
+                                isScrollControlled: true,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                                 ),
-                                builder: (context) => _AllActivityListSheet(),
+                                builder: (context) => const _AllActivityListSheet(),
                               );
                             },
                             child: Text('See more', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
                       _ActivityListWidget(limit: 3),
                     ],
                   ),
@@ -205,37 +210,32 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
               ),
               // Stat Cards Grid
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Center(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 18,
-                    crossAxisSpacing: 18,
-                    childAspectRatio: 0.85,
-                    children: [
-                      _StyledStatCard(
-                        title: 'Current Visitors',
-                        value: '12',
-                        icon: Icons.people,
-                      ),
-                      _StyledStatCard(
-                        title: 'Checked In',
-                        value: '8',
-                        icon: Icons.login,
-                      ),
-                      _StyledStatCard(
-                        title: 'Checked Out',
-                        value: '4',
-                        icon: Icons.logout,
-                      ),
-                      _StyledStatCard(
-                        title: 'Pending Approvals',
-                        value: '2',
-                        icon: Icons.pending_actions,
-                      ),
-                    ],
+                padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 0, bottom: 0),
+                child: Transform.translate(
+                  offset: const Offset(0, -34),
+                  child: Center(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 18,
+                      crossAxisSpacing: 18,
+                      childAspectRatio: 0.85,
+                      children: [
+                        _TodayVisitorsStatCard(),
+                        _StyledStatCard(
+                          title: 'Checked In',
+                          value: '8',
+                          icon: Icons.login,
+                        ),
+                        _StyledStatCard(
+                          title: 'Checked Out',
+                          value: '4',
+                          icon: Icons.logout,
+                        ),
+                        _FrequentVisitorsStatCard(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -428,18 +428,20 @@ class _QuickActionButtonState extends State<_QuickActionButton> with SingleTicke
 
 class _ActivityListWidget extends StatelessWidget {
   final int limit;
-  const _ActivityListWidget({this.limit = 3, Key? key}) : super(key: key);
+  final ScrollController? scrollController;
+  const _ActivityListWidget({this.limit = 3, this.scrollController, Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    // Fetch more items than needed, then limit in Dart
     final manualStream = FirebaseFirestore.instance
         .collection('manual_registrations')
         .orderBy('timestamp', descending: true)
-        .limit(15)
+        .limit(30)
         .snapshots();
     final deptStream = FirebaseFirestore.instance
         .collection('visitor')
         .orderBy('v_date', descending: true)
-        .limit(15)
+        .limit(30)
         .snapshots();
 
     return StreamBuilder<QuerySnapshot>(
@@ -463,38 +465,29 @@ class _ActivityListWidget extends StatelessWidget {
               if (bTime == null) return -1;
               return bTime.compareTo(aTime);
             });
-            final latest = allDocs.take(limit).toList();
+            final latest = limit > 0 ? allDocs.take(limit).toList() : allDocs;
             if (latest.isEmpty) {
               return const Text('No recent activity.', style: TextStyle(color: Color(0xFF6CA4FE)));
             }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: latest.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
-              itemBuilder: (context, index) {
-                final entry = latest[index];
-                final data = entry['data'] as Map<String, dynamic>;
-                final type = entry['type'] as String;
-                String name = 'Unknown';
-                DateTime? time;
-                if (type == 'manual') {
-                  name = data['fullName'] ?? data['visitor'] ?? 'Unknown';
-                  final ts = data['timestamp'] as Timestamp?;
-                  time = ts != null ? ts.toDate() : null;
-                } else if (type == 'dept') {
-                  name = data['v_name'] ?? 'Unknown';
-                  final ts = data['v_date'] as Timestamp?;
-                  time = ts != null ? ts.toDate() : null;
-                }
-                String message = type == 'dept' ? 'Dept visitor added: $name' : 'New visitor added: $name';
-                return ListTile(
-                  leading: Icon(Icons.person, color: Color(0xFF6CA4FE)),
-                  title: Text(message, style: const TextStyle(fontWeight: FontWeight.w500, fontFamily: 'Poppins', fontSize: 14)),
-                  subtitle: time != null ? Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}  ${time.day}/${time.month}/${time.year}', style: const TextStyle(fontSize: 12, color: Color(0xFF6CA4FE))) : null,
-                );
-              },
-            );
+            if (scrollController != null) {
+              return ListView.separated(
+                controller: scrollController,
+                itemCount: latest.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+                itemBuilder: (context, i) => _ActivityListTile(entry: latest[i]),
+              );
+            } else {
+              // For dashboard, use Column for tight fit
+              return Column(
+                children: [
+                  for (int i = 0; i < latest.length; i++) ...[
+                    if (i != 0)
+                      const Divider(height: 1, color: Color(0xFFD4E9FF)),
+                    _ActivityListTile(entry: latest[i]),
+                  ]
+                ],
+              );
+            }
           },
         );
       },
@@ -503,29 +496,165 @@ class _ActivityListWidget extends StatelessWidget {
 }
 
 class _AllActivityListSheet extends StatelessWidget {
+  const _AllActivityListSheet({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.notifications_active, color: Color(0xFF6CA4FE)),
-                const SizedBox(width: 8),
-                Text('All Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins')),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: _ActivityListWidget(limit: 30),
-            ),
-          ],
-        ),
-      ),
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.notifications_active, color: Color(0xFF6CA4FE)),
+                  const SizedBox(width: 8),
+                  Text('All Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: _ActivityListWidget(limit: 30, scrollController: scrollController),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Helper widget for activity list tile
+class _ActivityListTile extends StatelessWidget {
+  final Map<String, dynamic> entry;
+  const _ActivityListTile({required this.entry, Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    final data = entry['data'] as Map<String, dynamic>;
+    final type = entry['type'] as String;
+    String name = 'Unknown';
+    DateTime? time;
+    if (type == 'manual') {
+      name = data['fullName'] ?? data['visitor'] ?? 'Unknown';
+      final ts = data['timestamp'] as Timestamp?;
+      time = ts != null ? ts.toDate() : null;
+    } else if (type == 'dept') {
+      name = data['v_name'] ?? 'Unknown';
+      final ts = data['v_date'] as Timestamp?;
+      time = ts != null ? ts.toDate() : null;
+    }
+    String message = type == 'dept' ? 'Dept visitor added: $name' : 'New visitor added: $name';
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(Icons.person, color: Color(0xFF6CA4FE)),
+      title: Text(message, style: const TextStyle(fontWeight: FontWeight.w500, fontFamily: 'Poppins', fontSize: 14)),
+      subtitle: time != null ? Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}  ${time.day}/${time.month}/${time.year}', style: const TextStyle(fontSize: 12, color: Color(0xFF6CA4FE))) : null,
+    );
+  }
+}
+
+// Widget for real-time count of today's visitors
+class _TodayVisitorsStatCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final manualStream = FirebaseFirestore.instance
+        .collection('manual_registrations')
+        .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+        .where('timestamp', isLessThan: endOfDay)
+        .snapshots();
+    final deptStream = FirebaseFirestore.instance
+        .collection('visitor')
+        .where('v_date', isGreaterThanOrEqualTo: startOfDay)
+        .where('v_date', isLessThan: endOfDay)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: manualStream,
+      builder: (context, manualSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: deptStream,
+          builder: (context, deptSnapshot) {
+            int manualCount = manualSnapshot.hasData ? manualSnapshot.data!.docs.length : 0;
+            int deptCount = deptSnapshot.hasData ? deptSnapshot.data!.docs.length : 0;
+            int total = manualCount + deptCount;
+            return _StyledStatCard(
+              title: 'Total Visitors Today',
+              value: total.toString(),
+              icon: Icons.people,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Widget for real-time count of frequent visitors this week
+class _FrequentVisitorsStatCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1)); // Monday
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
+
+    final manualStream = FirebaseFirestore.instance
+        .collection('manual_registrations')
+        .where('timestamp', isGreaterThanOrEqualTo: startOfWeek)
+        .where('timestamp', isLessThan: endOfWeek)
+        .snapshots();
+    final deptStream = FirebaseFirestore.instance
+        .collection('visitor')
+        .where('v_date', isGreaterThanOrEqualTo: startOfWeek)
+        .where('v_date', isLessThan: endOfWeek)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: manualStream,
+      builder: (context, manualSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: deptStream,
+          builder: (context, deptSnapshot) {
+            final Map<String, int> visitorCounts = {};
+            if (manualSnapshot.hasData) {
+              for (var doc in manualSnapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = data['fullName'] ?? data['visitor'] ?? '';
+                if (name.isNotEmpty) {
+                  visitorCounts[name] = (visitorCounts[name] ?? 0) + 1;
+                }
+              }
+            }
+            if (deptSnapshot.hasData) {
+              for (var doc in deptSnapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = data['v_name'] ?? '';
+                if (name.isNotEmpty) {
+                  visitorCounts[name] = (visitorCounts[name] ?? 0) + 1;
+                }
+              }
+            }
+            final frequentCount = visitorCounts.values.where((count) => count > 1).length;
+            return _StyledStatCard(
+              title: 'Frequent Visitors',
+              value: frequentCount.toString(),
+              icon: Icons.repeat,
+            );
+          },
+        );
+      },
     );
   }
 } 
