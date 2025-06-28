@@ -7,12 +7,14 @@ class Employee {
   final String role;
   final String department;
   final String email;
+  final String phone;
 
   Employee({
     required this.name,
     required this.role,
     required this.department,
     required this.email,
+    this.phone = '',
   });
 }
 
@@ -45,6 +47,12 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
     _searchController.addListener(_applyFilters);
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchDepartments() async {
     final snapshot = await FirebaseFirestore.instance.collection('department').get();
     setState(() {
@@ -69,27 +77,44 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
       _errorMessage = null;
     });
     try {
+      // Fetch departments and build a map of id -> name
+      final deptSnap = await FirebaseFirestore.instance.collection('department').get();
+      final Map<String, String> deptMap = {};
+      for (var doc in deptSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        deptMap[doc.id] = data['d_name'] ?? '';
+      }
+
       final hostSnap = await FirebaseFirestore.instance.collection('host').get();
       final recSnap = await FirebaseFirestore.instance.collection('receptionist').get();
       List<Employee> all = [];
+      
+      // Add hosts with department name
       for (var doc in hostSnap.docs) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
+        final deptId = data['departmentId'] ?? '';
+        final deptName = deptMap[deptId] ?? deptId;
         all.add(Employee(
           name: data['emp_name'] ?? '',
           role: 'Host',
-          department: data['departmentId'] ?? '',
+          department: deptName,
           email: data['emp_email'] ?? '',
+          phone: data['emp_phone'] ?? '',
         ));
       }
+      
+      // Add receptionists
       for (var doc in recSnap.docs) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         all.add(Employee(
-          name: data['emp_name'] ?? '',
+          name: data['name'] ?? '',
           role: 'Receptionist',
-          department: data['departmentId'] ?? '',
-          email: data['emp_email'] ?? '',
+          department: '-',
+          email: data['email'] ?? '',
+          phone: data['phone'] ?? '',
         ));
       }
+      
       setState(() {
         _employees = all;
         _applyFilters();
@@ -106,7 +131,10 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
   void _applyFilters() {
     setState(() {
       _filteredEmployees = _employees.where((e) {
-        final matchesName = _searchController.text.isEmpty || e.name.toLowerCase().contains(_searchController.text.toLowerCase());
+        final matchesName = _searchController.text.isEmpty || 
+                           e.name.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+                           e.email.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+                           e.phone.toLowerCase().contains(_searchController.text.toLowerCase());
         final matchesRole = _selectedRole == 'All' || e.role == _selectedRole;
         final matchesDept = _selectedDepartment == 'All' || e.department == _selectedDepartment;
         return matchesName && matchesRole && matchesDept;
@@ -144,6 +172,12 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF081735)),
+              onPressed: () {
+                _fetchEmployees();
+              },
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: CircleAvatar(
@@ -179,7 +213,7 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                                hintText: 'Search by name...',
+                                hintText: 'Search by name, email, or phone...',
                                 hintStyle: const TextStyle(color: Colors.white54),
                                 border: InputBorder.none,
                                 isDense: true,
@@ -267,6 +301,16 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                     Text(emp.email, style: TextStyle(fontSize: 16, color: Colors.black87)),
                   ],
                 ),
+                if (emp.phone.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.phone, color: Colors.deepPurple),
+                      SizedBox(width: 8),
+                      Text(emp.phone, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

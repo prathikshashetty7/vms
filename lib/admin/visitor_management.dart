@@ -12,12 +12,8 @@ class VisitorManagementPage extends StatefulWidget {
 
 class _VisitorManagementPageState extends State<VisitorManagementPage> {
   DateTime? _selectedDate;
-  String _selectedHost = 'All';
   String _selectedDepartment = 'All';
-  String _selectedType = 'All';
-  List<String> _hosts = ['All'];
   List<String> _departments = ['All'];
-  List<String> _types = ['All'];
 
   @override
   void initState() {
@@ -26,22 +22,12 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
   }
 
   Future<void> _fetchFilters() async {
-    final hostSnap = await FirebaseFirestore.instance.collection('host').get();
     final deptSnap = await FirebaseFirestore.instance.collection('department').get();
-    final visitorSnap = await FirebaseFirestore.instance.collection('visitor').get();
     setState(() {
-      _hosts = ['All', ...hostSnap.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        return data['name']?.toString() ?? data['host_name']?.toString() ?? 'Unknown Host';
-      }).toSet()];
       _departments = ['All', ...deptSnap.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         return data['d_name']?.toString() ?? data['name']?.toString() ?? 'Unknown Department';
       }).toSet()];
-      _types = ['All', ...visitorSnap.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        return data['type']?.toString() ?? '';
-      }).where((t) => t.isNotEmpty).toSet()];
     });
   }
 
@@ -117,22 +103,6 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                     },
                   ),
                   DropdownButton<String>(
-                    value: _selectedHost,
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.black),
-                    items: _hosts.map((host) {
-                      return DropdownMenuItem<String>(
-                        value: host,
-                        child: Text(host, style: TextStyle(color: Colors.black)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedHost = val ?? 'All';
-                      });
-                    },
-                  ),
-                  DropdownButton<String>(
                     value: _selectedDepartment,
                     dropdownColor: Colors.white,
                     style: const TextStyle(color: Colors.white),
@@ -148,31 +118,13 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                       });
                     },
                   ),
-                  DropdownButton<String>(
-                    value: _selectedType,
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.white),
-                    items: _types.map((type) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(type, style: TextStyle(color: Colors.white)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedType = val ?? 'All';
-                      });
-                    },
-                  ),
                 ],
               ),
             ),
             Expanded(
               child: _VisitorListView(
                 date: _selectedDate,
-                host: _selectedHost,
                 department: _selectedDepartment,
-                type: _selectedType,
               ),
             ),
           ],
@@ -184,10 +136,8 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
 
 class _VisitorListView extends StatelessWidget {
   final DateTime? date;
-  final String host;
   final String department;
-  final String type;
-  const _VisitorListView({this.date, required this.host, required this.department, required this.type, Key? key}) : super(key: key);
+  const _VisitorListView({this.date, required this.department, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -208,9 +158,7 @@ class _VisitorListView extends StatelessWidget {
             final d = ts.toDate();
             if (!(d.year == date!.year && d.month == date!.month && d.day == date!.day)) return false;
           }
-          if (host != 'All' && (data['host_name'] ?? '') != host) return false;
           if (department != 'All' && (data['department'] ?? '') != department) return false;
-          if (type != 'All' && (data['type'] ?? '') != type) return false;
           return true;
         }).toList();
         // Manual grouping by date

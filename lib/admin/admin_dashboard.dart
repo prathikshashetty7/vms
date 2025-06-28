@@ -7,6 +7,7 @@ import 'employee_management.dart';
 import 'visitor_management.dart';
 import 'reports_page.dart';
 import 'settings_page.dart';
+import 'manage_receptionist.dart';
 import '../theme/admin_theme.dart';
 
 // Placeholder screens for other admin features
@@ -609,6 +610,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       },
                     ),
                     _buildDrawerItem(
+                      icon: Icons.receipt_long,
+                      text: 'Manage Receptionist',
+                      selected: false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ManageReceptionistPage()),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
                       icon: Icons.people_alt,
                       text: 'View Employees',
                       selected: false,
@@ -660,7 +673,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
             ),
-            // Footer section - fixed at bottom
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Divider(thickness: 1.2, color: Colors.deepPurple.shade100),
