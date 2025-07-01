@@ -12,8 +12,8 @@ class VisitorManagementPage extends StatefulWidget {
 
 class _VisitorManagementPageState extends State<VisitorManagementPage> {
   DateTime? _selectedDate;
-  String _selectedDepartment = 'All';
-  List<String> _departments = ['All'];
+  String _selectedDepartment = 'Departments';
+  List<String> _departments = ['Departments'];
 
   @override
   void initState() {
@@ -24,7 +24,7 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
   Future<void> _fetchFilters() async {
     final deptSnap = await FirebaseFirestore.instance.collection('department').get();
     setState(() {
-      _departments = ['All', ...deptSnap.docs.map((doc) {
+      _departments = ['Departments', ...deptSnap.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         return data['d_name']?.toString() ?? data['name']?.toString() ?? 'Unknown Department';
       }).toSet()];
@@ -46,27 +46,11 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
         ),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 56),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'View Visitors',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
-            ),
+            Image.asset('assets/images/rdl.png', height: 40),
+            const SizedBox(width: 10),
+            const Text('Visitor Management', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
-            ),
-          ),
-        ],
       ),
       backgroundColor: Colors.transparent,
       body: Container(
@@ -105,16 +89,16 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                   DropdownButton<String>(
                     value: _selectedDepartment,
                     dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.black),
                     items: _departments.map((dept) {
                       return DropdownMenuItem<String>(
                         value: dept,
-                        child: Text(dept, style: TextStyle(color: Colors.white)),
+                        child: Text(dept, style: TextStyle(color: Colors.black)),
                       );
                     }).toList(),
                     onChanged: (val) {
                       setState(() {
-                        _selectedDepartment = val ?? 'All';
+                        _selectedDepartment = val ?? 'Departments';
                       });
                     },
                   ),
@@ -158,7 +142,7 @@ class _VisitorListView extends StatelessWidget {
             final d = ts.toDate();
             if (!(d.year == date!.year && d.month == date!.month && d.day == date!.day)) return false;
           }
-          if (department != 'All' && (data['department'] ?? '') != department) return false;
+          if (department != 'Departments' && (data['department'] ?? '') != department) return false;
           return true;
         }).toList();
         // Manual grouping by date

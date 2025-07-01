@@ -123,27 +123,11 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
         ),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 56),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Manage Departments',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
-            ),
+            Image.asset('assets/images/rdl.png', height: 40),
+            const SizedBox(width: 10),
+            const Text('Manage Departments', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
-            ),
-          ),
-        ],
       ),
       backgroundColor: Colors.transparent,
       body: Container(

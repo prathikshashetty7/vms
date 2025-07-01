@@ -159,33 +159,11 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
           ),
           title: Row(
             children: [
-              Image.asset('assets/images/rdl.png', height: 56),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'View Employees',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                ),
-              ),
+              Image.asset('assets/images/rdl.png', height: 40),
+              const SizedBox(width: 10),
+              const Text('Employee Management', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Color(0xFF081735)),
-              onPressed: () {
-                _fetchEmployees();
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
-              ),
-            ),
-          ],
         ),
         backgroundColor: Colors.transparent,
         body: Container(
@@ -213,7 +191,7 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                                hintText: 'Search by name, email, or phone...',
+                                hintText: 'Search by name or email',
                                 hintStyle: const TextStyle(color: Colors.white54),
                                 border: InputBorder.none,
                                 isDense: true,
@@ -285,14 +263,16 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                     Text(emp.role, style: TextStyle(fontSize: 16, color: Colors.black87)),
                   ],
                 ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.apartment, color: Colors.deepPurple),
-                    SizedBox(width: 8),
-                    Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
-                  ],
-                ),
+                if (emp.role != 'Receptionist') ...[
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.apartment, color: Colors.deepPurple),
+                      SizedBox(width: 8),
+                      Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    ],
+                  ),
+                ],
                 SizedBox(height: 8),
                 Row(
                   children: [

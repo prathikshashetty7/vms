@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'manage_departments.dart';
 import '../logout.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -338,9 +339,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final List<String> _titles = [
     'Admin Dashboard',
     'Manage Departments',
+    'Manage Receptionists',
     'View Employees',
     'View Visitors',
     'Reports',
+    'Settings'
   ];
 
   void _onSelect(int index) {
@@ -518,30 +521,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF5F5F5), // Persistent gray color
         iconTheme: const IconThemeData(color: Color(0xFF081735)),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 56),
+            Image.asset('assets/images/rdl.png', height: 40),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                _titles[_selectedIndex],
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735)),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _titles[_selectedIndex],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF081735),
+                  ),
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple),
-            ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app, color: Colors.black),
+            onPressed: () => _showExitDialog(context),
+            tooltip: 'Exit',
           ),
+          const SizedBox(width: 10),
         ],
       ),
       drawer: Drawer(
@@ -550,11 +557,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             // Header section - fixed at top
             Container(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Color(0xFF2C5364), // Solid blue color
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
@@ -691,6 +694,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
         child: _screens[_selectedIndex],
       ),
+    );
+  }
+
+  void _showExitDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must tap a button
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Confirm Exit'),
+          content: const Text('Are you sure you want to exit the application?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('OK'),
+              onPressed: () {
+                SystemNavigator.pop(); // Exit the app
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
