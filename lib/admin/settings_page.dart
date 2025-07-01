@@ -1,8 +1,52 @@
 import 'package:flutter/material.dart';
 import '../theme/admin_theme.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool _showChangePassword = false;
+  bool _darkMode = false;
+
+  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Clear session and redirect to login
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,76 +63,9 @@ class SettingsPage extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Image.asset('assets/images/rdl.png', height: 56),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Settings',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF081735), fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.deepPurple, size: 20),
-            ),
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 12,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-              width: double.infinity,
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 38,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildDrawerItem(context, Icons.settings, 'Settings', true, () => Navigator.pop(context)),
-            _buildDrawerItem(context, Icons.dashboard, 'Dashboard', false, () {/* Navigate to dashboard */}),
-            _buildDrawerItem(context, Icons.logout, 'Logout', false, () {/* Handle logout */}),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Divider(thickness: 1.2, color: Colors.deepPurple.shade100),
-            ),
-            const SizedBox(height: 16),
+            const Icon(Icons.settings, color: Colors.black),
+            const SizedBox(width: 10),
+            const Text('Settings', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -99,185 +76,150 @@ class SettingsPage extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: AdminTheme.adminBackgroundGradient,
         ),
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            _sectionTitle('Edit Profile'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: const Text('Edit Profile'),
-                  subtitle: const Text('Name, email, password, profile picture'),
-                  trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () {/* Edit profile logic */}),
-                ),
-              ),
-            ),
-            _sectionTitle('Theme Mode'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: SwitchListTile(
-                  title: const Text('Dark Mode'),
-                  value: false,
-                  onChanged: (val) {/* Toggle theme */},
-                  secondary: const Icon(Icons.dark_mode),
-                ),
-              ),
-            ),
-            _sectionTitle('Notification Preferences'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      title: const Text('Push Notifications'),
-                      value: true,
-                      onChanged: (val) {/* Toggle push */},
-                      secondary: const Icon(Icons.notifications),
-                    ),
-                    SwitchListTile(
-                      title: const Text('Email Notifications'),
-                      value: false,
-                      onChanged: (val) {/* Toggle email */},
-                      secondary: const Icon(Icons.email),
-                    ),
-                    SwitchListTile(
-                      title: const Text('SMS Notifications'),
-                      value: false,
-                      onChanged: (val) {/* Toggle SMS */},
-                      secondary: const Icon(Icons.sms),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _sectionTitle('Language'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: ListTile(
-                  leading: const Icon(Icons.language),
-                  title: const Text('App Language'),
-                  trailing: DropdownButton<String>(
-                    value: 'English',
-                    items: const [DropdownMenuItem(value: 'English', child: Text('English')), DropdownMenuItem(value: 'Spanish', child: Text('Spanish'))],
-                    onChanged: (val) {/* Change language */},
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                ),
+                ],
               ),
-            ),
-            _sectionTitle('Privacy & Security'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.lock),
-                      title: const Text('Change Password'),
-                      onTap: () {/* Change password logic */},
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Profile Section
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 32,
+                        child: Icon(Icons.person, size: 36),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text('Admin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                            SizedBox(height: 4),
+                            Text('admin@gmail.com', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          // TODO: Navigate to edit profile page
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.deepPurple),
+                        tooltip: 'Edit Profile',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  // Security Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Security', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 16)),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.lock, color: Colors.deepPurple),
+                    title: const Text('Change Password'),
+                    trailing: Icon(_showChangePassword ? Icons.expand_less : Icons.expand_more),
+                    onTap: () {
+                      setState(() {
+                        _showChangePassword = !_showChangePassword;
+                      });
+                    },
+                  ),
+                  if (_showChangePassword)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _currentPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Current Password',
+                              prefixIcon: Icon(Icons.lock_outline),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _newPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'New Password',
+                              prefixIcon: Icon(Icons.lock_open),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _confirmPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Confirm Password',
+                              prefixIcon: Icon(Icons.lock),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              // TODO: Implement password update logic
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Update Password'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SwitchListTile(
-                      title: const Text('Two-Factor Authentication'),
-                      value: false,
-                      onChanged: (val) {/* Toggle 2FA */},
-                      secondary: const Icon(Icons.verified_user),
-                    ),
-                  ],
-                ),
+                  const Divider(),
+                  // Theme Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('Preferences', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 16)),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Dark Mode'),
+                    value: _darkMode,
+                    onChanged: (val) {
+                      setState(() {
+                        _darkMode = val;
+                      });
+                      // TODO: Implement theme switching
+                    },
+                    secondary: const Icon(Icons.brightness_6, color: Colors.deepPurple),
+                  ),
+                  const Divider(),
+                  // Logout Section
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                    onTap: _showLogoutDialog,
+                  ),
+                ],
               ),
             ),
-            _sectionTitle('About App'),
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Card(
-                elevation: 0,
-                color: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: ListTile(
-                  leading: const Icon(Icons.info),
-                  title: const Text('App Version 1.0.0'),
-                  subtitle: const Text('Developed by Your Company\nContact: support@example.com'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Center(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-                onPressed: () {/* Handle logout */},
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 6),
-        child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
-      );
-
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String text, bool selected, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: selected ? Colors.deepPurple : Colors.black54),
-      title: Text(text, style: TextStyle(fontWeight: FontWeight.w500, color: selected ? Colors.deepPurple : Colors.black87)),
-      selected: selected,
-      selectedTileColor: Colors.deepPurple.shade50,
-      hoverColor: Colors.deepPurple.shade50,
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
     );
   }
 } 
