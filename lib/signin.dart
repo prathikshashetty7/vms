@@ -61,7 +61,7 @@ class _SignInPageState extends State<SignInPage> {
             if (!mounted) return;
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HostDashboard()),
+              MaterialPageRoute(builder: (context) => const HostMainScreen()),
             );
             return;
           } else if (role == 'Receptionist') {
@@ -167,7 +167,7 @@ class _SignInPageState extends State<SignInPage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const HostDashboard()),
+                      MaterialPageRoute(builder: (context) => const HostMainScreen()),
                     );
                   },
                   child: const Text('Go to Host Dashboard'),
