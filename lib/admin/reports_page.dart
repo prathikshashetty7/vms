@@ -657,87 +657,107 @@ class _DepartmentVisitorBarChart extends StatelessWidget {
       Colors.pink.shade300,
     ];
 
+    // Minimum width: 90px per bar, at least screen width
+    final minChartWidth = (depts.length * 90.0).clamp(MediaQuery.of(context).size.width, double.infinity);
+    final labelFontSize = MediaQuery.of(context).size.width < 400 ? 12.0 : 14.0;
+
     return Stack(
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
           child: Container(
             color: Colors.white,
-            child: BarChart(
-              BarChartData(
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    tooltipBgColor: Color(0xFF78909C),
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        '${depts[groupIndex]}\n${rod.toY.toInt()}',
-                        const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < depts.length) {
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            space: 4,
-                            child: Text(depts[index], style: const TextStyle(fontSize: 12)),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: minChartWidth,
+                child: BarChart(
+                  BarChartData(
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        tooltipBgColor: Color(0xFF78909C),
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          return BarTooltipItem(
+                            '${depts[groupIndex]}\n${rod.toY.toInt()}',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                      reservedSize: 38,
+                        },
+                      ),
                     ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 3,
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            final index = value.toInt();
+                            if (index >= 0 && index < depts.length) {
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 8,
+                                child: SizedBox(
+                                  width: 90,
+                                  child: Text(
+                                    depts[index],
+                                    style: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.visible,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    softWrap: true,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                          reservedSize: 56,
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 32,
+                          interval: 1,
+                        ),
+                      ),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: const Border(
+                        left: BorderSide(color: Colors.black, width: 1),
+                        bottom: BorderSide(color: Colors.black, width: 1),
+                        right: BorderSide(color: Colors.transparent, width: 0),
+                        top: BorderSide(color: Colors.transparent, width: 0),
+                      ),
+                    ),
+                    barGroups: List.generate(
+                      depts.length,
+                      (i) => BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: counts[i].toDouble(),
+                            color: barColors[i % barColors.length],
+                            width: 40,
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide.none,
+                            backDrawRodData: BackgroundBarChartRodData(show: false),
+                          )
+                        ],
+                        barsSpace: 8,
+                      ),
+                    ),
+                    gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1, getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade300, strokeWidth: 1)),
+                    alignment: BarChartAlignment.spaceEvenly,
+                    groupsSpace: 12,
                   ),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    left: BorderSide(color: Colors.black, width: 1),
-                    bottom: BorderSide(color: Colors.black, width: 1),
-                    right: BorderSide(color: Colors.transparent, width: 0),
-                    top: BorderSide(color: Colors.transparent, width: 0),
-                  ),
-                ),
-                barGroups: List.generate(
-                  depts.length,
-                  (i) => BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: counts[i].toDouble(),
-                        color: barColors[i % barColors.length],
-                        width: 48,
-                        borderRadius: BorderRadius.circular(4),
-                        borderSide: BorderSide.none,
-                        backDrawRodData: BackgroundBarChartRodData(show: false),
-                      )
-                    ],
-                    barsSpace: 0,
-                  ),
-                ),
-                gridData: FlGridData(show: false),
-                alignment: BarChartAlignment.spaceEvenly,
-                groupsSpace: 4,
               ),
             ),
           ),
@@ -774,89 +794,108 @@ class _HostVisitorBarChart extends StatelessWidget {
       Colors.red.shade300,
     ];
 
+    // Minimum width: 90px per bar, at least screen width
+    final minChartWidth = (hosts.length * 90.0).clamp(MediaQuery.of(context).size.width, double.infinity);
+    final labelFontSize = MediaQuery.of(context).size.width < 400 ? 12.0 : 14.0;
+
     return Stack(
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
           child: Container(
             color: Colors.white,
-            child: BarChart(
-              BarChartData(
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    tooltipBgColor: Color(0xFF78909C),
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        '${hosts[groupIndex]}\n${rod.toY.toInt()}',
-                        const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < hosts.length) {
-                          final firstName = hosts[index].split(' ').first;
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            space: 4,
-                            angle: -0.7,
-                            child: Text(firstName, style: const TextStyle(fontSize: 12)),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: minChartWidth,
+                child: BarChart(
+                  BarChartData(
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        tooltipBgColor: Color(0xFF78909C),
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          return BarTooltipItem(
+                            '${hosts[groupIndex]}\n${rod.toY.toInt()}',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                      reservedSize: 42,
+                        },
+                      ),
                     ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            final index = value.toInt();
+                            if (index >= 0 && index < hosts.length) {
+                              final firstName = hosts[index].split(' ').first;
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 8,
+                                child: SizedBox(
+                                  width: 90,
+                                  child: Text(
+                                    firstName,
+                                    style: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.visible,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    softWrap: true,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                          reservedSize: 56,
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 32,
+                          interval: 1,
+                        ),
+                      ),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: const Border(
+                        left: BorderSide(color: Colors.black, width: 1),
+                        bottom: BorderSide(color: Colors.black, width: 1),
+                        right: BorderSide(color: Colors.transparent, width: 0),
+                        top: BorderSide(color: Colors.transparent, width: 0),
+                      ),
+                    ),
+                    barGroups: List.generate(
+                      hosts.length,
+                      (i) => BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: counts[i].toDouble(),
+                            color: barColors[i % barColors.length],
+                            width: 40,
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide.none,
+                            backDrawRodData: BackgroundBarChartRodData(show: false),
+                          )
+                        ],
+                        barsSpace: 8,
+                      ),
+                    ),
+                    gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1, getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade300, strokeWidth: 1)),
+                    alignment: BarChartAlignment.spaceEvenly,
+                    groupsSpace: 12,
                   ),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    left: BorderSide(color: Colors.black, width: 1),
-                    bottom: BorderSide(color: Colors.black, width: 1),
-                    right: BorderSide(color: Colors.transparent, width: 0),
-                    top: BorderSide(color: Colors.transparent, width: 0),
-                  ),
-                ),
-                barGroups: List.generate(
-                  hosts.length,
-                  (i) => BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: counts[i].toDouble(),
-                        color: barColors[i % barColors.length],
-                        width: 48,
-                        borderRadius: BorderRadius.circular(4),
-                        borderSide: BorderSide.none,
-                        backDrawRodData: BackgroundBarChartRodData(show: false),
-                      )
-                    ],
-                    barsSpace: 0,
-                  ),
-                ),
-                gridData: FlGridData(show: false),
-                alignment: BarChartAlignment.spaceEvenly,
-                groupsSpace: 4,
               ),
             ),
           ),
@@ -873,14 +912,15 @@ class _RecentVisitorsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: dummyData.length,
-      itemBuilder: (context, index) {
-        final visitor = dummyData[index];
-        return _VisitorListItem(visitor: visitor);
-      },
+    return SizedBox(
+      height: 260, // Adjust as needed
+      child: ListView.builder(
+        itemCount: dummyData.length,
+        itemBuilder: (context, index) {
+          final visitor = dummyData[index];
+          return _VisitorListItem(visitor: visitor);
+        },
+      ),
     );
   }
 }
