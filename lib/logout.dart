@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LogoutTile extends StatelessWidget {
   const LogoutTile({Key? key}) : super(key: key);
@@ -22,7 +23,10 @@ class LogoutTile extends StatelessWidget {
       ),
     );
     if (shouldLogout == true) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (_) {}
+      Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
     }
   }
 
