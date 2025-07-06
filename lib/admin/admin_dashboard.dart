@@ -10,6 +10,7 @@ import 'reports_page.dart';
 import 'settings_page.dart';
 import 'manage_receptionist.dart';
 import '../theme/admin_theme.dart';
+import '../signin.dart';
 
 // Placeholder screens for other admin features
 class AdminStatsDashboard extends StatelessWidget {
@@ -719,7 +720,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               child: const Text('OK'),
               onPressed: () {
-                SystemNavigator.pop(); // Exit the app
+                Navigator.of(context).pop(); // Dismiss the dialog
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                  (route) => false,
+                );
               },
             ),
           ],

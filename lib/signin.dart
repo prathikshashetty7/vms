@@ -4,6 +4,8 @@ import 'dept/dept_dashboard.dart';
 import 'host/host_dashboard.dart';
 import 'receptionist/dashboard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'theme/design_system.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -17,6 +19,11 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  
+  // Add this for password visibility
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -25,58 +32,100 @@ class _SignInPageState extends State<SignInPage> {
     super.dispose();
   }
 
+  // Replace the UID-based lookup with an email-based lookup
+  Future<Map<String, dynamic>?> _getUserDataByEmail(String email) async {
+    final collections = ['admin', 'department', 'host', 'receptionist'];
+    for (final collection in collections) {
+      // Try both 'email' and possible field names for each collection
+      final fieldNames = [
+        'email', // receptionist, admin
+        'emp_email', // host
+        'd_email', // department
+      ];
+      for (final field in fieldNames) {
+        final query = await _firestore
+            .collection(collection)
+            .where(field, isEqualTo: email)
+            .limit(1)
+            .get();
+        if (query.docs.isNotEmpty) {
+          final data = query.docs.first.data();
+          data['role'] = collection;
+          return data;
+        }
+      }
+    }
+    return null;
+  }
+
   void _signIn() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
       });
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _isLoading = false;
-      });
-      // Check for default admin credentials
-      if (_emailController.text == 'admin@gmail.com' && _passwordController.text == '123456') {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminDashboard()),
+      try {
+        // Sign in with Firebase Auth for all users
+        final userCredential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
-      } else if (_emailController.text == 'dept@gmail.com' && _passwordController.text == '123456') {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DeptDashboard()),
-        );
-      } else {
-        // Check employee credentials in Firestore
-        final query = await FirebaseFirestore.instance
-            .collection('employee')
-            .where('emp_email', isEqualTo: _emailController.text)
-            .where('emp_password', isEqualTo: _passwordController.text)
-            .limit(1)
-            .get();
-        if (query.docs.isNotEmpty) {
-          final role = query.docs.first['role'];
-          if (role == 'Host') {
-            if (!mounted) return;
+        final email = _emailController.text.trim();
+        // If admin, skip Firestore lookup
+        if (email.toLowerCase() == 'admin@gmail.com') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+          );
+        } else {
+          // Fetch user data by email for other roles
+          final userData = await _getUserDataByEmail(email);
+          if (userData == null) throw Exception('User data not found');
+          final role = userData['role'] as String?;
+          if (role == null) throw Exception('User role not found');
+          // Navigate based on role (case-insensitive)
+          if (role.toLowerCase() == 'department') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const DeptDashboard()),
+            );
+          } else if (role.toLowerCase() == 'host') {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const HostMainScreen()),
             );
-            return;
-          } else if (role == 'Receptionist') {
-            if (!mounted) return;
+          } else if (role.toLowerCase() == 'receptionist') {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
             );
-            return;
+          } else {
+            throw Exception('Invalid user role');
           }
         }
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid credentials!')),
-        );
+      } on FirebaseAuthException catch (e) {
+        String message = 'An error occurred during login.';
+        if (e.code == 'user-not-found') {
+          message = 'No user found for that email.';
+        } else if (e.code == 'wrong-password') {
+          message = 'Wrong password provided.';
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -84,106 +133,262 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign In'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF068FFF),
+              Colors.black,
+              Color(0xFF222831),
+            ],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(DesignSystem.spacing24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Logo and Welcome Card
+                  Container(
+                    padding: const EdgeInsets.all(DesignSystem.spacing24),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(DesignSystem.radiusLarge),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF068FFF).withOpacity(0.3),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(DesignSystem.spacing16),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF068FFF).withOpacity(0.5),
+                                blurRadius: 30,
+                                spreadRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(50),
+                            child: Image.asset(
+                              'assets/images/rdl.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: DesignSystem.spacing16),
+                        Text(
+                          'Welcome Back',
+                          style: DesignSystem.heading2.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: DesignSystem.spacing8),
+                        Text(
+                          'Sign in to continue',
+                          style: DesignSystem.bodyLarge.copyWith(color: Colors.white.withOpacity(0.8)),
+                        ),
+                      ],
+                    ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: DesignSystem.spacing32),
+                  // Sign In Form
+                  Container(
+                    padding: const EdgeInsets.all(DesignSystem.spacing24),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(DesignSystem.radiusLarge),
+                      border: Border.all(
+                        color: const Color(0xFF068FFF).withOpacity(0.3),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF068FFF).withOpacity(0.2),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: DesignSystem.inputDecoration(
+                              label: 'Email',
+                              hint: 'Enter your email',
+                              prefixIcon: const Icon(Icons.email_outlined, color: Colors.white70),
+                            ).copyWith(
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.white70),
+                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: DesignSystem.spacing16),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: DesignSystem.inputDecoration(
+                              label: 'Password',
+                              hint: 'Enter your password',
+                              prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ).copyWith(
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.white70),
+                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: DesignSystem.spacing24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _signIn,
+                              style: DesignSystem.primaryButtonStyle,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('Sign In'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _signIn,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Sign In'),
+                  const SizedBox(height: DesignSystem.spacing32),
+                  // Quick Login Buttons (now at the bottom)
+                  Column(
+                    children: [
+                      _QuickLoginButton(
+                        text: 'Go to Admin Dashboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: DesignSystem.spacing8),
+                      _QuickLoginButton(
+                        text: 'Go to Department Dashboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const DeptDashboard()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: DesignSystem.spacing8),
+                      _QuickLoginButton(
+                        text: 'Go to Host Dashboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HostMainScreen()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: DesignSystem.spacing8),
+                      _QuickLoginButton(
+                        text: 'Go to Receptionist Dashboard',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AdminDashboard()),
-                    );
-                  },
-                  child: const Text('Go to Admin Dashboard'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const DeptDashboard()),
-                    );
-                  },
-                  child: const Text('Go to Department Dashboard'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HostMainScreen()),
-                    );
-                  },
-                  child: const Text('Go to Host Dashboard'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
-                    );
-                  },
-                  child: const Text('Go to Receptionist Dashboard'),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Helper widget for quick login buttons
+class _QuickLoginButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  const _QuickLoginButton({required this.text, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 300,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.1),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        child: Text(
+          text,
+          style: DesignSystem.bodyLarge.copyWith(color: Colors.white),
         ),
       ),
     );

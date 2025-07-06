@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/dept_theme.dart';
+import '../theme/receptionist_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageVisitors extends StatefulWidget {
@@ -28,7 +28,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Color(0xFFD4E9FF),
+      backgroundColor: ReceptionistTheme.secondary,
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isLargeScreen = screenWidth > 600;
@@ -42,11 +42,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                gradient: DeptTheme.deptGradient,
+                gradient: ReceptionistTheme.deptGradient,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: DeptTheme.deptPrimary.withOpacity(0.12),
+                    color: ReceptionistTheme.primary.withOpacity(0.12),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -66,7 +66,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 children: [
                           Text(
                             isEditing ? 'Edit Visitor' : 'Add Visitor',
-                            style: DeptTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                            style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: ReceptionistTheme.text),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -75,15 +75,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Name',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -99,15 +99,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Email',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -123,15 +123,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Designation',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -146,15 +146,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Company Name',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -169,15 +169,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Contact No',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -192,15 +192,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Total Visitors',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -230,15 +230,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 decoration: InputDecoration(
                                   hintText: 'Select Date',
                                   filled: true,
-                                  fillColor: DeptTheme.deptLight,
-                                  hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  fillColor: ReceptionistTheme.primary,
+                                  hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                    borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -270,15 +270,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 decoration: InputDecoration(
                                   hintText: 'Select Time',
                                   filled: true,
-                                  fillColor: DeptTheme.deptLight,
-                                  hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  fillColor: ReceptionistTheme.primary,
+                                  hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                    borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -299,15 +299,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Host',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.primary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -342,9 +342,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 }
               },
                                 icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
-                                label: Text(isEditing ? 'Update' : 'Add', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                label: Text(isEditing ? 'Update' : 'Add', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isEditing ? DeptTheme.deptDark : DeptTheme.deptPrimary,
+                                  backgroundColor: isEditing ? ReceptionistTheme.text : ReceptionistTheme.primary,
                                   padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
@@ -438,18 +438,10 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 600;
     return Scaffold(
-        backgroundColor: Color(0xFFD4E9FF),
-        appBar: AppBar(
-        title: const Text('Manage Visitors', style: DeptTheme.appBarTitle),
-        backgroundColor: Color(0xFF6CA4FE),
-          elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: Padding(
-        padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: const Color(0xFFD4E9FF),
+        body: Column(
           children: [
+            _customHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
@@ -464,11 +456,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          gradient: DeptTheme.deptGradient,
+                          gradient: ReceptionistTheme.deptGradient,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: DeptTheme.deptPrimary.withOpacity(0.10),
+                              color: ReceptionistTheme.primary.withOpacity(0.10),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -476,7 +468,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                         ),
                         child: ListTile(
                           leading: const Icon(Icons.person, color: Colors.white),
-                          title: Text(doc['v_name'], style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                          title: Text(doc['v_name'], style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                           subtitle: FutureBuilder<String>(
                             future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
                             builder: (context, hostSnapshot) {
@@ -484,17 +476,17 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 return const Text("Loading host...");
                               }
                               if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
-                                return Text("Host not found | Total Visitors: $totalVisitors", style: DeptTheme.body.copyWith(color: Colors.white70));
+                                return Text("Host not found | Total Visitors: $totalVisitors", style: ReceptionistTheme.body.copyWith(color: Colors.white70));
                               }
-                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: DeptTheme.body.copyWith(color: Colors.white70));
+                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: ReceptionistTheme.body.copyWith(color: Colors.white70));
                             }
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary), onPressed: () => _showVisitorForm(doc)),
-                              IconButton(icon: const Icon(Icons.delete, color: DeptTheme.deptPrimary), onPressed: () => doc.reference.delete()),
-                              IconButton(icon: const Icon(Icons.visibility, color: DeptTheme.deptPrimary), onPressed: () => _showVisitorDetailsDialog(doc)),
+                              IconButton(icon: const Icon(Icons.edit, color: ReceptionistTheme.primary), onPressed: () => _showVisitorForm(doc)),
+                              IconButton(icon: const Icon(Icons.delete, color: ReceptionistTheme.primary), onPressed: () => doc.reference.delete()),
+                              IconButton(icon: const Icon(Icons.visibility, color: ReceptionistTheme.primary), onPressed: () => _showVisitorDetailsDialog(doc)),
                             ],
                           ),
                         ),
@@ -505,14 +497,34 @@ class _ManageVisitorsState extends State<ManageVisitors> {
               ),
             ),
           ],
-          ),
         ),
         floatingActionButton: FloatingActionButton(
-          backgroundColor: DeptTheme.deptPrimary,
+          backgroundColor: ReceptionistTheme.primary,
         onPressed: () => _showVisitorForm(),
         child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Visitor',
       ),
     );
   }
+}
+
+Widget _customHeader() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+    decoration: const BoxDecoration(
+      color: Color(0xFF6CA4FE),
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(24),
+        bottomRight: Radius.circular(24),
+      ),
+    ),
+    child: Row(
+      children: [
+        Image.asset('assets/images/rdl.png', height: 32),
+        const SizedBox(width: 12),
+        const Text('Manage Visitors', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+      ],
+    ),
+  );
 } 

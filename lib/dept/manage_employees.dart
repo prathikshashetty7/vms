@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/dept_theme.dart';
+import '../theme/receptionist_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageEmployees extends StatefulWidget {
   const ManageEmployees({Key? key}) : super(key: key);
@@ -19,6 +20,32 @@ class _ManageEmployeesState extends State<ManageEmployees> {
   String? _selectedRole;
   String? _editingId;
   String? _editingCollection;
+  String? _currentDepartmentId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentDepartmentId();
+  }
+
+  Future<void> _fetchCurrentDepartmentId() async {
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    print('Current department user email: $userEmail');
+    if (userEmail == null) return;
+    final query = await FirebaseFirestore.instance
+        .collection('department')
+        .where('d_email', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+    if (query.docs.isNotEmpty) {
+      setState(() {
+        _currentDepartmentId = query.docs.first.id;
+      });
+      print('Fetched departmentId: \\_currentDepartmentId=$_currentDepartmentId');
+    } else {
+      print('No department found for email: $userEmail');
+    }
+  }
 
   Future<void> _addOrUpdateEmployee() async {
     final empId = _empIdController.text.trim();
@@ -40,7 +67,10 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       'emp_contno': empContNo,
       'emp_address': empAddress,
       'role': role,
+      if (role == 'Host' && _currentDepartmentId != null)
+        'departmentId': _currentDepartmentId,
     };
+    print('Adding employee with data: $employeeData');
 
     if (_editingId == null) {
       // Add new employee
@@ -130,11 +160,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: DeptTheme.deptGradient,
+                  gradient: ReceptionistTheme.receptionistGradient,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: DeptTheme.deptPrimary.withOpacity(0.12),
+                      color: ReceptionistTheme.primary.withOpacity(0.12),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -152,7 +182,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                         children: [
                           Text(
                             _editingId == null ? 'Add Employee' : 'Edit Employee',
-                            style: DeptTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                            style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: Colors.white),
                           ),
                           const SizedBox(height: 16),
                           TextField(
@@ -161,15 +191,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Employee ID',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -184,15 +214,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Employee Name',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -207,15 +237,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Email',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -231,15 +261,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Password',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -255,15 +285,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Contact Number',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -279,15 +309,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Address',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -307,15 +337,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Role',
                               filled: true,
-                              fillColor: DeptTheme.deptLight,
-                              hintStyle: DeptTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              fillColor: ReceptionistTheme.secondary,
+                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: DeptTheme.deptPrimary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -333,9 +363,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                                   Navigator.of(context).pop();
                                 },
                                 icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
-                                label: Text(_editingId == null ? 'Add' : 'Update', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                label: Text(_editingId == null ? 'Add' : 'Update', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _editingId == null ? DeptTheme.deptPrimary : DeptTheme.deptDark,
+                                  backgroundColor: _editingId == null ? ReceptionistTheme.primary : ReceptionistTheme.text,
                                   padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
@@ -354,33 +384,55 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Color(0xFFD4E9FF),
-      appBar: AppBar(
-        title: const Text('Manage Employees', style: DeptTheme.appBarTitle),
-        backgroundColor: Color(0xFF6CA4FE),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    Widget _customHeader() {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: const BoxDecoration(
+          color: Color(0xFF6CA4FE),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+        ),
+        child: Row(
           children: [
-            // Employee Lists
-            Expanded(
-              child: ListView(
+            Image.asset('assets/images/rdl.png', height: 32),
+            const SizedBox(width: 12),
+            const Text('Manage Employees', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFD4E9FF),
+      body: Column(
+        children: [
+          _customHeader(),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildEmployeeList('host', 'Hosts', showEmployeeForm),
-                  _buildEmployeeList('receptionist', 'Receptionists', showEmployeeForm),
+                  // Employee Lists
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildEmployeeList('host', 'Hosts', showEmployeeForm),
+                        // Removed Receptionists section
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        ], // <-- Close the children list for Column
+      ), // <-- Close the Column
       floatingActionButton: FloatingActionButton(
-        backgroundColor: DeptTheme.deptPrimary,
+        backgroundColor: ReceptionistTheme.primary,
         onPressed: () => showEmployeeForm(),
         child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Employee',
@@ -394,7 +446,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(title, style: DeptTheme.subheading),
+          child: Text(title, style: ReceptionistTheme.subheading),
         ),
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection(collectionName).snapshots(),
@@ -415,11 +467,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    gradient: DeptTheme.deptGradient,
+                    gradient: ReceptionistTheme.receptionistGradient,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: DeptTheme.deptPrimary.withOpacity(0.10),
+                        color: ReceptionistTheme.primary.withOpacity(0.10),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -427,17 +479,17 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.person, color: Colors.white),
-                    title: Text(doc['emp_name'] ?? '', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
-                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: DeptTheme.body.copyWith(color: Colors.white70)),
+                    title: Text(doc['emp_name'] ?? '', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: ReceptionistTheme.body.copyWith(color: Colors.white70)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: DeptTheme.deptPrimary),
+                          icon: const Icon(Icons.edit, color: ReceptionistTheme.primary),
                           onPressed: () => showEmployeeForm(doc, collectionName),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, color: DeptTheme.deptPrimary),
+                          icon: const Icon(Icons.delete, color: ReceptionistTheme.primary),
                           onPressed: () => _deleteEmployee(doc.id, collectionName),
                         ),
                       ],
