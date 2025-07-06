@@ -15,7 +15,6 @@ class DeptReport extends StatelessWidget {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              _customHeader(),
               const SizedBox(height: 20),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
@@ -38,23 +37,13 @@ class DeptReport extends StatelessWidget {
                         final total = doc['v_totalno']?.toString() ?? '1';
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            gradient: ReceptionistTheme.deptGradient,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: ReceptionistTheme.primary.withOpacity(0.10),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                          color: Colors.white,
                           child: ListTile(
-                            leading: const Icon(Icons.person, color: Colors.white),
-                            title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                            leading: const Icon(Icons.person, color: Colors.black),
+                            title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                             subtitle: Text(
                               'Email: $email\nDate: ${date != null ? '${date.day}/${date.month}/${date.year}' : 'N/A'}\nTotal Visitors: $total',
-                              style: ReceptionistTheme.body.copyWith(color: Colors.white70),
+                              style: ReceptionistTheme.body.copyWith(color: Colors.black54),
                             ),
                           ),
                         );
@@ -66,27 +55,6 @@ class DeptReport extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _customHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      decoration: const BoxDecoration(
-        color: Color(0xFF6CA4FE),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Row(
-        children: [
-          Image.asset('assets/images/rdl.png', height: 32),
-          const SizedBox(width: 12),
-          const Text('Department Report', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
-        ],
       ),
     );
   }

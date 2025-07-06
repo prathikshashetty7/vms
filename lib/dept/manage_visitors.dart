@@ -456,19 +456,12 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          gradient: ReceptionistTheme.deptGradient,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: ReceptionistTheme.primary.withOpacity(0.10),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: ListTile(
-                          leading: const Icon(Icons.person, color: Colors.white),
-                          title: Text(doc['v_name'], style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                          leading: const Icon(Icons.person, color: Colors.black),
+                          title: Text(doc['v_name'], style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                           subtitle: FutureBuilder<String>(
                             future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
                             builder: (context, hostSnapshot) {
@@ -476,9 +469,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 return const Text("Loading host...");
                               }
                               if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
-                                return Text("Host not found | Total Visitors: $totalVisitors", style: ReceptionistTheme.body.copyWith(color: Colors.white70));
+                                return Text("Host not found | Total Visitors: $totalVisitors", style: ReceptionistTheme.body.copyWith(color: Colors.black54));
                               }
-                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: ReceptionistTheme.body.copyWith(color: Colors.white70));
+                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: ReceptionistTheme.body.copyWith(color: Colors.black54));
                             }
                           ),
                           trailing: Row(

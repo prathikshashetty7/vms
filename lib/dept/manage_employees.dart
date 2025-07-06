@@ -467,20 +467,12 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    gradient: ReceptionistTheme.receptionistGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ReceptionistTheme.primary.withOpacity(0.10),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    color: Colors.white,
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.person, color: Colors.white),
-                    title: Text(doc['emp_name'] ?? '', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
-                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: ReceptionistTheme.body.copyWith(color: Colors.white70)),
+                    leading: const Icon(Icons.person, color: Colors.black),
+                    title: Text(doc['emp_name'] ?? '', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
