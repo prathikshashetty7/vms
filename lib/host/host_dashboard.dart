@@ -115,12 +115,12 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
   Future<void> _fetchHostDetails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final snap = await FirebaseFirestore.instance.collection('host').where('email', isEqualTo: user.email).limit(1).get();
+    final snap = await FirebaseFirestore.instance.collection('host').where('emp_email', isEqualTo: user.email).limit(1).get();
     if (snap.docs.isNotEmpty) {
       final data = snap.docs.first.data();
       setState(() {
         hostName = data['emp_name'] ?? 'Host';
-        hostEmail = data['email'] ?? user.email;
+        hostEmail = data['emp_email'] ?? user.email;
         hostDept = data['department'] ?? '';
         loading = false;
       });
@@ -198,64 +198,38 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x226CA4FE),
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 60,
-                    margin: const EdgeInsets.only(right: 16),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF6CA4FE),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
+              child: loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        loading
-                          ? const SizedBox(height: 22, child: LinearProgressIndicator())
-                          : Text(
-                              'Welcome, ${hostName ?? 'Host'}',
-                              style: const TextStyle(
-                                color: Color(0xFF091016),
-                                fontWeight: FontWeight.w900,
-                                fontFamily: 'Poppins',
-                                fontSize: 22,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                        const SizedBox(height: 6),
                         Text(
-                          'Hope you have a wonderful day at work! 😊',
+                          hostName != null && hostName!.isNotEmpty
+                              ? 'Welcome, $hostName!'
+                              : 'Welcome, Host!',
                           style: const TextStyle(
-                            color: Color(0xFF6CA4FE),
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'Poppins',
-                            fontSize: 15,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF091016),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        if (hostDept != null && hostDept!.isNotEmpty)
+                          Text(
+                            'Department: $hostDept',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black54,
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: loading ? null : _showProfileDialog,
-                    child: CircleAvatar(
-                      radius: 26,
-                      backgroundColor: Color(0xFF6CA4FE),
-                      child: Icon(Icons.person, color: Colors.white, size: 28),
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 30),
             // Stat Cards Grid

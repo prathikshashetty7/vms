@@ -17,6 +17,36 @@ class DeptDashboard extends StatefulWidget {
 
 class _DeptDashboardState extends State<DeptDashboard> {
   int _selectedIndex = 0;
+  String? _currentDepartmentId;
+  bool _loadingDeptId = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentDepartmentId();
+  }
+
+  Future<void> _fetchCurrentDepartmentId() async {
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    if (userEmail == null) {
+      setState(() { _loadingDeptId = false; });
+      return;
+    }
+    final query = await FirebaseFirestore.instance
+        .collection('department')
+        .where('d_email', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+    if (query.docs.isNotEmpty) {
+      setState(() {
+        _currentDepartmentId = query.docs.first.id;
+        _loadingDeptId = false;
+      });
+    } else {
+      setState(() { _loadingDeptId = false; });
+    }
+  }
+
   static const List<Widget> _pages = <Widget>[
     _DeptHomePage(),
     ManageEmployees(),
@@ -38,6 +68,12 @@ class _DeptDashboardState extends State<DeptDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingDeptId) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFD4E9FF),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFD4E9FF),
       appBar: AppBar(
@@ -84,13 +120,16 @@ class _DeptDashboardState extends State<DeptDashboard> {
           ),
         ],
       ),
-      body: _pages[_selectedIndex],
+      body: _selectedIndex == 0
+          ? _DeptHomePage(currentDepartmentId: _currentDepartmentId)
+          : _pages[_selectedIndex],
     );
   }
 }
 
 class _DeptHomePage extends StatelessWidget {
-  const _DeptHomePage();
+  final String? currentDepartmentId;
+  const _DeptHomePage({this.currentDepartmentId});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +154,7 @@ class _DeptHomePage extends StatelessWidget {
                 ),
               ],
             ),
-            child: _DeptAnalytics(),
+            child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
           ),
           // Dashboard Card
           Center(
@@ -157,6 +196,9 @@ class _DeptHomePage extends StatelessWidget {
 }
 
 class _DeptAnalytics extends StatelessWidget {
+  final String? currentDepartmentId;
+  const _DeptAnalytics({this.currentDepartmentId});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -164,7 +206,7 @@ class _DeptAnalytics extends StatelessWidget {
       children: [
         _AnalyticsTile(label: 'Roles', icon: Icons.security, collection: 'roles'),
         _AnalyticsTile(label: 'Receptionists', icon: Icons.person, collection: 'receptionist'),
-        _AnalyticsTile(label: 'Hosts', icon: Icons.people_alt, collection: 'host'),
+        _AnalyticsTile(label: 'Hosts', icon: Icons.people_alt, collection: 'host', departmentId: currentDepartmentId),
         _AnalyticsTile(label: 'Visitors', icon: Icons.people, collection: 'visitor'),
       ],
     );
@@ -175,7 +217,8 @@ class _AnalyticsTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final String collection;
-  const _AnalyticsTile({required this.label, required this.icon, required this.collection});
+  final String? departmentId;
+  const _AnalyticsTile({required this.label, required this.icon, required this.collection, this.departmentId});
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +240,13 @@ class _AnalyticsTile extends StatelessWidget {
   }
 
   Stream<int> _countStream() {
+    if (collection == 'host' && departmentId != null) {
+      return FirebaseFirestore.instance
+          .collection('host')
+          .where('departmentId', isEqualTo: departmentId)
+          .snapshots()
+          .map((snap) => snap.docs.length);
+    }
     return FirebaseFirestore.instance.collection(collection).snapshots().map((snap) => snap.docs.length);
   }
 } 

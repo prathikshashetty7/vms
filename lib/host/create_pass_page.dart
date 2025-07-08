@@ -23,7 +23,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
   Future<void> _fetchHostName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final snap = await FirebaseFirestore.instance.collection('host').where('email', isEqualTo: user.email).limit(1).get();
+    final snap = await FirebaseFirestore.instance.collection('host').where('emp_email', isEqualTo: user.email).limit(1).get();
     if (snap.docs.isNotEmpty) {
       final data = snap.docs.first.data();
       setState(() {
@@ -44,7 +44,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
       child: loading || hostName == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('visitor').where('host', isEqualTo: hostName).snapshots(),
+              stream: FirebaseFirestore.instance.collection('visitor').where('emp_id', isEqualTo: hostName).snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -73,8 +73,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 CircleAvatar(
                                   radius: 28,
                                   backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
-                                  backgroundImage: v['photo'],
-                                  child: v['photo'] == null ? const Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)) : null,
+                                  child: const Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
@@ -83,7 +82,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     children: [
                                       Text(v['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016))),
                                       const SizedBox(height: 4),
-                                      Text('Host: ${v['host'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                                      Text('Host: $hostName', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                                       Text('Company: ${v['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                                     ],
                                   ),
@@ -113,12 +112,19 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 ),
                                 icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
                                 label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                                onPressed: () {
+                                onPressed: () async {
+                                  // Mark pass as generated in Firestore
+                                  final visitorId = snapshot.data!.docs[idx].id;
+                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'pass_generated': true});
                                   showDialog(
                                     context: context,
                                     builder: (context) => Dialog(
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                      child: _VisitorPassCard(visitor: v),
+                                      child: _VisitorPassCard(
+                                        visitor: v,
+                                        hostName: hostName ?? '',
+                                        passNo: idx + 1, // auto-incremental pass number
+                                      ),
                                     ),
                                   );
                                 },
@@ -138,7 +144,9 @@ class _CreatePassPageState extends State<CreatePassPage> {
 
 class _VisitorPassCard extends StatelessWidget {
   final Map<String, dynamic> visitor;
-  const _VisitorPassCard({required this.visitor});
+  final String hostName;
+  final int passNo;
+  const _VisitorPassCard({required this.visitor, required this.hostName, required this.passNo});
 
   @override
   Widget build(BuildContext context) {
@@ -165,14 +173,14 @@ class _VisitorPassCard extends StatelessWidget {
                       color: Color(0xFF6CA4FE),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text('Cybernetics', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    child: Text(visitor['v_company_name'] ?? 'Company', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                   const SizedBox(height: 2),
-                  const Text('Cybernetics Software Pvt. Ltd.', style: TextStyle(fontSize: 10)),
+                  Text(visitor['v_company_name'] ?? '', style: const TextStyle(fontSize: 10)),
                 ],
               ),
               const Spacer(),
-              Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
+              const Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           const SizedBox(height: 8),
@@ -185,20 +193,15 @@ class _VisitorPassCard extends StatelessWidget {
                   color: Color(0xFF6CA4FE),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: visitor['photo'] == null
-                    ? const Icon(Icons.person, color: Colors.white, size: 48)
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Image.network(visitor['photo'], fit: BoxFit.cover),
-                      ),
+                child: const Icon(Icons.person, color: Colors.white, size: 48),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pass No      : ${visitor['passNo']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                    Text('Visitor Name : ${visitor['name']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                    Text('Pass No      : $passNo', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                    Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                   ],
                 ),
               ),
@@ -212,10 +215,10 @@ class _VisitorPassCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('From     : ${visitor['company']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Host     : ${visitor['host']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Date     : ${visitor['date']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Time     : ${visitor['time']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                  Text('From     : ${visitor['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                  Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                  Text('Date     : ${visitor['v_date'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                  Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
                 ],
               ),
             ],

@@ -59,6 +59,14 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     
     final collectionName = role == 'Host' ? 'host' : 'receptionist';
 
+    // Ensure departmentId is set for hosts
+    if (role == 'Host' && (_currentDepartmentId == null || _currentDepartmentId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Department ID not found. Cannot add host.')),
+      );
+      return;
+    }
+
     final employeeData = {
       'emp_id': empId,
       'emp_name': empName,
@@ -67,13 +75,26 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       'emp_contno': empContNo,
       'emp_address': empAddress,
       'role': role,
-      if (role == 'Host' && _currentDepartmentId != null)
+      if (role == 'Host')
         'departmentId': _currentDepartmentId,
     };
     print('Adding employee with data: $employeeData');
 
     if (_editingId == null) {
       // Add new employee
+      if (role == 'Host') {
+        try {
+          // Optionally sign out current user if needed (depends on your auth rules)
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: empEmail,
+            password: empPassword,
+          );
+        } catch (e) {
+          // Handle error (e.g., email already in use)
+          print('Error creating host in Firebase Auth: ' + e.toString());
+          // Optionally show a message to the user
+        }
+      }
       await FirebaseFirestore.instance.collection(collectionName).add(employeeData);
     } else {
       // Update existing employee
@@ -126,6 +147,25 @@ class _ManageEmployeesState extends State<ManageEmployees> {
         .toList();
   }
 
+  Future<void> _updateHostsDepartmentId() async {
+    if (_currentDepartmentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Department ID not found.')),
+      );
+      return;
+    }
+    final hostQuery = await FirebaseFirestore.instance
+        .collection('host')
+        .where('departmentId', isNull: true)
+        .get();
+    for (var doc in hostQuery.docs) {
+      await doc.reference.update({'departmentId': _currentDepartmentId});
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All hosts updated with departmentId!')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -160,7 +200,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: ReceptionistTheme.receptionistGradient,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -191,19 +231,19 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Employee ID',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
@@ -214,7 +254,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Employee Name',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -222,11 +262,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
@@ -237,7 +277,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Email',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -245,11 +285,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                             keyboardType: TextInputType.emailAddress,
@@ -261,7 +301,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Password',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -269,11 +309,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                             obscureText: true,
@@ -285,7 +325,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Contact Number',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -293,11 +333,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                             keyboardType: TextInputType.phone,
@@ -309,7 +349,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             decoration: InputDecoration(
                               hintText: 'Address',
                               filled: true,
-                              fillColor: ReceptionistTheme.secondary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -317,39 +357,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
-                            value: _selectedRole,
-                            items: items,
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedRole = val;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Role',
-                              filled: true,
-                              fillColor: ReceptionistTheme.secondary,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
@@ -449,12 +461,17 @@ class _ManageEmployeesState extends State<ManageEmployees> {
           child: Text(title, style: ReceptionistTheme.subheading),
         ),
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection(collectionName).snapshots(),
+          stream: collectionName == 'host' && _currentDepartmentId != null
+              ? FirebaseFirestore.instance.collection('host').where('departmentId', isEqualTo: _currentDepartmentId).snapshots()
+              : FirebaseFirestore.instance.collection(collectionName).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.data!.docs.isEmpty) {
               return Center(child: Text('No $title found.'));
             }
             final docs = snapshot.data!.docs;

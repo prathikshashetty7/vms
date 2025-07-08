@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/receptionist_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageVisitors extends StatefulWidget {
   const ManageVisitors({Key? key}) : super(key: key);
@@ -10,6 +11,29 @@ class ManageVisitors extends StatefulWidget {
 }
 
 class _ManageVisitorsState extends State<ManageVisitors> {
+  String? _currentDepartmentId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentDepartmentId();
+  }
+
+  Future<void> _fetchCurrentDepartmentId() async {
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    if (userEmail == null) return;
+    final query = await FirebaseFirestore.instance
+        .collection('department')
+        .where('d_email', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+    if (query.docs.isNotEmpty) {
+      setState(() {
+        _currentDepartmentId = query.docs.first.id;
+      });
+    }
+  }
+
   void _showVisitorForm([DocumentSnapshot? visitor]) {
     final isEditing = visitor != null;
     final _formKey = GlobalKey<FormState>();
@@ -28,7 +52,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: ReceptionistTheme.secondary,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isLargeScreen = screenWidth > 600;
@@ -42,7 +66,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                gradient: ReceptionistTheme.deptGradient,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -75,8 +99,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Name',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -99,8 +124,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Email',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -123,8 +149,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Designation',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -146,8 +173,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Company Name',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -169,8 +197,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Contact No',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -192,8 +221,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Total Visitors',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -230,8 +260,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 decoration: InputDecoration(
                                   hintText: 'Select Date',
                                   filled: true,
-                                  fillColor: ReceptionistTheme.primary,
+                                  fillColor: Colors.white,
                                   hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
@@ -270,8 +301,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 decoration: InputDecoration(
                                   hintText: 'Select Time',
                                   filled: true,
-                                  fillColor: ReceptionistTheme.primary,
+                                  fillColor: Colors.white,
                                   hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
@@ -299,8 +331,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             decoration: InputDecoration(
                               hintText: 'Host',
                               filled: true,
-                              fillColor: ReceptionistTheme.primary,
+                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
@@ -407,7 +440,29 @@ class _ManageVisitorsState extends State<ManageVisitors> {
   }
 
   Future<List<DropdownMenuItem<String>>> _getHostDropdownItems() async {
-    final snapshot = await FirebaseFirestore.instance.collection('host').get();
+    print('DEBUG: _currentDepartmentId =  [32m [1m [4m [7m' + (_currentDepartmentId ?? 'null') + '\u001b[0m');
+    if (_currentDepartmentId == null) return [
+      const DropdownMenuItem<String>(
+        value: null,
+        child: Text('No department ID found'),
+      ),
+    ];
+    final snapshot = await FirebaseFirestore.instance
+        .collection('host')
+        .where('departmentId', isEqualTo: _currentDepartmentId)
+        .get();
+    print('DEBUG: Hosts fetched for departmentId $_currentDepartmentId:');
+    for (var doc in snapshot.docs) {
+      print('  Host: ' + (doc.data()['emp_name'] ?? 'NO NAME'));
+    }
+    if (snapshot.docs.isEmpty) {
+      return [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('No hosts found for this department'),
+        ),
+      ];
+    }
     return snapshot.docs.map((doc) => DropdownMenuItem<String>(
       value: doc.id,
       child: Text(doc['emp_name']),
