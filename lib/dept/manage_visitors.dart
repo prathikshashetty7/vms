@@ -4,34 +4,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageVisitors extends StatefulWidget {
-  const ManageVisitors({Key? key}) : super(key: key);
+  final String? currentDepartmentId;
+  const ManageVisitors({Key? key, this.currentDepartmentId}) : super(key: key);
 
   @override
   _ManageVisitorsState createState() => _ManageVisitorsState();
 }
 
 class _ManageVisitorsState extends State<ManageVisitors> {
-  String? _currentDepartmentId;
+  String? get _currentDepartmentId => widget.currentDepartmentId;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrentDepartmentId();
-  }
-
-  Future<void> _fetchCurrentDepartmentId() async {
-    final userEmail = FirebaseAuth.instance.currentUser?.email;
-    if (userEmail == null) return;
-    final query = await FirebaseFirestore.instance
-        .collection('department')
-        .where('d_email', isEqualTo: userEmail)
-        .limit(1)
-        .get();
-    if (query.docs.isNotEmpty) {
-      setState(() {
-        _currentDepartmentId = query.docs.first.id;
-      });
-    }
+    // No need to fetch departmentId here
   }
 
   void _showVisitorForm([DocumentSnapshot? visitor]) {
@@ -362,14 +348,15 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     'v_company_name': vCompanyNameController.text,
                     'v_contactno': vContactNoController.text,
                     'v_totalno': int.tryParse(vTotalNoController.text) ?? 1,
-                                      'v_date': Timestamp.fromDate(selectedDate),
-                                      'v_time': selectedTime.format(context),
+                    'v_date': Timestamp.fromDate(selectedDate),
+                    'v_time': selectedTime.format(context),
                     'emp_id': selectedHostId,
+                    'departmentId': _currentDepartmentId,
                   };
-                                    if (!isEditing) {
+                  if (!isEditing) {
                     await FirebaseFirestore.instance.collection('visitor').add(visitorData);
                   } else {
-                                      await visitor!.reference.update(visitorData);
+                    await visitor!.reference.update(visitorData);
                   }
                   Navigator.of(context).pop();
                 }
@@ -421,7 +408,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     return Text('Host: ${snapshot.data ?? 'N/A'}');
                   },
                 ),
-                Text('Date: ${ (visitor['v_date'] as Timestamp).toDate().toLocal().toString().split(' ')[0]}'),
+                Text('Date: ${_formatDate((visitor['v_date'] as Timestamp).toDate())}'),
                 Text('Time: ${visitor['v_time']}'),
               ],
             ),
@@ -488,6 +475,10 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     return TimeOfDay(hour: int.tryParse(parts[0]) ?? 0, minute: int.tryParse(parts[1]) ?? 0);
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -499,7 +490,12 @@ class _ManageVisitorsState extends State<ManageVisitors> {
             _customHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+                stream: _currentDepartmentId == null
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('visitor')
+                        .where('departmentId', isEqualTo: _currentDepartmentId)
+                        .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                   return ListView.builder(

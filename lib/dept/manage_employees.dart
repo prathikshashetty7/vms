@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageEmployees extends StatefulWidget {
-  const ManageEmployees({Key? key}) : super(key: key);
+  final String? currentDepartmentId;
+  const ManageEmployees({Key? key, this.currentDepartmentId}) : super(key: key);
 
   @override
   State<ManageEmployees> createState() => _ManageEmployeesState();
@@ -17,34 +18,15 @@ class _ManageEmployeesState extends State<ManageEmployees> {
   final TextEditingController _empPasswordController = TextEditingController();
   final TextEditingController _empContNoController = TextEditingController();
   final TextEditingController _empAddressController = TextEditingController();
-  String? _selectedRole;
+  String? _selectedRole = 'Host'; // Default to Host
   String? _editingId;
   String? _editingCollection;
-  String? _currentDepartmentId;
+  String? get _currentDepartmentId => widget.currentDepartmentId;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrentDepartmentId();
-  }
-
-  Future<void> _fetchCurrentDepartmentId() async {
-    final userEmail = FirebaseAuth.instance.currentUser?.email;
-    print('Current department user email: $userEmail');
-    if (userEmail == null) return;
-    final query = await FirebaseFirestore.instance
-        .collection('department')
-        .where('d_email', isEqualTo: userEmail)
-        .limit(1)
-        .get();
-    if (query.docs.isNotEmpty) {
-      setState(() {
-        _currentDepartmentId = query.docs.first.id;
-      });
-      print('Fetched departmentId: \\_currentDepartmentId=$_currentDepartmentId');
-    } else {
-      print('No department found for email: $userEmail');
-    }
+    // No need to fetch departmentId here
   }
 
   Future<void> _addOrUpdateEmployee() async {
@@ -54,19 +36,21 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     final empPassword = _empPasswordController.text.trim();
     final empContNo = _empContNoController.text.trim();
     final empAddress = _empAddressController.text.trim();
-    final role = _selectedRole;
-    if ([empId, empName, empEmail, empPassword, empContNo, empAddress, role].any((e) => e == null || e.isEmpty)) return;
-    
-    final collectionName = role == 'Host' ? 'host' : 'receptionist';
-
-    // Ensure departmentId is set for hosts
-    if (role == 'Host' && (_currentDepartmentId == null || _currentDepartmentId!.isEmpty)) {
+    final role = 'Host'; // Always Host
+    if ([empId, empName, empEmail, empPassword, empContNo, empAddress].any((e) => e == null || e.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All fields are required.')),
+      );
+      print('DEBUG: Not adding host - missing field.');
+      return;
+    }
+    if (_currentDepartmentId == null || _currentDepartmentId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Department ID not found. Cannot add host.')),
       );
+      print('DEBUG: Not adding host - departmentId missing.');
       return;
     }
-
     final employeeData = {
       'emp_id': empId,
       'emp_name': empName,
@@ -75,47 +59,44 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       'emp_contno': empContNo,
       'emp_address': empAddress,
       'role': role,
-      if (role == 'Host')
-        'departmentId': _currentDepartmentId,
+      'departmentId': _currentDepartmentId,
     };
-    print('Adding employee with data: $employeeData');
-
-    if (_editingId == null) {
-      // Add new employee
-      if (role == 'Host') {
-        try {
-          // Optionally sign out current user if needed (depends on your auth rules)
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: empEmail,
-            password: empPassword,
-          );
-        } catch (e) {
-          // Handle error (e.g., email already in use)
-          print('Error creating host in Firebase Auth: ' + e.toString());
-          // Optionally show a message to the user
-        }
-      }
-      await FirebaseFirestore.instance.collection(collectionName).add(employeeData);
-    } else {
-      // Update existing employee
-      if (_editingCollection != null && _editingCollection != collectionName) {
-        // Role has changed, so move the document
-        await FirebaseFirestore.instance.collection(_editingCollection!).doc(_editingId!).delete();
-        await FirebaseFirestore.instance.collection(collectionName).doc(_editingId!).set(employeeData);
+    print('DEBUG: Add/Update host with data: $employeeData');
+    try {
+      if (_editingId == null) {
+        // Add new host
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: empEmail,
+          password: empPassword,
+        );
+        await FirebaseFirestore.instance.collection('host').add(employeeData);
+        print('DEBUG: Host added to Firestore.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Host added successfully!')),
+        );
       } else {
-        await FirebaseFirestore.instance.collection(collectionName).doc(_editingId!).update(employeeData);
+        // Update existing host
+        await FirebaseFirestore.instance.collection('host').doc(_editingId).update(employeeData);
+        print('DEBUG: Host updated in Firestore.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Host updated successfully!')),
+        );
       }
-      _editingId = null;
-      _editingCollection = null;
+    } catch (e) {
+      print('DEBUG: Error adding/updating host: ' + e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Firestore error: ${e.toString()}')),
+      );
     }
-
     _empIdController.clear();
     _empNameController.clear();
     _empEmailController.clear();
     _empPasswordController.clear();
     _empContNoController.clear();
     _empAddressController.clear();
-    _selectedRole = null;
+    _selectedRole = 'Host';
+    _editingId = null;
+    _editingCollection = null;
     setState(() {});
   }
 
@@ -171,6 +152,19 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 600;
 
+    // Receptionists list
+    final receptionistStream = _currentDepartmentId == null
+        ? null
+        : FirebaseFirestore.instance.collection('receptionist')
+            .where('departmentId', isEqualTo: _currentDepartmentId)
+            .snapshots();
+    // Hosts list
+    final hostStream = _currentDepartmentId == null
+        ? null
+        : FirebaseFirestore.instance.collection('host')
+            .where('departmentId', isEqualTo: _currentDepartmentId)
+            .snapshots();
+
     void showEmployeeForm([DocumentSnapshot? doc, String? collectionName]) {
       if (doc != null && collectionName != null) {
         _startEdit(doc, collectionName);
@@ -183,7 +177,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
         _empPasswordController.clear();
         _empContNoController.clear();
         _empAddressController.clear();
-        _selectedRole = null;
+        _selectedRole = 'Host'; // Always Host
       }
       showModalBottomSheet(
         context: context,
@@ -212,181 +206,175 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-                  child: FutureBuilder<List<DropdownMenuItem<String>>>(
-                    future: _getRoleDropdownItems(),
-                    builder: (context, snapshot) {
-                      final items = snapshot.data ?? [];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _editingId == null ? 'Add Host' : 'Edit Host',
+                        style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _empIdController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Employee ID',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _empNameController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Employee Name',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _empEmailController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Email',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _empPasswordController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _empContNoController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Contact Number',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _empAddressController,
+                        style: const TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                          hintText: 'Address',
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(
-                            _editingId == null ? 'Add Employee' : 'Edit Employee',
-                            style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: Colors.white),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _empIdController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Employee ID',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              _addOrUpdateEmployee();
+                              Navigator.of(context).pop();
+                            },
+                            icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
+                            label: Text(_editingId == null ? 'Add' : 'Update', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _editingId == null ? ReceptionistTheme.primary : ReceptionistTheme.text,
+                              padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _empNameController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Employee Name',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _empEmailController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Email',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _empPasswordController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Password',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
-                            ),
-                            obscureText: true,
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _empContNoController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Contact Number',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
-                            ),
-                            keyboardType: TextInputType.phone,
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _empAddressController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Address',
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.black, width: 2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  _addOrUpdateEmployee();
-                                  Navigator.of(context).pop();
-                                },
-                                icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
-                                label: Text(_editingId == null ? 'Add' : 'Update', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _editingId == null ? ReceptionistTheme.primary : ReceptionistTheme.text,
-                                  padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ],
                           ),
                         ],
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -494,11 +482,11 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: ReceptionistTheme.primary),
+                          icon: const Icon(Icons.edit, color: Colors.black),
                           onPressed: () => showEmployeeForm(doc, collectionName),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, color: ReceptionistTheme.primary),
+                          icon: const Icon(Icons.delete, color: Colors.black),
                           onPressed: () => _deleteEmployee(doc.id, collectionName),
                         ),
                       ],

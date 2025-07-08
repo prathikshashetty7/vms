@@ -12,22 +12,27 @@ class CreatePassPage extends StatefulWidget {
 
 class _CreatePassPageState extends State<CreatePassPage> {
   String? hostName;
+  String? hostDocId;
+  String? departmentId;
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchHostName();
+    _fetchHostInfo();
   }
 
-  Future<void> _fetchHostName() async {
+  Future<void> _fetchHostInfo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final snap = await FirebaseFirestore.instance.collection('host').where('emp_email', isEqualTo: user.email).limit(1).get();
     if (snap.docs.isNotEmpty) {
-      final data = snap.docs.first.data();
+      final doc = snap.docs.first;
+      final data = doc.data();
       setState(() {
         hostName = data['emp_name'] ?? '';
+        hostDocId = doc.id;
+        departmentId = data['departmentId'] ?? '';
         loading = false;
       });
     } else {
@@ -41,10 +46,14 @@ class _CreatePassPageState extends State<CreatePassPage> {
       decoration: const BoxDecoration(
         color: Color(0xFFD4E9FF),
       ),
-      child: loading || hostName == null
+      child: loading || hostName == null || hostDocId == null || departmentId == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('visitor').where('emp_id', isEqualTo: hostName).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('visitor')
+                  .where('emp_id', isEqualTo: hostDocId)
+                  .where('departmentId', isEqualTo: departmentId)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -94,7 +103,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                               children: [
                                 const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
                                 const SizedBox(width: 4),
-                                Text('Date: ${v['v_date'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                                Text('Date: ${_formatDate(v['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
                                 const SizedBox(width: 16),
                                 const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
                                 const SizedBox(width: 4),
@@ -113,7 +122,6 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
                                 label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                                 onPressed: () async {
-                                  // Mark pass as generated in Firestore
                                   final visitorId = snapshot.data!.docs[idx].id;
                                   await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'pass_generated': true});
                                   showDialog(
@@ -123,7 +131,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       child: _VisitorPassCard(
                                         visitor: v,
                                         hostName: hostName ?? '',
-                                        passNo: idx + 1, // auto-incremental pass number
+                                        passNo: idx + 1,
                                       ),
                                     ),
                                   );
@@ -167,20 +175,22 @@ class _VisitorPassCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF6CA4FE),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(visitor['v_company_name'] ?? 'Company', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/rdl.png',
+                        width: 60,
+                        height: 30,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(visitor['v_company_name'] ?? '', style: const TextStyle(fontSize: 10)),
                 ],
               ),
-              const Spacer(),
-              const Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           const SizedBox(height: 8),
@@ -200,8 +210,8 @@ class _VisitorPassCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pass No      : $passNo', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                    Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                    Text('Pass No      : $passNo', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
+                    Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
                   ],
                 ),
               ),
@@ -217,7 +227,7 @@ class _VisitorPassCard extends StatelessWidget {
                 children: [
                   Text('From     : ${visitor['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
                   Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Date     : ${visitor['v_date'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                  Text('Date     : ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
                   Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
                 ],
               ),
@@ -227,4 +237,16 @@ class _VisitorPassCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatDate(dynamic date) {
+  if (date == null) return '';
+  if (date is Timestamp) {
+    final d = date.toDate();
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+  if (date is DateTime) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+  return date.toString();
 } 

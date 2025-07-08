@@ -7,6 +7,7 @@ import '../logout.dart';
 import 'dept_report.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../theme/dept_theme.dart';
 
 class DeptDashboard extends StatefulWidget {
   const DeptDashboard({Key? key}) : super(key: key);
@@ -47,14 +48,6 @@ class _DeptDashboardState extends State<DeptDashboard> {
     }
   }
 
-  static const List<Widget> _pages = <Widget>[
-    _DeptHomePage(),
-    ManageEmployees(),
-    ManageVisitors(),
-    DeptReport(),
-    SizedBox.shrink(), // Placeholder for Logout
-  ];
-
   void _onItemTapped(int index) async {
     if (index == 4) {
       await FirebaseAuth.instance.signOut();
@@ -74,6 +67,14 @@ class _DeptDashboardState extends State<DeptDashboard> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+    // Pass currentDepartmentId to all subpages
+    final List<Widget> _pages = <Widget>[
+      _DeptHomePage(currentDepartmentId: _currentDepartmentId),
+      ManageEmployees(currentDepartmentId: _currentDepartmentId),
+      ManageVisitors(currentDepartmentId: _currentDepartmentId),
+      DeptReport(currentDepartmentId: _currentDepartmentId),
+      SizedBox.shrink(), // Placeholder for Logout
+    ];
     return Scaffold(
       backgroundColor: const Color(0xFFD4E9FF),
       appBar: AppBar(
@@ -138,22 +139,9 @@ class _DeptHomePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
-          // Analytics Header
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x226CA4FE),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
+          // Analytics Header (remove white container)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
             child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
           ),
           // Dashboard Card
@@ -201,52 +189,117 @@ class _DeptAnalytics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _AnalyticsTile(label: 'Roles', icon: Icons.security, collection: 'roles'),
-        _AnalyticsTile(label: 'Receptionists', icon: Icons.person, collection: 'receptionist'),
-        _AnalyticsTile(label: 'Hosts', icon: Icons.people_alt, collection: 'host', departmentId: currentDepartmentId),
-        _AnalyticsTile(label: 'Visitors', icon: Icons.people, collection: 'visitor'),
-      ],
+    return Center(
+      child: Wrap(
+        spacing: 18,
+        runSpacing: 18,
+        alignment: WrapAlignment.center,
+        children: [
+          DeptStatCard(
+            title: 'Hosts',
+            icon: Icons.people_alt,
+            valueStream: _countStream('host', currentDepartmentId),
+          ),
+          DeptStatCard(
+            title: 'Visitors',
+            icon: Icons.people,
+            valueStream: _countStream('visitor', currentDepartmentId),
+          ),
+        ],
+      ),
     );
+  }
+
+  Stream<String> _countStream(String collection, String? departmentId) {
+    if ((collection == 'host' || collection == 'visitor') && departmentId != null) {
+      return FirebaseFirestore.instance
+          .collection(collection)
+          .where('departmentId', isEqualTo: departmentId)
+          .snapshots()
+          .map((snap) => snap.docs.length.toString());
+    }
+    return FirebaseFirestore.instance.collection(collection).snapshots().map((snap) => snap.docs.length.toString());
   }
 }
 
-class _AnalyticsTile extends StatelessWidget {
-  final String label;
+class DeptStatCard extends StatelessWidget {
+  final String title;
   final IconData icon;
-  final String collection;
-  final String? departmentId;
-  const _AnalyticsTile({required this.label, required this.icon, required this.collection, this.departmentId});
+  final Stream<String> valueStream;
+
+  const DeptStatCard({
+    Key? key,
+    required this.title,
+    required this.icon,
+    required this.valueStream,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: Color(0xFF6CA4FE), size: 32),
-        const SizedBox(height: 8),
-        StreamBuilder<int>(
-          stream: _countStream(),
-          builder: (context, snapshot) {
-            final count = snapshot.data ?? 0;
-            return Text('$count', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 22, color: Color(0xFF091016)));
-          },
+    return Container(
+      height: 140,
+      width: 180,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEDF4FF), Color(0xFFD4E9FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Color(0xFF091016))),
-      ],
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x226CA4FE),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF6CA4FE).withOpacity(0.18),
+              shape: BoxShape.circle,
+            ),
+            padding: const EdgeInsets.all(7),
+            child: Icon(
+              icon,
+              color: const Color(0xFF6CA4FE),
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 6),
+          StreamBuilder<String>(
+            stream: valueStream,
+            builder: (context, snapshot) {
+              final value = snapshot.data ?? '0';
+              return Text(
+                value,
+                style: const TextStyle(
+                  color: Color(0xFF091016),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF091016),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
-  }
-
-  Stream<int> _countStream() {
-    if (collection == 'host' && departmentId != null) {
-      return FirebaseFirestore.instance
-          .collection('host')
-          .where('departmentId', isEqualTo: departmentId)
-          .snapshots()
-          .map((snap) => snap.docs.length);
-    }
-    return FirebaseFirestore.instance.collection(collection).snapshots().map((snap) => snap.docs.length);
   }
 } 

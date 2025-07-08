@@ -109,7 +109,7 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
         all.add(Employee(
           name: data['name'] ?? '',
           role: 'Receptionist',
-          department: '-',
+          department: data['department'] ?? '', // Use the department field for receptionists
           email: data['email'] ?? '',
           phone: data['phone'] ?? '',
         ));
@@ -263,16 +263,15 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                     Text(emp.role, style: TextStyle(fontSize: 16, color: Colors.black87)),
                   ],
                 ),
-                if (emp.role != 'Receptionist') ...[
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.apartment, color: Colors.deepPurple),
-                      SizedBox(width: 8),
-                      Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
-                    ],
-                  ),
-                ],
+                // Always show department for both hosts and receptionists
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.apartment, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  ],
+                ),
                 SizedBox(height: 8),
                 Row(
                   children: [

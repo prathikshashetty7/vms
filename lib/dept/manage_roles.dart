@@ -3,7 +3,8 @@ import '../theme/receptionist_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageRoles extends StatefulWidget {
-  const ManageRoles({Key? key}) : super(key: key);
+  final String? currentDepartmentId;
+  const ManageRoles({Key? key, this.currentDepartmentId}) : super(key: key);
 
   @override
   State<ManageRoles> createState() => _ManageRolesState();
@@ -20,11 +21,13 @@ class _ManageRolesState extends State<ManageRoles> {
       // Add new role
       await FirebaseFirestore.instance.collection('roles').add({
         'role_name': role,
+        'departmentId': widget.currentDepartmentId,
       });
     } else {
       // Update existing role
       await FirebaseFirestore.instance.collection('roles').doc(_editingId).update({
         'role_name': role,
+        'departmentId': widget.currentDepartmentId,
       });
       _editingId = null;
     }
@@ -147,7 +150,11 @@ class _ManageRolesState extends State<ManageRoles> {
                 SizedBox(
                   height: 300, // or MediaQuery.of(context).size.height - someOffset
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('roles').snapshots(),
+                    stream: widget.currentDepartmentId == null
+                        ? null
+                        : FirebaseFirestore.instance.collection('roles')
+                            .where('departmentId', isEqualTo: widget.currentDepartmentId)
+                            .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
