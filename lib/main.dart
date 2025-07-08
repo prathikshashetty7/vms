@@ -174,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HostDashboard()),
+                  MaterialPageRoute(builder: (context) => const HostMainScreen()),
                 );
               },
               child: const Text('Go to Host Dashboard'),
