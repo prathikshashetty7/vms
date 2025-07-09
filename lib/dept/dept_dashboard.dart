@@ -8,6 +8,23 @@ import 'dept_report.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/dept_theme.dart';
+import 'dart:math';
+
+class DiagonalAppBarClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height);
+    path.lineTo(size.width - 50, size.height);
+    path.lineTo(size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
 
 class DeptDashboard extends StatefulWidget {
   const DeptDashboard({Key? key}) : super(key: key);
@@ -77,16 +94,29 @@ class _DeptDashboardState extends State<DeptDashboard> {
     ];
     return Scaffold(
       backgroundColor: const Color(0xFFD4E9FF),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6CA4FE),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Row(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(kToolbarHeight + MediaQuery.of(context).padding.top),
+        child: Stack(
           children: [
-            Image.asset('assets/images/rdl.png', height: 36),
-            const SizedBox(width: 12),
-            const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
+            ClipPath(
+              clipper: DiagonalAppBarClipper(),
+              child: Container(
+                height: kToolbarHeight + MediaQuery.of(context).padding.top,
+                color: const Color(0xFF6CA4FE),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    Image.asset('assets/images/rdl.png', height: 36),
+                    const SizedBox(width: 12),
+                    const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

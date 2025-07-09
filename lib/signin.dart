@@ -25,10 +25,15 @@ class _SignInPageState extends State<SignInPage> {
   // Add this for password visibility
   bool _obscurePassword = true;
 
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -233,6 +238,9 @@ class _SignInPageState extends State<SignInPage> {
                         children: [
                           TextFormField(
                             controller: _emailController,
+                            focusNode: _emailFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocus),
                             style: const TextStyle(color: Colors.white),
                             decoration: DesignSystem.inputDecoration(
                               label: 'Email',
@@ -258,6 +266,9 @@ class _SignInPageState extends State<SignInPage> {
                           const SizedBox(height: DesignSystem.spacing16),
                           TextFormField(
                             controller: _passwordController,
+                            focusNode: _passwordFocus,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _signIn(),
                             obscureText: _obscurePassword,
                             style: const TextStyle(color: Colors.white),
                             decoration: DesignSystem.inputDecoration(

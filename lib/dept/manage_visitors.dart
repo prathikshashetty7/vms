@@ -528,9 +528,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(icon: const Icon(Icons.edit, color: ReceptionistTheme.primary), onPressed: () => _showVisitorForm(doc)),
-                              IconButton(icon: const Icon(Icons.delete, color: ReceptionistTheme.primary), onPressed: () => doc.reference.delete()),
-                              IconButton(icon: const Icon(Icons.visibility, color: ReceptionistTheme.primary), onPressed: () => _showVisitorDetailsDialog(doc)),
+                              IconButton(icon: const Icon(Icons.edit, color: Colors.black), onPressed: () => _showVisitorForm(doc)),
+                              IconButton(icon: const Icon(Icons.delete, color: Colors.black), onPressed: () => doc.reference.delete()),
+                              IconButton(icon: const Icon(Icons.visibility, color: Colors.black), onPressed: () => _showVisitorDetailsDialog(doc)),
                             ],
                           ),
                         ),
@@ -545,7 +545,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
         floatingActionButton: FloatingActionButton(
           backgroundColor: ReceptionistTheme.primary,
         onPressed: () => _showVisitorForm(),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.black),
         tooltip: 'Add Visitor',
       ),
     );

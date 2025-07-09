@@ -19,6 +19,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
   String? hostName;
   String? hostDocId;
   String? departmentId;
+  String? departmentName;
   bool loading = true;
   final Map<int, File?> _visitorImages = {};
   final Map<int, Uint8List?> _visitorImageBytes = {};
@@ -39,10 +40,21 @@ class _CreatePassPageState extends State<CreatePassPage> {
     if (snap.docs.isNotEmpty) {
       final doc = snap.docs.first;
       final data = doc.data();
+      String? deptId = data['departmentId'];
+      String? deptName = data['department'];
+      if ((deptName == null || deptName.isEmpty) && deptId != null && deptId.isNotEmpty) {
+        final deptSnap = await FirebaseFirestore.instance.collection('department').doc(deptId).get();
+        if (deptSnap.exists) {
+          deptName = deptSnap.data()?['d_name'] ?? deptId;
+        } else {
+          deptName = deptId;
+        }
+      }
       setState(() {
         hostName = data['emp_name'] ?? '';
         hostDocId = doc.id;
-        departmentId = data['departmentId'] ?? '';
+        departmentId = deptId ?? '';
+        departmentName = deptName ?? '';
         loading = false;
       });
     } else {
@@ -94,7 +106,24 @@ class _CreatePassPageState extends State<CreatePassPage> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No visitors found.'));
                 }
-                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) {
+                  final date = v['v_date'];
+                  if (date == null) return false;
+                  DateTime visitDate;
+                  if (date is Timestamp) {
+                    visitDate = date.toDate();
+                  } else if (date is DateTime) {
+                    visitDate = date;
+                  } else {
+                    try {
+                      visitDate = DateTime.parse(date.toString());
+                    } catch (_) {
+                      return false;
+                    }
+                  }
+                  final now = DateTime.now();
+                  return !visitDate.isBefore(DateTime(now.year, now.month, now.day));
+                }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: visitors.length,
@@ -158,6 +187,8 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       const SizedBox(height: 4),
                                       Text('Host: $hostName', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                                       Text('Company: ${v['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                                      if (departmentName != null && departmentName!.isNotEmpty)
+                                        Text('Department: $departmentName', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                                     ],
                                   ),
                                 ),
@@ -188,7 +219,12 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                                 onPressed: () async {
                                   final visitorId = snapshot.data!.docs[idx].id;
-                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'pass_generated': true});
+                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
+                                    'pass_generated': true,
+                                    'departmentId': departmentId ?? '',
+                                    'department': departmentName ?? '',
+                                    'host_name': hostName ?? '',
+                                  });
                                   showDialog(
                                     context: context,
                                     builder: (context) => Dialog(
@@ -198,6 +234,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                         hostName: hostName ?? '',
                                         passNo: idx + 1,
                                         imageBytes: v['photoBase64'] != null ? base64Decode(v['photoBase64']) : _visitorImageBytes[idx],
+                                        departmentName: departmentName ?? '',
                                       ),
                                     ),
                                   );
@@ -221,7 +258,8 @@ class _VisitorPassCard extends StatelessWidget {
   final String hostName;
   final int passNo;
   final Uint8List? imageBytes;
-  const _VisitorPassCard({required this.visitor, required this.hostName, required this.passNo, this.imageBytes});
+  final String departmentName;
+  const _VisitorPassCard({required this.visitor, required this.hostName, required this.passNo, this.imageBytes, required this.departmentName});
 
   @override
   Widget build(BuildContext context) {
@@ -260,30 +298,25 @@ class _VisitorPassCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/rdl.png',
-                        width: 60,
-                        height: 30,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(visitor['v_company_name'] ?? '', style: const TextStyle(fontSize: 10)),
-                ],
+              Image.asset(
+                'assets/images/rdl.png',
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
               ),
+              const SizedBox(width: 12),
+              const Text('RDL Technologies Pvt Ltd', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
             ],
           ),
           const SizedBox(height: 8),
+          const Center(
+            child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
+          ),
+          const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               avatar,
               const SizedBox(width: 16),
@@ -298,22 +331,13 @@ class _VisitorPassCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(width: 4),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('From     : ${visitor['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Date     : ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                  Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                ],
-              ),
-            ],
-          ),
+          const SizedBox(height: 10),
+          if (visitor['v_company_name'] != null && visitor['v_company_name'].toString().isNotEmpty)
+            Text('Company : ${visitor['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          Text('Department: $departmentName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          Text('Date     : ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
         ],
       ),
     );

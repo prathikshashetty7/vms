@@ -78,20 +78,7 @@ class ReceptionistReportsPage extends StatelessWidget {
                 icon: Icons.vpn_key,
                 color: Colors.orangeAccent,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ThemedVisitorListPage(
-                        collection: 'host_passes',
-                        title: 'Host Passes',
-                        icon: Icons.vpn_key,
-                        color: Colors.orangeAccent,
-                        nameField: 'visitor',
-                        mobileField: 'mobile',
-                        timeField: 'timestamp',
-                      ),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/host_passes');
                 },
               ),
               const SizedBox(height: 24),
