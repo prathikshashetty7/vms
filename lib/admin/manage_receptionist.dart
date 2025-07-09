@@ -17,6 +17,23 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _obscurePassword = true;
+  String? _selectedDepartment = null;
+  List<String> _departments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDepartments();
+  }
+
+  Future<void> _fetchDepartments() async {
+    final snapshot = await FirebaseFirestore.instance.collection('department').get();
+    setState(() {
+      _departments = snapshot.docs.map((doc) => doc['d_name'] as String).toList();
+      // Do not pre-select any department
+      _selectedDepartment = null;
+    });
+  }
 
   @override
   void dispose() {
@@ -34,6 +51,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.clear();
     _passwordController.clear();
     _obscurePassword = true;
+    _selectedDepartment = null;
 
     showDialog(
       context: context,
@@ -46,6 +64,31 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    DropdownButtonFormField<String>(
+                      value: _selectedDepartment,
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                        border: OutlineInputBorder(),
+                      ),
+                      hint: const Text('Department'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Department'),
+                        ),
+                        ..._departments.map((dept) => DropdownMenuItem<String>(
+                          value: dept,
+                          child: Text(dept),
+                        ))
+                      ],
+                      onChanged: (value) {
+                        setStateSB(() {
+                          _selectedDepartment = value;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Please select a department' : null,
+                    ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: _nameController,
                       decoration: const InputDecoration(
@@ -115,9 +158,10 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     if (_nameController.text.isEmpty || 
         _emailController.text.isEmpty || 
         _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
+        _passwordController.text.isEmpty ||
+        _selectedDepartment == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
+        const SnackBar(content: Text('Please fill all fields and select a department')),
       );
       return;
     }
@@ -136,6 +180,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
         'phone': _phoneController.text,
         'password': _passwordController.text,
         'role': 'receptionist',
+        'department': _selectedDepartment,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
