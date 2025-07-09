@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/receptionist_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
 
 class CreatePassPage extends StatefulWidget {
   const CreatePassPage({Key? key}) : super(key: key);
@@ -15,6 +20,11 @@ class _CreatePassPageState extends State<CreatePassPage> {
   String? hostDocId;
   String? departmentId;
   bool loading = true;
+  final Map<int, File?> _visitorImages = {};
+  final Map<int, Uint8List?> _visitorImageBytes = {};
+  final Map<int, String?> _visitorImageUrls = {};
+  final Map<int, String?> _visitorImageBase64 = {};
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -37,6 +47,29 @@ class _CreatePassPageState extends State<CreatePassPage> {
       });
     } else {
       setState(() { loading = false; });
+    }
+  }
+
+  Future<void> _pickImage(int idx, String visitorId) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        Uint8List bytes = await pickedFile.readAsBytes();
+        String base64Str = base64Encode(bytes);
+        setState(() {
+          _visitorImageBytes[idx] = bytes;
+          _visitorImageBase64[idx] = base64Str;
+        });
+        try {
+          await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'photoBase64': base64Str});
+        } catch (e) {
+          print('Firestore update error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save image: $e')));
+        }
+      }
+    } catch (e) {
+      print('Image pick error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image selection failed: $e')));
     }
   }
 
@@ -67,6 +100,23 @@ class _CreatePassPageState extends State<CreatePassPage> {
                   itemCount: visitors.length,
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
+                    final visitorId = snapshot.data!.docs[idx].id;
+                    Widget avatar;
+                    final photoBase64 = v['photoBase64'] ?? _visitorImageBase64[idx];
+                    if (photoBase64 != null && photoBase64 != '') {
+                      final bytes = base64Decode(photoBase64);
+                      avatar = CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
+                        backgroundImage: MemoryImage(bytes),
+                      );
+                    } else {
+                      avatar = const CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Color(0xFF6CA4FE),
+                        child: Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
+                      );
+                    }
                     return Card(
                       color: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -79,10 +129,25 @@ class _CreatePassPageState extends State<CreatePassPage> {
                           children: [
                             Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
-                                  child: const Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
+                                Stack(
+                                  children: [
+                                    avatar,
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: GestureDetector(
+                                        onTap: () => _pickImage(idx, visitorId),
+                                        child: Container(
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: const EdgeInsets.all(2),
+                                          child: const Icon(Icons.edit, size: 16, color: Colors.blueAccent),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
@@ -132,6 +197,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                         visitor: v,
                                         hostName: hostName ?? '',
                                         passNo: idx + 1,
+                                        imageBytes: v['photoBase64'] != null ? base64Decode(v['photoBase64']) : _visitorImageBytes[idx],
                                       ),
                                     ),
                                   );
@@ -154,10 +220,33 @@ class _VisitorPassCard extends StatelessWidget {
   final Map<String, dynamic> visitor;
   final String hostName;
   final int passNo;
-  const _VisitorPassCard({required this.visitor, required this.hostName, required this.passNo});
+  final Uint8List? imageBytes;
+  const _VisitorPassCard({required this.visitor, required this.hostName, required this.passNo, this.imageBytes});
 
   @override
   Widget build(BuildContext context) {
+    Widget avatar;
+    if (imageBytes != null) {
+      avatar = Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          color: Color(0xFF6CA4FE),
+          borderRadius: BorderRadius.circular(4),
+          image: DecorationImage(image: MemoryImage(imageBytes!), fit: BoxFit.cover),
+        ),
+      );
+    } else {
+      avatar = Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          color: Color(0xFF6CA4FE),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Icon(Icons.person, color: Colors.white, size: 48),
+      );
+    }
     return Container(
       width: 340,
       padding: const EdgeInsets.all(18),
@@ -196,15 +285,7 @@ class _VisitorPassCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Color(0xFF6CA4FE),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Icon(Icons.person, color: Colors.white, size: 48),
-              ),
+              avatar,
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
