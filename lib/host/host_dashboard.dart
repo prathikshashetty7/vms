@@ -104,6 +104,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
   String? hostName;
   String? hostEmail;
   String? hostDept;
+  String? hostDeptId;
   bool loading = true;
 
   @override
@@ -118,10 +119,22 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
     final snap = await FirebaseFirestore.instance.collection('host').where('emp_email', isEqualTo: user.email).limit(1).get();
     if (snap.docs.isNotEmpty) {
       final data = snap.docs.first.data();
+      String? deptName = data['department'];
+      String? deptId = data['departmentId'];
+      if ((deptName == null || deptName.isEmpty) && deptId != null && deptId.isNotEmpty) {
+        // Fetch department name from department collection
+        final deptSnap = await FirebaseFirestore.instance.collection('department').doc(deptId).get();
+        if (deptSnap.exists) {
+          deptName = deptSnap.data()?['d_name'] ?? deptId;
+        } else {
+          deptName = deptId;
+        }
+      }
       setState(() {
         hostName = data['emp_name'] ?? 'Host';
         hostEmail = data['emp_email'] ?? user.email;
-        hostDept = data['department'] ?? '';
+        hostDept = deptName ?? '';
+        hostDeptId = deptId;
         loading = false;
       });
     } else {

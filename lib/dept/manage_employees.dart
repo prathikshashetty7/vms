@@ -22,11 +22,35 @@ class _ManageEmployeesState extends State<ManageEmployees> {
   String? _editingId;
   String? _editingCollection;
   String? get _currentDepartmentId => widget.currentDepartmentId;
+  bool _obscurePassword = true;
+  final FocusNode _empIdFocus = FocusNode();
+  final FocusNode _empNameFocus = FocusNode();
+  final FocusNode _empEmailFocus = FocusNode();
+  final FocusNode _empPasswordFocus = FocusNode();
+  final FocusNode _empContNoFocus = FocusNode();
+  final FocusNode _empAddressFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
     // No need to fetch departmentId here
+  }
+
+  @override
+  void dispose() {
+    _empIdController.dispose();
+    _empNameController.dispose();
+    _empEmailController.dispose();
+    _empPasswordController.dispose();
+    _empContNoController.dispose();
+    _empAddressController.dispose();
+    _empIdFocus.dispose();
+    _empNameFocus.dispose();
+    _empEmailFocus.dispose();
+    _empPasswordFocus.dispose();
+    _empContNoFocus.dispose();
+    _empAddressFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _addOrUpdateEmployee() async {
@@ -217,6 +241,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _empIdController,
+                        focusNode: _empIdFocus,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_empNameFocus),
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Employee ID',
@@ -240,6 +267,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _empNameController,
+                        focusNode: _empNameFocus,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_empEmailFocus),
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Employee Name',
@@ -263,6 +293,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _empEmailController,
+                        focusNode: _empEmailFocus,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_empPasswordFocus),
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Email',
@@ -285,8 +318,13 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 10),
-                      TextField(
+                      StatefulBuilder(
+                        builder: (context, setStateSB) {
+                          return TextField(
                         controller: _empPasswordController,
+                            focusNode: _empPasswordFocus,
+                            textInputAction: TextInputAction.next,
+                            onSubmitted: (_) => FocusScope.of(context).requestFocus(_empContNoFocus),
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Password',
@@ -305,12 +343,25 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.black, width: 2),
                           ),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () {
+                                  setStateSB(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
                         ),
-                        obscureText: true,
+                            obscureText: _obscurePassword,
+                          );
+                        },
                       ),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _empContNoController,
+                        focusNode: _empContNoFocus,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_empAddressFocus),
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Contact Number',
@@ -335,6 +386,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _empAddressController,
+                        focusNode: _empAddressFocus,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) {},
                         style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           hintText: 'Address',
@@ -432,9 +486,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
         ], // <-- Close the children list for Column
       ), // <-- Close the Column
       floatingActionButton: FloatingActionButton(
-        backgroundColor: ReceptionistTheme.primary,
+        backgroundColor: Colors.white,
         onPressed: () => showEmployeeForm(),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.black),
         tooltip: 'Add Employee',
       ),
     );
@@ -488,6 +542,12 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.black),
                           onPressed: () => _deleteEmployee(doc.id, collectionName),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_red_eye, color: Colors.black),
+                          onPressed: () {
+                            // Add your view logic here
+                          },
                         ),
                       ],
                     ),
