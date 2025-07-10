@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
+import 'package:vms/receptionist/host_passes_page.dart' show PassDetailDialog;
 
 class CreatePassPage extends StatefulWidget {
   const CreatePassPage({Key? key}) : super(key: key);
@@ -225,17 +226,41 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'department': departmentName ?? '',
                                     'host_name': hostName ?? '',
                                   });
+                                  // Prepare pass data
+                                  dynamic vDate = v['v_date'];
+                                  Timestamp passDate;
+                                  if (vDate is Timestamp) {
+                                    passDate = vDate;
+                                  } else if (vDate is DateTime) {
+                                    passDate = Timestamp.fromDate(vDate);
+                                  } else {
+                                    try {
+                                      passDate = Timestamp.fromDate(DateTime.parse(vDate.toString()));
+                                    } catch (_) {
+                                      passDate = Timestamp.now();
+                                    }
+                                  }
+                                  final passData = {
+                                    'visitorId': visitorId,
+                                    'v_name': v['v_name'] ?? '',
+                                    'v_company_name': v['v_company_name'] ?? '',
+                                    'department': departmentName ?? '',
+                                    'departmentId': departmentId ?? '',
+                                    'host_name': hostName ?? '',
+                                    'v_date': passDate,
+                                    'v_time': v['v_time'],
+                                    'photoBase64': v['photoBase64'] ?? _visitorImageBase64[idx],
+                                  };
+                                  await FirebaseFirestore.instance.collection('passes').add({
+                                    ...passData,
+                                    'created_at': FieldValue.serverTimestamp(),
+                                  });
                                   showDialog(
                                     context: context,
                                     builder: (context) => Dialog(
+                                      insetPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 24), // Add this for better responsiveness
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                      child: _VisitorPassCard(
-                                        visitor: v,
-                                        hostName: hostName ?? '',
-                                        passNo: idx + 1,
-                                        imageBytes: v['photoBase64'] != null ? base64Decode(v['photoBase64']) : _visitorImageBytes[idx],
-                                        departmentName: departmentName ?? '',
-                                      ),
+                                      child: PassDetailDialog(pass: passData, showPrint: false),
                                     ),
                                   );
                                 },
