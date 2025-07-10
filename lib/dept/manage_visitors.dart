@@ -12,12 +12,31 @@ class ManageVisitors extends StatefulWidget {
 }
 
 class _ManageVisitorsState extends State<ManageVisitors> {
+  // Add missing FocusNodes
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _designationFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _totalFocus = FocusNode();
+
   String? get _currentDepartmentId => widget.currentDepartmentId;
 
   @override
   void initState() {
     super.initState();
     // No need to fetch departmentId here
+  }
+
+  @override
+  void dispose() {
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _designationFocus.dispose();
+    _companyFocus.dispose();
+    _contactFocus.dispose();
+    _totalFocus.dispose();
+    super.dispose();
   }
 
   void _showVisitorForm([DocumentSnapshot? visitor]) {
@@ -81,6 +100,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: vNameController,
+                            focusNode: _nameFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_emailFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Name',
@@ -106,6 +130,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vEmailController,
+                            focusNode: _emailFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_designationFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Email',
@@ -131,6 +160,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vDesignationController,
+                            focusNode: _designationFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_companyFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Designation',
@@ -155,6 +189,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vCompanyNameController,
+                            focusNode: _companyFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_contactFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Company Name',
@@ -179,6 +218,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vContactNoController,
+                            focusNode: _contactFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_totalFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Contact No',
@@ -203,6 +247,11 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                   TextFormField(
                     controller: vTotalNoController,
+                    focusNode: _totalFocus,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                      // Optionally submit the form here
+                    },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Total Visitors',
