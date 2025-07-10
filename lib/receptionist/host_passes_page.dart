@@ -242,164 +242,208 @@ class _PassDetailDialog extends StatelessWidget {
     if (pass['photoBase64'] != null && pass['photoBase64'] != '') {
       imageBytes = base64Decode(pass['photoBase64']);
     }
-    return Container(
-      width: 340,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black54, width: 1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/rdl.png',
-                width: 40,
-                height: 40,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-              const Text('RDL Technologies Pvt Ltd', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Center(
-            child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (imageBytes != null)
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF6CA4FE),
-                    borderRadius: BorderRadius.circular(4),
-                    image: DecorationImage(image: MemoryImage(imageBytes), fit: BoxFit.cover),
-                  ),
-                )
-              else
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF6CA4FE),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 48),
+    // Load logo bytes for PDF
+    final logoProvider = AssetImage('assets/images/rdl.png');
+    // This is a workaround for PDF: you need to load the bytes asynchronously, so we'll use rootBundle
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double dialogWidth = 340;
+        final screenWidth = MediaQuery.of(context).size.width;
+        if (screenWidth < 380) {
+          dialogWidth = screenWidth * 0.95;
+        } else if (screenWidth < 500) {
+          dialogWidth = screenWidth * 0.90;
+        }
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: SingleChildScrollView(
+              child: Container(
+                width: dialogWidth,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black54, width: 1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              const SizedBox(width: 16),
-              Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Visitor Name : ${pass['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
-            Text('Company : ${pass['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Host     : ${pass['host_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Department: ${pass['department'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Date     : ${_formatDate(pass['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Time     : ${pass['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.print),
-                label: const Text('Print'),
-                onPressed: () async {
-                  await Printing.layoutPdf(
-                    onLayout: (PdfPageFormat format) async {
-                      final pdf = pw.Document();
-                      pdf.addPage(
-                        pw.Page(
-                          pageFormat: format,
-                          build: (pw.Context context) {
-                            return pw.Container(
-                              padding: const pw.EdgeInsets.all(18),
-                              decoration: pw.BoxDecoration(
-                                border: pw.Border.all(color: PdfColor.fromInt(0xFF000000), width: 1),
-                                borderRadius: pw.BorderRadius.circular(12),
-                              ),
-                              child: pw.Column(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  pw.Row(
-                                    children: [
-                                      if (imageBytes != null)
-                                        pw.Container(
-                                          width: 70,
-                                          height: 70,
-                                          decoration: pw.BoxDecoration(
-                                            color: PdfColor.fromInt(0xFF6CA4FE),
-                                            borderRadius: pw.BorderRadius.circular(4),
-                                            image: pw.DecorationImage(
-                                              image: pw.MemoryImage(imageBytes),
-                                              fit: pw.BoxFit.cover,
-                                            ),
-                                          ),
-                                        )
-                                      else
-                                        pw.Container(
-                                          width: 70,
-                                          height: 70,
-                                          decoration: pw.BoxDecoration(
-                                            color: PdfColor.fromInt(0xFF6CA4FE),
-                                            borderRadius: pw.BorderRadius.circular(4),
-                                          ),
-                                          child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/rdl.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('RDL Technologies Pvt Ltd', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Center(
+                      child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (imageBytes != null)
+                          Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF6CA4FE),
+                              borderRadius: BorderRadius.circular(4),
+                              image: DecorationImage(image: MemoryImage(imageBytes), fit: BoxFit.cover),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF6CA4FE),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.person, color: Colors.white, size: 48),
+                          ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Visitor Name : ${pass['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
+                      Text('Company : ${pass['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                    Text('Host     : ${pass['host_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                    Text('Department: ${pass['department'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                    Text('Date     : ${_formatDate(pass['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                    Text('Time     : ${pass['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.print),
+                          label: const Text('Print'),
+                          onPressed: () async {
+                            // Load logo bytes for PDF
+                            final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
+                            final logoUint8List = logoBytes.buffer.asUint8List();
+                            await Printing.layoutPdf(
+                              onLayout: (PdfPageFormat format) async {
+                                final pdf = pw.Document();
+                                pdf.addPage(
+                                  pw.Page(
+                                    pageFormat: format,
+                                    build: (pw.Context context) {
+                                      return pw.Container(
+                                        padding: const pw.EdgeInsets.all(18),
+                                        decoration: pw.BoxDecoration(
+                                          border: pw.Border.all(color: PdfColor.fromInt(0xFF000000), width: 1),
+                                          borderRadius: pw.BorderRadius.circular(12),
                                         ),
-                                      pw.SizedBox(width: 16),
-                                      pw.Expanded(
                                         child: pw.Column(
                                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                                           children: [
-                                            pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                                            // Logo and company name
+                                            pw.Row(
+                                              crossAxisAlignment: pw.CrossAxisAlignment.center,
+                                              children: [
+                                                pw.Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  child: pw.Image(pw.MemoryImage(logoUint8List)),
+                                                ),
+                                                pw.SizedBox(width: 12),
+                                                pw.Text('RDL Technologies Pvt Ltd', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                              ],
+                                            ),
+                                            pw.SizedBox(height: 8),
+                                            pw.Center(
+                                              child: pw.Text('Visitor Pass', style: pw.TextStyle(color: PdfColor.fromInt(0xFFEF4444), fontWeight: pw.FontWeight.bold, fontSize: 18)),
+                                            ),
+                                            pw.SizedBox(height: 12),
+                                            pw.Row(
+                                              children: [
+                                                if (imageBytes != null)
+                                                  pw.Container(
+                                                    width: 70,
+                                                    height: 70,
+                                                    decoration: pw.BoxDecoration(
+                                                      color: PdfColor.fromInt(0xFF6CA4FE),
+                                                      borderRadius: pw.BorderRadius.circular(4),
+                                                      image: pw.DecorationImage(
+                                                        image: pw.MemoryImage(imageBytes),
+                                                        fit: pw.BoxFit.cover,
+                                                      ),
+                                                    ),
+                                                  )
+                                                else
+                                                  pw.Container(
+                                                    width: 70,
+                                                    height: 70,
+                                                    decoration: pw.BoxDecoration(
+                                                      color: PdfColor.fromInt(0xFF6CA4FE),
+                                                      borderRadius: pw.BorderRadius.circular(4),
+                                                    ),
+                                                    child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                                                  ),
+                                                pw.SizedBox(width: 16),
+                                                pw.Expanded(
+                                                  child: pw.Column(
+                                                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                                    children: [
+                                                      pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            pw.SizedBox(height: 10),
+                                            if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
+                                              pw.Text('Company : ${pass['v_company_name']}', style: pw.TextStyle(fontSize: 13)),
+                                            pw.Text('Host     : ${pass['host_name'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
+                                            pw.Text('Department: ${pass['department'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
+                                            pw.Text('Date     : ${_formatDate(pass['v_date'])}', style: pw.TextStyle(fontSize: 13)),
+                                            pw.Text('Time     : ${pass['v_time'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
                                           ],
                                         ),
-                                      ),
-                                    ],
+                                      );
+                                    },
                                   ),
-                                  pw.SizedBox(height: 10),
-                                  if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
-                                    pw.Text('Company : ${pass['v_company_name']}', style: pw.TextStyle(fontSize: 13)),
-                                  pw.Text('Host     : ${pass['host_name'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
-                                  pw.Text('Department: ${pass['department'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
-                                  pw.Text('Date     : ${_formatDate(pass['v_date'])}', style: pw.TextStyle(fontSize: 13)),
-                                  pw.Text('Time     : ${pass['v_time'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
-                                ],
-                              ),
+                                );
+                                return pdf.save();
+                              },
                             );
                           },
                         ),
-                      );
-                      return pdf.save();
-                    },
-                  );
-                },
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.close),
+                          label: const Text('Close'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.close),
-                label: const Text('Close'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 } 
