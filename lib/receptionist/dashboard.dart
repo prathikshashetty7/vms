@@ -208,35 +208,30 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                   ),
                 ),
               ),
-              // Stat Cards Grid
+              const SizedBox(height: 16), // Add space after Recent Activity
               Padding(
-                padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 0, bottom: 0),
-                child: Transform.translate(
-                  offset: const Offset(0, -34),
-                  child: Center(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 18,
-                      crossAxisSpacing: 18,
-                      childAspectRatio: 0.85,
-                      children: [
-                        _TodayVisitorsStatCard(),
-                        _StyledStatCard(
-                          title: 'Checked In',
-                          value: '8',
-                          icon: Icons.login,
-                        ),
-                        _StyledStatCard(
-                          title: 'Checked Out',
-                          value: '4',
-                          icon: Icons.logout,
-                        ),
-                        _FrequentVisitorsStatCard(),
-                      ],
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 18,
+                  crossAxisSpacing: 18,
+                  childAspectRatio: 0.95,
+                  children: [
+                    _TodayVisitorsStatCard(),
+                    _StyledStatCard(
+                      title: 'Checked In',
+                      value: '8',
+                      icon: Icons.login,
                     ),
-                  ),
+                    _StyledStatCard(
+                      title: 'Checked Out',
+                      value: '4',
+                      icon: Icons.logout,
+                    ),
+                    _FrequentVisitorsStatCard(),
+                  ],
                 ),
               ),
               const SizedBox(height: 2),

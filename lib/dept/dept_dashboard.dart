@@ -96,28 +96,20 @@ class _DeptDashboardState extends State<DeptDashboard> {
       backgroundColor: const Color(0xFFD4E9FF),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight + MediaQuery.of(context).padding.top),
-        child: Stack(
-          children: [
-            ClipPath(
-              clipper: DiagonalAppBarClipper(),
-              child: Container(
-                height: kToolbarHeight + MediaQuery.of(context).padding.top,
-                color: const Color(0xFF6CA4FE),
+        child: Container(
+          color: const Color(0xFF6CA4FE),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Image.asset('assets/images/rdl.png', height: 36),
+                  const SizedBox(width: 12),
+                  const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
               ),
             ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    Image.asset('assets/images/rdl.png', height: 36),
-                    const SizedBox(width: 12),
-                    const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
       extendBodyBehindAppBar: true,
@@ -192,13 +184,13 @@ class _DeptHomePage extends StatelessWidget {
                     const SizedBox(height: 12),
                     const Text('Manage your department roles, employees, and visitors efficiently.', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Color(0xFF091016)), textAlign: TextAlign.center),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: const [
                         Chip(label: Text('Secure', style: TextStyle(color: Color(0xFF091016))), backgroundColor: Color(0xFF6CA4FE)),
-                        SizedBox(width: 8),
                         Chip(label: Text('Efficient', style: TextStyle(color: Color(0xFF091016))), backgroundColor: Color(0xFF6CA4FE)),
-                        SizedBox(width: 8),
                         Chip(label: Text('Professional', style: TextStyle(color: Color(0xFF091016))), backgroundColor: Color(0xFF6CA4FE)),
                       ],
                     ),
@@ -219,24 +211,48 @@ class _DeptAnalytics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Wrap(
-        spacing: 18,
-        runSpacing: 18,
-        alignment: WrapAlignment.center,
-        children: [
-          DeptStatCard(
-            title: 'Hosts',
-            icon: Icons.people_alt,
-            valueStream: _countStream('host', currentDepartmentId),
-          ),
-          DeptStatCard(
-            title: 'Visitors',
-            icon: Icons.people,
-            valueStream: _countStream('visitor', currentDepartmentId),
-          ),
-        ],
+    final cardList = [
+      DeptStatCard(
+        title: 'Hosts',
+        icon: Icons.people_alt,
+        valueStream: _countStream('host', currentDepartmentId),
       ),
+      DeptStatCard(
+        title: 'Visitors',
+        icon: Icons.people,
+        valueStream: _countStream('visitor', currentDepartmentId),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 500;
+        if (isWide) {
+          // On wide screens, show in a row with equal spacing
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: cardList
+                .map((card) => Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9.0),
+                      child: card,
+                    )))
+                .toList(),
+          );
+        } else {
+          // On small screens, show in a horizontal scrollable row
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: cardList
+                  .map((card) => Container(
+                        width: 180,
+                        margin: const EdgeInsets.symmetric(horizontal: 9.0),
+                        child: card,
+                      ))
+                  .toList(),
+            ),
+          );
+        }
+      },
     );
   }
 
