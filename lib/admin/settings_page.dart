@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/admin_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../main.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -16,12 +18,76 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  bool _showCurrent = false;
+  bool _showNew = false;
+  bool _showConfirm = false;
+  bool _loading = false;
+
   @override
   void dispose() {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Remove Theme.of(context) from here
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _darkMode = WidgetsBinding.instance.window.platformBrightness == Brightness.dark || Theme.of(context).brightness == Brightness.dark;
+  }
+
+  Future<void> _updatePassword() async {
+    if (_currentPasswordController.text.isEmpty ||
+        _newPasswordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields.')),
+      );
+      return;
+    }
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New passwords do not match.')),
+      );
+      return;
+    }
+    if (_newPasswordController.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters.')),
+      );
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final user = await FirebaseAuth.instance.currentUser;
+      if (user == null || user.email == null) throw Exception('No user logged in');
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: _currentPasswordController.text,
+      );
+      await user.reauthenticateWithCredential(cred);
+      await user.updatePassword(_newPasswordController.text);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password updated successfully!')),
+      );
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      setState(() => _showChangePassword = false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update password: $e')),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   void _showLogoutDialog() {
@@ -36,9 +102,10 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              // TODO: Clear session and redirect to login
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
               Navigator.of(context).pop();
+              Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Logout'),
@@ -147,37 +214,49 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           TextField(
                             controller: _currentPasswordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
+                            obscureText: !_showCurrent,
+                            decoration: InputDecoration(
                               labelText: 'Current Password',
-                              prefixIcon: Icon(Icons.lock_outline),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(_showCurrent ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => _showCurrent = !_showCurrent),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _newPasswordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
+                            obscureText: !_showNew,
+                            decoration: InputDecoration(
                               labelText: 'New Password',
-                              prefixIcon: Icon(Icons.lock_open),
+                              prefixIcon: const Icon(Icons.lock_open),
+                              suffixIcon: IconButton(
+                                icon: Icon(_showNew ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => _showNew = !_showNew),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           TextField(
                             controller: _confirmPasswordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
+                            obscureText: !_showConfirm,
+                            decoration: InputDecoration(
                               labelText: 'Confirm Password',
-                              prefixIcon: Icon(Icons.lock),
+                              prefixIcon: const Icon(Icons.lock),
+                              suffixIcon: IconButton(
+                                icon: Icon(_showConfirm ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Implement password update logic
-                            },
+                            onPressed: _loading ? null : _updatePassword,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Update Password'),
+                            label: _loading
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Text('Update Password'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepPurple,
                               foregroundColor: Colors.white,
@@ -202,7 +281,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       setState(() {
                         _darkMode = val;
                       });
-                      // TODO: Implement theme switching
+                      MyApp.of(context)?.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
                     },
                     secondary: const Icon(Icons.brightness_6, color: Colors.deepPurple),
                   ),
