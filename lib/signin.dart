@@ -40,27 +40,33 @@ class _SignInPageState extends State<SignInPage> {
   // Replace the UID-based lookup with an email-based lookup
   Future<Map<String, dynamic>?> _getUserDataByEmail(String email) async {
     final collections = ['admin', 'department', 'host', 'receptionist'];
+    final fieldNames = [
+      'email', // receptionist, admin
+      'emp_email', // host
+      'd_email', // department
+    ];
+    // Prepare all queries in parallel
+    List<Future<Map<String, dynamic>?>> futures = [];
     for (final collection in collections) {
-      // Try both 'email' and possible field names for each collection
-      final fieldNames = [
-        'email', // receptionist, admin
-        'emp_email', // host
-        'd_email', // department
-      ];
       for (final field in fieldNames) {
-        final query = await _firestore
+        futures.add(_firestore
             .collection(collection)
             .where(field, isEqualTo: email)
             .limit(1)
-            .get();
-        if (query.docs.isNotEmpty) {
-          final data = query.docs.first.data();
-          data['role'] = collection;
-          return data;
-        }
+            .get()
+            .then((query) {
+              if (query.docs.isNotEmpty) {
+                final data = query.docs.first.data();
+                data['role'] = collection;
+                return data;
+              }
+              return null;
+            }));
       }
     }
-    return null;
+    // Wait for all queries to complete and return the first non-null result
+    final results = await Future.wait(futures);
+    return results.firstWhere((data) => data != null, orElse: () => null);
   }
 
   void _signIn() async {
