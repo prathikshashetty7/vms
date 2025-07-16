@@ -36,6 +36,7 @@ class DeptDashboard extends StatefulWidget {
 class _DeptDashboardState extends State<DeptDashboard> {
   int _selectedIndex = 0;
   String? _currentDepartmentId;
+  String? _departmentName;
   bool _loadingDeptId = true;
 
   @override
@@ -58,6 +59,7 @@ class _DeptDashboardState extends State<DeptDashboard> {
     if (query.docs.isNotEmpty) {
       setState(() {
         _currentDepartmentId = query.docs.first.id;
+        _departmentName = query.docs.first.data()['d_name'] ?? '';
         _loadingDeptId = false;
       });
     } else {
@@ -67,8 +69,27 @@ class _DeptDashboardState extends State<DeptDashboard> {
 
   void _onItemTapped(int index) async {
     if (index == 4) {
-      await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(context, '/signin');
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
@@ -84,9 +105,9 @@ class _DeptDashboardState extends State<DeptDashboard> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    // Pass currentDepartmentId to all subpages
+    // Pass currentDepartmentId and departmentName to all subpages
     final List<Widget> _pages = <Widget>[
-      _DeptHomePage(currentDepartmentId: _currentDepartmentId),
+      _DeptHomePage(currentDepartmentId: _currentDepartmentId, departmentName: _departmentName),
       ManageEmployees(currentDepartmentId: _currentDepartmentId),
       ManageVisitors(currentDepartmentId: _currentDepartmentId),
       DeptReport(currentDepartmentId: _currentDepartmentId),
@@ -144,7 +165,7 @@ class _DeptDashboardState extends State<DeptDashboard> {
         ],
       ),
       body: _selectedIndex == 0
-          ? _DeptHomePage(currentDepartmentId: _currentDepartmentId)
+          ? _DeptHomePage(currentDepartmentId: _currentDepartmentId, departmentName: _departmentName)
           : _pages[_selectedIndex],
     );
   }
@@ -152,7 +173,8 @@ class _DeptDashboardState extends State<DeptDashboard> {
 
 class _DeptHomePage extends StatelessWidget {
   final String? currentDepartmentId;
-  const _DeptHomePage({this.currentDepartmentId});
+  final String? departmentName;
+  const _DeptHomePage({this.currentDepartmentId, this.departmentName});
 
   @override
   Widget build(BuildContext context) {
@@ -161,12 +183,7 @@ class _DeptHomePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
-          // Analytics Header (remove white container)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
-          ),
-          // Dashboard Card
+          // Dashboard Card (now above analytics)
           Center(
             child: Card(
               elevation: 8,
@@ -180,7 +197,13 @@ class _DeptHomePage extends StatelessWidget {
                   children: [
                     Image.asset('assets/images/rdl.png', height: 64),
                     const SizedBox(height: 16),
-                    const Text('Department Dashboard!', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 28, color: Color(0xFF091016)), textAlign: TextAlign.center),
+                    Text(
+                      departmentName != null && departmentName!.isNotEmpty
+                          ? '${departmentName!} Department Dashboard!'
+                          : 'Department Dashboard!',
+                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 28, color: Color(0xFF091016)),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
                     const Text('Manage your department roles, employees, and visitors efficiently.', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Color(0xFF091016)), textAlign: TextAlign.center),
                     const SizedBox(height: 24),
@@ -198,6 +221,11 @@ class _DeptHomePage extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          // Analytics Header (now below dashboard card)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+            child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
           ),
         ],
       ),
@@ -286,11 +314,7 @@ class DeptStatCard extends StatelessWidget {
       height: 140,
       width: 180,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEDF4FF), Color(0xFFD4E9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(

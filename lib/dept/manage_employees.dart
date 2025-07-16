@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/receptionist_theme.dart';
+import '../theme/dept_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -218,12 +219,12 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: DeptTheme.background,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: ReceptionistTheme.primary.withOpacity(0.12),
-                      blurRadius: 12,
+                      color: Colors.black.withOpacity(0.08), // subtle shadow like host dashboard
+                      blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
                   ],
@@ -234,9 +235,19 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        _editingId == null ? 'Add Host' : 'Edit Host',
-                        style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: Colors.white),
+                      Row(
+                        children: [
+                          Icon(Icons.person, color: DeptTheme.text, size: 28),
+                          const SizedBox(width: 10),
+                          Text(
+                            _editingId == null ? 'Add Host' : 'Edit Host',
+                            style: DeptTheme.heading.copyWith(
+                              fontSize: 22,
+                              color: DeptTheme.text,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -419,9 +430,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               Navigator.of(context).pop();
                             },
                             icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
-                            label: Text(_editingId == null ? 'Add' : 'Update', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                            label: Text(_editingId == null ? 'Add' : 'Update', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _editingId == null ? ReceptionistTheme.primary : ReceptionistTheme.text,
+                              backgroundColor: DeptTheme.text,
                               padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -463,7 +474,6 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       backgroundColor: const Color(0xFFD4E9FF),
       body: Column(
         children: [
-          _customHeader(),
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
@@ -494,70 +504,138 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     );
   }
 
-  Widget _buildEmployeeList(String collectionName, String title, void Function([DocumentSnapshot?, String?]) showEmployeeForm) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(title, style: ReceptionistTheme.subheading),
-        ),
-        StreamBuilder<QuerySnapshot>(
-          stream: collectionName == 'host' && _currentDepartmentId != null
-              ? FirebaseFirestore.instance.collection('host').where('departmentId', isEqualTo: _currentDepartmentId).snapshots()
-              : FirebaseFirestore.instance.collection(collectionName).snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.data!.docs.isEmpty) {
-              return Center(child: Text('No $title found.'));
-            }
-            final docs = snapshot.data!.docs;
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: docs.length,
-              itemBuilder: (context, index) {
-                final doc = docs[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: ListTile(
-                    leading: const Icon(Icons.person, color: Colors.black),
-                    title: Text(doc['emp_name'] ?? '', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
-                    subtitle: Text('ID: ${doc['emp_id']}, Role: ${doc['role']}', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.black),
-                          onPressed: () => showEmployeeForm(doc, collectionName),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.black),
-                          onPressed: () => _deleteEmployee(doc.id, collectionName),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.remove_red_eye, color: Colors.black),
-                          onPressed: () {
-                            // Add your view logic here
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+  Widget _buildEmployeeList(String collection, String title, void Function([DocumentSnapshot?, String?]) showForm) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _currentDepartmentId == null
+          ? null
+          : FirebaseFirestore.instance.collection(collection)
+              .where('departmentId', isEqualTo: _currentDepartmentId)
+              .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Center(child: Text('No $title found.', style: ReceptionistTheme.body)),
+          );
+        }
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final name = doc['emp_name'] ?? '';
+            final email = doc['emp_email'] ?? '';
+            final contact = doc['emp_contno'] ?? '';
+            final role = doc['role'] ?? '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.person, color: Colors.black),
+                title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                subtitle: Text('Email: $email | Contact Number: $contact', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(icon: const Icon(Icons.edit, color: Colors.black), onPressed: () => showForm(doc, collection)),
+                    IconButton(icon: const Icon(Icons.delete, color: Colors.black), onPressed: () => _deleteEmployee(doc.id, collection)),
+                    IconButton(icon: const Icon(Icons.visibility, color: Colors.black), onPressed: () => _showEmployeeDetailsDialog(doc)),
+                  ],
+                ),
+              ),
             );
           },
-        ),
-      ],
+        );
+      },
+    );
+  }
+
+  void _showEmployeeDetailsDialog(DocumentSnapshot doc) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 8,
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        'Employee Details',
+                        style: DeptTheme.heading.copyWith(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Card(
+                      color: Colors.grey[50],
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _employeeDetailRow('Employee ID', doc['emp_id'] ?? ''),
+                            _employeeDetailRow('Name', doc['emp_name'] ?? ''),
+                            _employeeDetailRow('Email', doc['emp_email'] ?? ''),
+                            _employeeDetailRow('Contact Number', doc['emp_contno'] ?? ''),
+                            _employeeDetailRow('Address', doc['emp_address'] ?? ''),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        child: Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _employeeDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+          Expanded(
+            child: Text(value, style: TextStyle(color: Colors.black87)),
+          ),
+        ],
+      ),
     );
   }
 } 
