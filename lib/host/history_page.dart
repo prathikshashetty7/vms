@@ -14,6 +14,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String? hostDocId;
   String? departmentId;
+  String? hostName;
   bool loading = true;
 
   @override
@@ -32,6 +33,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       setState(() {
         hostDocId = doc.id;
         departmentId = data['departmentId'] ?? '';
+        hostName = data['emp_name'] ?? '';
         loading = false;
       });
     } else {
@@ -57,13 +59,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       decoration: const BoxDecoration(
         color: Color(0xFFD4E9FF),
       ),
-      child: loading || hostDocId == null || departmentId == null
+      child: loading || hostDocId == null || departmentId == null || hostName == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('visitor')
-                  .where('emp_id', isEqualTo: hostDocId)
-                  .where('departmentId', isEqualTo: departmentId)
+                  .collection('passes')
+                  // .where('host_name', isEqualTo: hostName)
+                  // .where('departmentId', isEqualTo: departmentId)
+                  .orderBy('created_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -72,24 +75,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
                 }
-                final now = DateTime.now();
-                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) {
-                  final date = v['v_date'];
-                  if (date == null) return false;
-                  DateTime visitDate;
-                  if (date is Timestamp) {
-                    visitDate = date.toDate();
-                  } else if (date is DateTime) {
-                    visitDate = date;
-                  } else {
-                    try {
-                      visitDate = DateTime.parse(date.toString());
-                    } catch (_) {
-                      return false;
-                    }
-                  }
-                  return visitDate.isBefore(DateTime(now.year, now.month, now.day));
-                }).toList();
+                // TEMP: Show all passes for debugging
+                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
                 if (visitors.isEmpty) {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
                 }

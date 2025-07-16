@@ -86,21 +86,54 @@ class _VisitorManagementPageState extends State<VisitorManagementPage> {
                       }
                     },
                   ),
-                  DropdownButton<String>(
-                    value: _selectedDepartment,
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(color: Colors.black),
-                    items: _departments.map((dept) {
-                      return DropdownMenuItem<String>(
-                        value: dept,
-                        child: Text(dept, style: TextStyle(color: Colors.black)),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedDepartment = val ?? 'Departments';
-                      });
-                    },
+                  SizedBox(
+                    width: 180, // Adjust width as needed
+                    height: 40, // Adjust height as needed
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        // The white selected value
+                        Positioned.fill(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 12, right: 36),
+                              child: Text(
+                                _selectedDepartment,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 16),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // The dropdown icon on the right
+                        Positioned(
+                          right: 8,
+                          child: Icon(Icons.arrow_drop_down, color: Colors.black),
+                        ),
+                        // The transparent DropdownButton overlays the text and handles interaction
+                        DropdownButton<String>(
+                          value: _selectedDepartment,
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.white),
+                          items: _departments.map((dept) {
+                            return DropdownMenuItem<String>(
+                              value: dept,
+                              child: Text(dept, style: const TextStyle(color: Colors.black)),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedDepartment = val ?? 'Departments';
+                            });
+                          },
+                          icon: const SizedBox.shrink(), // Hide default icon
+                          underline: Container(height: 2, color: Colors.transparent),
+                          isExpanded: true,
+                          selectedItemBuilder: (context) => _departments.map((dept) => const SizedBox.shrink()).toList(),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
