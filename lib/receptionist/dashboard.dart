@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'manual_entry_page.dart';
 import 'receptionist_reports_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReceptionistDashboard extends StatefulWidget {
   const ReceptionistDashboard({Key? key}) : super(key: key);
@@ -16,6 +17,40 @@ class ReceptionistDashboard extends StatefulWidget {
 
 class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
   int _selectedIndex = 0;
+  String? receptionistName;
+  bool _loadingReceptionist = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReceptionistName();
+  }
+
+  Future<void> _fetchReceptionistName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _loadingReceptionist = false;
+      });
+      return;
+    }
+    final snap = await FirebaseFirestore.instance
+        .collection('receptionist')
+        .where('email', isEqualTo: user.email)
+        .limit(1)
+        .get();
+    if (snap.docs.isNotEmpty) {
+      final data = snap.docs.first.data();
+      setState(() {
+        receptionistName = data['name'] ?? user.email;
+        _loadingReceptionist = false;
+      });
+    } else {
+      setState(() {
+        _loadingReceptionist = false;
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     if (index == 4) {
@@ -28,7 +63,10 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
     if (index == 0) {
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else if (index == 1) {
-      Navigator.pushReplacementNamed(context, '/host_passes');
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const VisitorsPage()),
+      );
     } else if (index == 2) {
       Navigator.pushReplacementNamed(context, '/manual_entry');
     } else if (index == 3) {
@@ -67,8 +105,8 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.vpn_key_rounded),
-            label: 'Host Passes',
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
@@ -125,16 +163,18 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Welcome, Receptionist',
-                            style: TextStyle(
-                              color: Color(0xFF091016),
-                              fontWeight: FontWeight.w900,
-                              fontFamily: 'Poppins',
-                              fontSize: 22,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                          _loadingReceptionist
+                              ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                              : Text(
+                                  'Welcome, ' + (receptionistName ?? 'Receptionist'),
+                                  style: TextStyle(
+                                    color: Color(0xFF091016),
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'Poppins',
+                                    fontSize: 22,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                           const SizedBox(height: 6),
                           Text(
                             'Hope you have a wonderful day at work! 😊',
@@ -157,8 +197,46 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                   ],
                 ),
               ),
+              // Stat cards section moved here
+              const SizedBox(height: 4), // Reduced space after header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 700) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: _TodayVisitorsStatCard()),
+                          const SizedBox(width: 18),
+                          Expanded(child: _StyledStatCard(title: 'Checked In', value: '8', icon: Icons.login)),
+                          const SizedBox(width: 18),
+                          Expanded(child: _StyledStatCard(title: 'Checked Out', value: '4', icon: Icons.logout)),
+                          const SizedBox(width: 18),
+                          Expanded(child: _FrequentVisitorsStatCard()),
+                        ],
+                      );
+                    } else {
+                      return GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 18,
+                        crossAxisSpacing: 18,
+                        childAspectRatio: 0.95,
+                        children: [
+                          _TodayVisitorsStatCard(),
+                          _StyledStatCard(title: 'Checked In', value: '8', icon: Icons.login),
+                          _StyledStatCard(title: 'Checked Out', value: '4', icon: Icons.logout),
+                          _FrequentVisitorsStatCard(),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ),
               const SizedBox(height: 30),
-              // Activity List
+              // Activity List (now after stat cards)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: Container(
@@ -208,32 +286,6 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16), // Add space after Recent Activity
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 18,
-                  crossAxisSpacing: 18,
-                  childAspectRatio: 0.95,
-                  children: [
-                    _TodayVisitorsStatCard(),
-                    _StyledStatCard(
-                      title: 'Checked In',
-                      value: '8',
-                      icon: Icons.login,
-                    ),
-                    _StyledStatCard(
-                      title: 'Checked Out',
-                      value: '4',
-                      icon: Icons.logout,
-                    ),
-                    _FrequentVisitorsStatCard(),
-                  ],
-                ),
-              ),
               const SizedBox(height: 2),
               // Optionally, add more creative widgets here
             ],
@@ -261,11 +313,7 @@ class _StyledStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFEDF4FF), Color(0xFFD4E9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white, // Changed from gradient to solid white
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -650,6 +698,54 @@ class _FrequentVisitorsStatCard extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+class VisitorsPage extends StatelessWidget {
+  const VisitorsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('All Visitors'),
+        backgroundColor: Color(0xFF6CA4FE),
+      ),
+      backgroundColor: Color(0xFFD4E9FF),
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
+        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No visitors found.'));
+          }
+          final docs = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              final name = data['v_name'] ?? 'Unknown';
+              final status = data['checked_out'] == true ? 'Checked Out' : 'Checked In';
+              final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: Icon(
+                    status == 'Checked In' ? Icons.login : Icons.logout,
+                    color: status == 'Checked In' ? Colors.green : Colors.red,
+                  ),
+                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(date != null ? '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' : ''),
+                  trailing: Text(status, style: TextStyle(color: status == 'Checked In' ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 } 

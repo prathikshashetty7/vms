@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class ThemedVisitorListPage extends StatelessWidget {
   final String collection;
@@ -75,33 +78,28 @@ class ThemedVisitorListPage extends StatelessWidget {
                   final name = data[nameField] ?? 'Unknown';
                   final mobile = data[mobileField] ?? '';
                   final time = (data[timeField] as Timestamp?)?.toDate();
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF6FAFF),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x22005FFE),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
+                  return Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: color.withOpacity(0.13),
+                        backgroundColor: color.withOpacity(0.18),
                         child: Icon(icon, color: color),
                       ),
-                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016))),
-                      subtitle: Text('Mobile: $mobile', style: const TextStyle(color: Color(0xFF6CA4FE))),
-                      trailing: time != null
-                          ? Text(
-                              '${time.day}/${time.month}/${time.year}\n${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-                              textAlign: TextAlign.right,
+                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 16)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Mobile: $mobile', style: const TextStyle(color: Color(0xFF6CA4FE), fontSize: 13)),
+                          if (time != null)
+                            Text(
+                              '${time.day}/${time.month}/${time.year}  ${time.hour}:${time.minute.toString().padLeft(2, '0')}',
                               style: const TextStyle(fontSize: 12, color: Color(0xFF005FFE)),
-                            )
-                          : null,
+                            ),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFF6CA4FE)),
                       onTap: () {
                         showDialog(
                           context: context,
@@ -169,12 +167,101 @@ class ThemedVisitorListPage extends StatelessWidget {
   }
 }
 
-class _VisitorDetailsDialog extends StatelessWidget {
+class _VisitorDetailsDialog extends StatefulWidget {
   final Map<String, dynamic> data;
   final Color color;
   final IconData icon;
   final String name;
   const _VisitorDetailsDialog({required this.data, required this.color, required this.icon, required this.name, Key? key}) : super(key: key);
+
+  @override
+  State<_VisitorDetailsDialog> createState() => _VisitorDetailsDialogState();
+}
+
+class _VisitorDetailsDialogState extends State<_VisitorDetailsDialog> {
+  bool _isPassGenerated = false;
+  Map<String, dynamic>? _passDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPassStatus();
+  }
+
+  Future<void> _checkPassStatus() async {
+    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
+    final passDoc = await passRef.get();
+    if (passDoc.exists) {
+      setState(() {
+        _isPassGenerated = true;
+        _passDetails = passDoc.data() as Map<String, dynamic>;
+      });
+    }
+  }
+
+  Future<void> _generatePass() async {
+    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
+    await passRef.set({
+      'visitorId': widget.data['_id'],
+      'fullName': widget.data['fullName'],
+      'mobile': widget.data['mobile'],
+      'email': widget.data['email'],
+      'company': widget.data['company'],
+      'purpose': widget.data['purpose'],
+      'purposeOther': widget.data['purposeOther'],
+      'appointment': widget.data['appointment'],
+      'department': widget.data['department'],
+      'host': widget.data['host'],
+      'accompanying': widget.data['accompanying'],
+      'accompanyingCount': widget.data['accompanyingCount'],
+      'laptop': widget.data['laptop'],
+      'laptopDetails': widget.data['laptopDetails'],
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    setState(() {
+      _isPassGenerated = true;
+      _passDetails = widget.data; // Store the full visitor data as pass details
+    });
+  }
+
+  Future<void> _printPass() async {
+    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
+    final passDoc = await passRef.get();
+    if (passDoc.exists) {
+      final passData = passDoc.data() as Map<String, dynamic>;
+      await Printing.layoutPdf(onLayout: (format) async {
+        final pdf = pw.Document();
+        pdf.addPage(
+          pw.Page(
+            pageFormat: format,
+            build: (context) => pw.Center(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Visitor Pass', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 16),
+                  pw.Text('Name: ${passData['fullName'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Mobile: ${passData['mobile'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Email: ${passData['email'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Company: ${passData['company'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Purpose: ${passData['purpose'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Appointment: ${passData['appointment'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Department: ${passData['department'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Host: ${passData['host'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Accompanying: ${passData['accompanying'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Accompanying Count: ${passData['accompanyingCount'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Laptop: ${passData['laptop'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Laptop Details: ${passData['laptopDetails'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                  pw.Text('Timestamp: ${passData['timestamp'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+          ),
+        );
+        return pdf.save();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,16 +277,16 @@ class _VisitorDetailsDialog extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: color.withOpacity(0.13),
-                  child: Icon(icon, color: color),
+                  backgroundColor: widget.color.withOpacity(0.13),
+                  child: Icon(widget.icon, color: widget.color),
                   radius: 28,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    name,
+                    widget.name,
                     style: TextStyle(
-                      color: color,
+                      color: widget.color,
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
                       fontFamily: 'Poppins',
@@ -213,62 +300,95 @@ class _VisitorDetailsDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            ...data.entries.map((entry) {
-              if (entry.key == 'timestamp') {
-                final time = (entry.value as Timestamp?)?.toDate();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time, size: 18, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Text(
-                        time != null
-                            ? '${time.day}/${time.month}/${time.year}  ${time.hour}:${time.minute.toString().padLeft(2, '0')}'
-                            : 'N/A',
-                        style: const TextStyle(color: Colors.black87),
-                      ),
-                    ],
+            if (!_isPassGenerated)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ElevatedButton(
+                  onPressed: _generatePass,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.color,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                );
-              }
-              if (entry.key == 'photo' && entry.value != null && entry.value != '') {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Center(
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundImage: MemoryImage(const Base64Decoder().convert(entry.value)),
-                    ),
-                  ),
-                );
-              }
-              if (entry.value == null || entry.value.toString().isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(_iconForKey(entry.key), size: 18, color: color.withOpacity(0.7)),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_prettifyKey(entry.key)}: ',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: color),
-                    ),
-                    Expanded(
-                      child: Text(
-                        entry.value.toString(),
-                        style: const TextStyle(color: Colors.black87),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  child: const Text('Generate Pass'),
                 ),
-              );
-            }).toList(),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ..._displayFields(),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ElevatedButton(
+                      onPressed: _printPass,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.color,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Print Pass'),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _displayFields() {
+    final List<Widget> fields = [];
+    final List<String> displayOrder = [
+      'photo',
+      'fullName',
+      'mobile',
+      'email',
+      'company',
+      'purpose',
+      'purposeOther',
+      'appointment',
+      'department',
+      'host',
+      'accompanying',
+      'accompanyingCount',
+      'laptop',
+      'laptopDetails',
+      'timestamp',
+    ];
+
+    for (final key in displayOrder) {
+      final value = widget.data[key];
+      if (value == null || value.toString().isEmpty) continue;
+
+      fields.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Icon(_iconForKey(key), size: 18, color: widget.color.withOpacity(0.7)),
+              const SizedBox(width: 8),
+              Text(
+                '${_prettifyKey(key)}: ',
+                style: TextStyle(fontWeight: FontWeight.bold, color: widget.color),
+              ),
+              Expanded(
+                child: Text(
+                  value.toString(),
+                  style: const TextStyle(color: Colors.black87),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return fields;
   }
 
   String _prettifyKey(String key) {
