@@ -44,79 +44,80 @@ class ThemedVisitorListPage extends StatelessWidget {
       backgroundColor: const Color(0xFFD4E9FF),
       body: Padding(
         padding: const EdgeInsets.all(18.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x22005FFE),
-                blurRadius: 14,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12.0),
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection(collection)
-                .orderBy(timeField, descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return Center(child: Text('No visitors found.', style: TextStyle(color: color)));
-              }
-              final docs = snapshot.data!.docs;
-              return ListView.separated(
-                itemCount: docs.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final name = data[nameField] ?? 'Unknown';
-                  final mobile = data[mobileField] ?? '';
-                  final time = (data[timeField] as Timestamp?)?.toDate();
-                  return Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: color.withOpacity(0.18),
-                        child: Icon(icon, color: color),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection(collection)
+              .orderBy(timeField, descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(child: Text('No visitors found.', style: TextStyle(color: color)));
+            }
+            final docs = snapshot.data!.docs;
+            return ListView.separated(
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+              itemBuilder: (context, index) {
+                final data = docs[index].data() as Map<String, dynamic>;
+                final docId = docs[index].id;
+                final name = data[nameField] ?? 'Unknown';
+                final mobile = data[mobileField] ?? '';
+                final time = (data[timeField] as Timestamp?)?.toDate();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.10),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 16)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Mobile: $mobile', style: const TextStyle(color: Color(0xFF6CA4FE), fontSize: 13)),
-                          if (time != null)
-                            Text(
-                              '${time.day}/${time.month}/${time.year}  ${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF005FFE)),
-                            ),
-                        ],
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFF6CA4FE)),
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => _VisitorDetailsDialog(
-                            data: data,
-                            color: color,
-                            icon: icon,
-                            name: name,
-                          ),
-                        );
-                      },
+                    ],
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: color.withOpacity(0.18),
+                      child: Icon(icon, color: color),
                     ),
-                  );
-                },
-              );
-            },
-          ),
+                    title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 16)),
+                    subtitle: Text('Mobile: $mobile', style: const TextStyle(color: Color(0xFF6CA4FE), fontSize: 13)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.black),
+                          onPressed: () => _showEditVisitorSheet(context, data, docId),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _confirmDeleteVisitor(context, docId),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_red_eye, color: Colors.blue),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => _VisitorDetailsDialog(
+                                data: data,
+                                color: color,
+                                icon: icon,
+                                name: name,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -164,6 +165,175 @@ class ThemedVisitorListPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showEditVisitorSheet(BuildContext context, Map<String, dynamic> data, String docId) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: data['fullName']);
+    final mobileController = TextEditingController(text: data['mobile']);
+    final emailController = TextEditingController(text: data['email']);
+    final companyController = TextEditingController(text: data['company']);
+    final purposeController = TextEditingController(text: data['purpose']);
+    final appointmentController = TextEditingController(text: data['appointment']);
+    final departmentController = TextEditingController(text: data['department']);
+    final hostController = TextEditingController(text: data['host']);
+    final accompanyingController = TextEditingController(text: data['accompanying']);
+    final accompanyingCountController = TextEditingController(text: data['accompanyingCount']);
+    final laptopController = TextEditingController(text: data['laptop']);
+    final laptopDetailsController = TextEditingController(text: data['laptopDetails']);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Edit Visitor',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Name'),
+                  validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: mobileController,
+                  decoration: InputDecoration(labelText: 'Mobile'),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) => value!.isEmpty ? 'Mobile cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) => value!.isEmpty ? 'Email cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: companyController,
+                  decoration: InputDecoration(labelText: 'Company'),
+                  validator: (value) => value!.isEmpty ? 'Company cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: purposeController,
+                  decoration: InputDecoration(labelText: 'Purpose'),
+                  validator: (value) => value!.isEmpty ? 'Purpose cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: appointmentController,
+                  decoration: InputDecoration(labelText: 'Appointment'),
+                  validator: (value) => value!.isEmpty ? 'Appointment cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: departmentController,
+                  decoration: InputDecoration(labelText: 'Department'),
+                  validator: (value) => value!.isEmpty ? 'Department cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: hostController,
+                  decoration: InputDecoration(labelText: 'Host'),
+                  validator: (value) => value!.isEmpty ? 'Host cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: accompanyingController,
+                  decoration: InputDecoration(labelText: 'Accompanying'),
+                  validator: (value) => value!.isEmpty ? 'Accompanying cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: accompanyingCountController,
+                  decoration: InputDecoration(labelText: 'Accompanying Count'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value!.isEmpty ? 'Accompanying Count cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: laptopController,
+                  decoration: InputDecoration(labelText: 'Laptop'),
+                  validator: (value) => value!.isEmpty ? 'Laptop cannot be empty' : null,
+                ),
+                TextFormField(
+                  controller: laptopDetailsController,
+                  decoration: InputDecoration(labelText: 'Laptop Details'),
+                  validator: (value) => value!.isEmpty ? 'Laptop Details cannot be empty' : null,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final updatedData = {
+                        'fullName': nameController.text,
+                        'mobile': mobileController.text,
+                        'email': emailController.text,
+                        'company': companyController.text,
+                        'purpose': purposeController.text,
+                        'appointment': appointmentController.text,
+                        'department': departmentController.text,
+                        'host': hostController.text,
+                        'accompanying': accompanyingController.text,
+                        'accompanyingCount': int.tryParse(accompanyingCountController.text) ?? 0,
+                        'laptop': laptopController.text,
+                        'laptopDetails': laptopDetailsController.text,
+                      };
+                      await FirebaseFirestore.instance.collection(collection).doc(docId).update(updatedData);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF6CA4FE),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteVisitor(BuildContext context, String docId) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to delete this visitor? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Visitor deleted successfully!')),
+      );
+    }
   }
 }
 
