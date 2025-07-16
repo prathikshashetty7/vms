@@ -156,8 +156,8 @@ class ThemedVisitorListPage extends StatelessWidget {
             label: 'Add Visitor',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
+            icon: Icon(Icons.people_rounded), // Changed from Icons.bar_chart_rounded
+            label: 'Visitors', // Changed from 'Reports'
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),
