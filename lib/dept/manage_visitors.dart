@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/receptionist_theme.dart';
+import '../theme/dept_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class ManageVisitors extends StatefulWidget {
   final String? currentDepartmentId;
@@ -14,10 +16,29 @@ class ManageVisitors extends StatefulWidget {
 class _ManageVisitorsState extends State<ManageVisitors> {
   String? get _currentDepartmentId => widget.currentDepartmentId;
 
+  // FocusNodes for form fields
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _designationFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _totalNoFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
     // No need to fetch departmentId here
+  }
+
+  @override
+  void dispose() {
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _designationFocus.dispose();
+    _companyFocus.dispose();
+    _contactFocus.dispose();
+    _totalNoFocus.dispose();
+    super.dispose();
   }
 
   void _showVisitorForm([DocumentSnapshot? visitor]) {
@@ -34,6 +55,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     TimeOfDay selectedTime = visitor != null && visitor['v_time'] != null
       ? _parseTime(visitor['v_time'])
       : TimeOfDay.now();
+    String passGeneratedBy = (visitor?.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'host';
 
     showModalBottomSheet(
       context: context,
@@ -76,29 +98,33 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 children: [
                           Text(
                             isEditing ? 'Edit Visitor' : 'Add Visitor',
-                            style: ReceptionistTheme.heading.copyWith(fontSize: 20, color: ReceptionistTheme.text),
+                            style: DeptTheme.heading.copyWith(fontSize: 20, color: DeptTheme.text),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: vNameController,
+                            focusNode: _nameFocus,
+                            autofocus: true,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_emailFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Name',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                             validator: (val) => val == null || val.isEmpty ? 'Required' : null,
@@ -106,24 +132,27 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vEmailController,
+                            focusNode: _emailFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_designationFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Email',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                             validator: (val) => val == null || val.isEmpty ? 'Required' : null,
@@ -131,96 +160,108 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vDesignationController,
+                            focusNode: _designationFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_companyFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Designation',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vCompanyNameController,
+                            focusNode: _companyFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_contactFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Company Name',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
                             controller: vContactNoController,
+                            focusNode: _contactFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_totalNoFocus);
+                            },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Contact No',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
                   TextFormField(
                     controller: vTotalNoController,
+                    focusNode: _totalNoFocus,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).unfocus();
+                    },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Total Visitors',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
                     keyboardType: TextInputType.number,
@@ -245,21 +286,19 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 readOnly: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select Date',
-                                  filled: true,
-                                  fillColor: Colors.white,
                                   hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Colors.white, width: 2),
+                                    borderSide: BorderSide(color: Colors.black, width: 2),
                                   ),
                                 ),
                                 controller: TextEditingController(
@@ -286,21 +325,19 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 readOnly: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select Time',
-                                  filled: true,
-                                  fillColor: Colors.white,
                                   hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(color: Colors.white, width: 2),
+                                    borderSide: BorderSide(color: Colors.black, width: 2),
                                   ),
                                 ),
                                 controller: TextEditingController(
@@ -316,23 +353,69 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                         onChanged: (val) => selectedHostId = val,
                             decoration: InputDecoration(
                               hintText: 'Host',
-                              filled: true,
-                              fillColor: Colors.white,
                               hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none,
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(color: Colors.white, width: 2),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
               ),
             ),
+          ),
+                          const SizedBox(height: 10),
+                          // Pass Generation Radio Buttons
+                          Text(
+                            'Pass Generated By:',
+                            style: ReceptionistTheme.body.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          StatefulBuilder(
+                            builder: (context, setState) {
+                              return Column(
+                                children: [
+                                  RadioListTile<String>(
+                                    title: Text(
+                                      'Host',
+                                      style: ReceptionistTheme.body.copyWith(color: Colors.black),
+                                    ),
+                                    value: 'host',
+                                    groupValue: passGeneratedBy,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        passGeneratedBy = value!;
+                                      });
+                                    },
+                                    activeColor: ReceptionistTheme.primary,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  RadioListTile<String>(
+                                    title: Text(
+                                      'Receptionist',
+                                      style: ReceptionistTheme.body.copyWith(color: Colors.black),
+              ),
+                                    value: 'receptionist',
+                                    groupValue: passGeneratedBy,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        passGeneratedBy = value!;
+                                      });
+                                    },
+                                    activeColor: ReceptionistTheme.primary,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ],
+                              );
+                            },
           ),
                           const SizedBox(height: 18),
                           Row(
@@ -352,6 +435,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     'v_time': selectedTime.format(context),
                     'emp_id': selectedHostId,
                     'departmentId': _currentDepartmentId,
+                    'pass_generated_by': passGeneratedBy,
                   };
                   if (!isEditing) {
                     await FirebaseFirestore.instance.collection('visitor').add(visitorData);
@@ -362,9 +446,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 }
               },
                                 icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
-                                label: Text(isEditing ? 'Update' : 'Add', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                label: Text(isEditing ? 'Update' : 'Add', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isEditing ? ReceptionistTheme.text : ReceptionistTheme.primary,
+                                  backgroundColor: DeptTheme.text,
                                   padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
@@ -385,44 +469,161 @@ class _ManageVisitorsState extends State<ManageVisitors> {
   }
 
   void _showVisitorDetailsDialog(DocumentSnapshot visitor) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Visitor Details'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('Name: ${visitor['v_name']}'),
-                Text('Email: ${visitor['v_email']}'),
-                Text('Designation: ${visitor['v_designation']}'),
-                Text('Company: ${visitor['v_company_name']}'),
-                Text('Contact No: ${visitor['v_contactno']}'),
-                Text('Total Visitors: ${visitor['v_totalno']}'),
+    showGeneralDialog(
+    context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Visitor Details',
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Dialog(
+        shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 12,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: Colors.blue.shade100,
+                                  child: const Icon(Icons.person, size: 38, color: Colors.blue),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Visitor Details',
+                                  style: DeptTheme.heading.copyWith(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _interactiveDetailRow('Name', visitor['v_name']),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _interactiveDetailRow('Email', visitor['v_email'])),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 18),
+                                        tooltip: 'Copy Email',
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: visitor['v_email']));
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email copied!')));
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  _interactiveDetailRow('Designation', visitor['v_designation']),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _interactiveDetailRow('Contact No', visitor['v_contactno'])),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 18),
+                                        tooltip: 'Copy Contact',
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: visitor['v_contactno']));
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact copied!')));
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  _interactiveDetailRow('Company', visitor['v_company_name']),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Divider(),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _interactiveDetailRow('Total Visitors', visitor['v_totalno'].toString()),
                 FutureBuilder<String>(
                   future: _getHostName(visitor['emp_id']),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Text('Host: Loading...');
-                    }
-                    return Text('Host: ${snapshot.data ?? 'N/A'}');
-                  },
-                ),
-                Text('Date: ${_formatDate((visitor['v_date'] as Timestamp).toDate())}'),
-                Text('Time: ${visitor['v_time']}'),
+                                        return _interactiveDetailRow('Host', 'Loading...', highlight: true);
+                                      }
+                                      return _interactiveDetailRow('Host', snapshot.data ?? 'N/A', highlight: true);
+                                    },
+                                  ),
+                                  _interactiveDetailRow('Date', _formatDate((visitor['v_date'] as Timestamp).toDate())),
+                                  _interactiveDetailRow('Time', visitor['v_time']),
+                                  _interactiveDetailRow('Pass Generated By', (visitor.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'Host', highlight: true),
               ],
             ),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+        ),
+                          const SizedBox(height: 18),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              child: Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        );
-      },
+          ),
+      );
+    },
+  );
+}
+
+  Widget _interactiveDetailRow(String label, String value, {bool highlight = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+          Expanded(
+            child: Text(value, style: TextStyle(color: Colors.black87)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -485,9 +686,10 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final isLargeScreen = screenWidth > 600;
     return Scaffold(
         backgroundColor: const Color(0xFFD4E9FF),
-        body: Column(
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
           children: [
-            _customHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _currentDepartmentId == null
@@ -519,10 +721,21 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               if (hostSnapshot.connectionState == ConnectionState.waiting) {
                                 return const Text("Loading host...");
                               }
-                              if (hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null) {
-                                return Text("Host not found | Total Visitors: $totalVisitors", style: ReceptionistTheme.body.copyWith(color: Colors.black54));
-                              }
-                              return Text('Host: ${hostSnapshot.data} | Total Visitors: $totalVisitors', style: ReceptionistTheme.body.copyWith(color: Colors.black54));
+                              final email = doc['v_email'] ?? '';
+                              final company = doc['v_company_name'] ?? '';
+                              final contact = doc['v_contactno'] ?? '';
+                              final host = hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null
+                                  ? 'N/A'
+                                  : hostSnapshot.data;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Email: $email', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Company: $company', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Contact: $contact', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Host: $host', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                                ],
+                              );
                             }
                           ),
                           trailing: Row(
@@ -541,6 +754,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
               ),
             ),
           ],
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: ReceptionistTheme.primary,
@@ -550,25 +764,4 @@ class _ManageVisitorsState extends State<ManageVisitors> {
       ),
     );
   }
-}
-
-Widget _customHeader() {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-    decoration: const BoxDecoration(
-      color: Color(0xFF6CA4FE),
-      borderRadius: BorderRadius.only(
-        bottomLeft: Radius.circular(24),
-        bottomRight: Radius.circular(24),
-      ),
-    ),
-    child: Row(
-      children: [
-        Image.asset('assets/images/rdl.png', height: 32),
-        const SizedBox(width: 12),
-        const Text('Manage Visitors', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
-      ],
-    ),
-  );
 } 

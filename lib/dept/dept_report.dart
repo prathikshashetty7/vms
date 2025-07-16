@@ -25,7 +25,6 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              const SizedBox(height: 20),
               Expanded(
                 child: widget.currentDepartmentId == null
                     ? const Center(child: CircularProgressIndicator())
@@ -61,7 +60,10 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                               final total = doc['v_totalno']?.toString() ?? '1';
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                color: Colors.white,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                                 child: ListTile(
                                   leading: const Icon(Icons.person, color: Colors.black),
                                   title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
