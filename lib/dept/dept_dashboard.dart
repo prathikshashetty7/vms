@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/dept_theme.dart';
 import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 
 class DiagonalAppBarClipper extends CustomClipper<Path> {
   @override
@@ -36,6 +37,7 @@ class DeptDashboard extends StatefulWidget {
 class _DeptDashboardState extends State<DeptDashboard> {
   int _selectedIndex = 0;
   String? _currentDepartmentId;
+  String? _departmentName;
   bool _loadingDeptId = true;
 
   @override
@@ -58,6 +60,7 @@ class _DeptDashboardState extends State<DeptDashboard> {
     if (query.docs.isNotEmpty) {
       setState(() {
         _currentDepartmentId = query.docs.first.id;
+        _departmentName = query.docs.first.data()['d_name'] ?? '';
         _loadingDeptId = false;
       });
     } else {
@@ -67,8 +70,27 @@ class _DeptDashboardState extends State<DeptDashboard> {
 
   void _onItemTapped(int index) async {
     if (index == 4) {
-      await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(context, '/signin');
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
@@ -84,9 +106,9 @@ class _DeptDashboardState extends State<DeptDashboard> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    // Pass currentDepartmentId to all subpages
+    // Pass currentDepartmentId and departmentName to all subpages
     final List<Widget> _pages = <Widget>[
-      _DeptHomePage(currentDepartmentId: _currentDepartmentId),
+      _DeptHomePage(currentDepartmentId: _currentDepartmentId, departmentName: _departmentName),
       ManageEmployees(currentDepartmentId: _currentDepartmentId),
       ManageVisitors(currentDepartmentId: _currentDepartmentId),
       DeptReport(currentDepartmentId: _currentDepartmentId),
@@ -144,7 +166,7 @@ class _DeptDashboardState extends State<DeptDashboard> {
         ],
       ),
       body: _selectedIndex == 0
-          ? _DeptHomePage(currentDepartmentId: _currentDepartmentId)
+          ? _DeptHomePage(currentDepartmentId: _currentDepartmentId, departmentName: _departmentName)
           : _pages[_selectedIndex],
     );
   }
@@ -152,7 +174,8 @@ class _DeptDashboardState extends State<DeptDashboard> {
 
 class _DeptHomePage extends StatelessWidget {
   final String? currentDepartmentId;
-  const _DeptHomePage({this.currentDepartmentId});
+  final String? departmentName;
+  const _DeptHomePage({this.currentDepartmentId, this.departmentName});
 
   @override
   Widget build(BuildContext context) {
@@ -160,27 +183,30 @@ class _DeptHomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
-          // Analytics Header (remove white container)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
-          ),
+          SizedBox(height: 52),
           // Dashboard Card
-          Center(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               color: Colors.white,
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Padding(
+              margin: const EdgeInsets.symmetric(vertical: 24),
+              child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset('assets/images/rdl.png', height: 64),
                     const SizedBox(height: 16),
-                    const Text('Department Dashboard!', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 28, color: Color(0xFF091016)), textAlign: TextAlign.center),
+                    Text(
+                      departmentName != null && departmentName!.isNotEmpty
+                          ? '${departmentName!} Department Dashboard!'
+                          : 'Department Dashboard!',
+                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 28, color: Color(0xFF091016)),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
                     const Text('Manage your department roles, employees, and visitors efficiently.', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Color(0xFF091016)), textAlign: TextAlign.center),
                     const SizedBox(height: 24),
@@ -199,10 +225,149 @@ class _DeptHomePage extends StatelessWidget {
               ),
             ),
           ),
+          // Stat Cards (Analytics) before the graph
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+            child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
+          ),
+          // Appointments Line Chart
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Card(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              elevation: 4,
+              color: Colors.white,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 180,
+                      child: LineChart(
+                        LineChartData(
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: [
+                                FlSpot(0, 5),
+                                FlSpot(1, 8),
+                                FlSpot(2, 6),
+                                FlSpot(3, 10),
+                                FlSpot(4, 7),
+                              ],
+                              isCurved: true,
+                              color: Colors.blue,
+                              barWidth: 4,
+                              dotData: FlDotData(show: true),
+                            ),
+                          ],
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                                  if (value % 1 == 0 && value.toInt() >= 0 && value.toInt() < days.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(days[value.toInt()]),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                                interval: 1,
+                              ),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          gridData: FlGridData(show: false),
+                          minX: 0,
+                          maxX: 4,
+                          minY: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+Widget appointmentsLineChart() {
+  final List<FlSpot> mockData = [
+    FlSpot(0, 5),
+    FlSpot(1, 8),
+    FlSpot(2, 6),
+    FlSpot(3, 10),
+    FlSpot(4, 7),
+  ];
+  final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  return Card(
+    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    elevation: 4,
+    color: Colors.white, // Set background to white
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: mockData,
+                    isCurved: true,
+                    color: Colors.blue,
+                    barWidth: 4,
+                    dotData: FlDotData(show: true),
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        // Only show label if value is an integer and in range
+                        if (value.toInt() >= 0 && value.toInt() < days.length && value == value.toInt()) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(days[value.toInt()]),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                      interval: 1,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(show: false),
+                minX: 0,
+                maxX: 4,
+                minY: 0,
+                // Optionally set maxY if you want to control y-axis
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _DeptAnalytics extends StatelessWidget {
@@ -286,11 +451,7 @@ class DeptStatCard extends StatelessWidget {
       height: 140,
       width: 180,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEDF4FF), Color(0xFFD4E9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(

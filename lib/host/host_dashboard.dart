@@ -196,130 +196,147 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       decoration: const BoxDecoration(
         color: Color(0xFFD4E9FF),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
-            // Welcome Card
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          SizedBox(height: 32),
+          // Welcome Card
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: loading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hostName != null && hostName!.isNotEmpty
+                            ? 'Welcome, $hostName!'
+                            : 'Welcome, Host!',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF091016),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (hostDept != null && hostDept!.isNotEmpty)
+                        Text(
+                          'Department: $hostDept',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 30),
+          // Stat Cards Grid
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 0, bottom: 0),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 600) {
+                  // Mobile: 2x2 grid
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 18,
+                    crossAxisSpacing: 18,
+                    childAspectRatio: 0.85,
+                    children: const [
+                      _StyledStatCard(title: 'Visitors Today', value: '0', icon: Icons.groups),
+                      _StyledStatCard(title: 'Upcoming Visitors', value: '0', icon: Icons.event),
+                      _StyledStatCard(title: 'Total Passes', value: '0', icon: Icons.qr_code),
+                      _StyledStatCard(title: 'Pending Checkouts', value: '0', icon: Icons.logout),
+                    ],
+                  );
+                } else {
+                  // Wide: 1 row of 4
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Expanded(child: _StyledStatCard(title: 'Visitors Today', value: '0', icon: Icons.groups)),
+                      SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Upcoming Visitors', value: '0', icon: Icons.event)),
+                      SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Total Passes', value: '0', icon: Icons.qr_code)),
+                      SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Pending Checkouts', value: '0', icon: Icons.logout)),
+                    ],
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Recent Activity Card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(0),
+                  bottomRight: Radius.circular(0),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Color(0x226CA4FE),
                     blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
-              child: loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hostName != null && hostName!.isNotEmpty
-                              ? 'Welcome, $hostName!'
-                              : 'Welcome, Host!',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF091016),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (hostDept != null && hostDept!.isNotEmpty)
-                          Text(
-                            'Department: $hostDept',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black54,
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
-            const SizedBox(height: 30),
-            // Stat Cards Grid
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 0, bottom: 0),
-              child: Center(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 18,
-                  crossAxisSpacing: 18,
-                  childAspectRatio: 0.85,
-                  children: [
-                    _StyledStatCard(title: 'Visitors Today', value: '0', icon: Icons.groups),
-                    _StyledStatCard(title: 'Upcoming Visitors', value: '0', icon: Icons.event),
-                    _StyledStatCard(title: 'Total Passes', value: '0', icon: Icons.qr_code),
-                    _StyledStatCard(title: 'Pending Checkouts', value: '0', icon: Icons.logout),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 2),
-            // Recent Activity Card
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                    bottomLeft: Radius.circular(0),
-                    bottomRight: Radius.circular(0),
+              padding: const EdgeInsets.only(top: 6, left: 12, right: 12, bottom: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.notifications_active, color: Color(0xFF6CA4FE)),
+                      const SizedBox(width: 8),
+                      Text('Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins')),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {},
+                        child: Text('See more', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x226CA4FE),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.only(top: 6, left: 12, right: 12, bottom: 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.notifications_active, color: Color(0xFF6CA4FE)),
-                        const SizedBox(width: 8),
-                        Text('Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins')),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () {},
-                          child: Text('See more', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const _ActivityItem(
-                      icon: Icons.person,
-                      title: 'Visitor checked in',
-                      subtitle: 'Amit, 9:00 AM',
-                    ),
-                    Divider(height: 18, color: Color(0xFFE0E0E0)),
-                    const _ActivityItem(
-                      icon: Icons.person,
-                      title: 'Visitor checked out',
-                      subtitle: 'Rahul, 7:30 AM',
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 10),
+                  const _ActivityItem(
+                    icon: Icons.person,
+                    title: 'Visitor checked in',
+                    subtitle: 'Amit, 9:00 AM',
+                  ),
+                  Divider(height: 18, color: Color(0xFFE0E0E0)),
+                  const _ActivityItem(
+                    icon: Icons.person,
+                    title: 'Visitor checked out',
+                    subtitle: 'Rahul, 7:30 AM',
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -433,13 +450,8 @@ class _StyledStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100, // Set a fixed, smaller height
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEDF4FF), Color(0xFFD4E9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
