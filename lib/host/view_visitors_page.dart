@@ -92,7 +92,89 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2100),
                           );
-                          if (picked != null) setState(() => _selectedDate = picked);
+                          if (picked != null) {
+                            setState(() => _selectedDate = picked);
+                            // Show dialog with visitors for the selected date
+                            final visitors = await FirebaseFirestore.instance
+                                .collection('visitor')
+                                .where('emp_id', isEqualTo: hostDocId)
+                                .where('departmentId', isEqualTo: departmentId)
+                                .get();
+                            final filtered = visitors.docs.where((doc) {
+                              final data = doc.data();
+                              final vDate = data['v_date'];
+                              if (vDate == null) return false;
+                              DateTime d;
+                              if (vDate is Timestamp) {
+                                d = vDate.toDate();
+                              } else if (vDate is DateTime) {
+                                d = vDate;
+                              } else {
+                                return false;
+                              }
+                              return d.year == picked.year && d.month == picked.month && d.day == picked.day;
+                            }).toList();
+                            String dialogDate = picked != null ? _formatDate(picked) : '';
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return Dialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                  child: Container(
+                                    constraints: const BoxConstraints(maxWidth: 400, maxHeight: 500),
+                                    padding: const EdgeInsets.all(20),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Visitors for $dialogDate', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                                        const SizedBox(height: 12),
+                                        Expanded(
+                                          child: filtered.isEmpty
+                                              ? const Center(child: Text('No visitors found for this date.'))
+                                              : ListView.separated(
+                                                  itemCount: filtered.length,
+                                                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                                  itemBuilder: (context, idx) {
+                                                    final v = filtered[idx].data();
+                                                    return Card(
+                                                      color: Colors.white,
+                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                      elevation: 2,
+                                                      margin: EdgeInsets.zero,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(v['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                                                            if ((v['v_company_name'] ?? '').toString().isNotEmpty)
+                                                              Text('Company: ${v['v_company_name']}', style: const TextStyle(fontSize: 13)),
+                                                            if ((v['v_email'] ?? '').toString().isNotEmpty)
+                                                              Text('Email: ${v['v_email']}', style: const TextStyle(fontSize: 13)),
+                                                            if ((v['v_time'] ?? '').toString().isNotEmpty)
+                                                              Text('Time: ${v['v_time']}', style: const TextStyle(fontSize: 13)),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                        ),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text('Close'),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -182,15 +264,6 @@ class _VisitorCard extends StatelessWidget {
   final Map<String, dynamic> visitor;
   const _VisitorCard({required this.visitor});
 
-  Future<String> _getHostName(String? hostId) async {
-    if (hostId == null || hostId.isEmpty) return '';
-    final doc = await FirebaseFirestore.instance.collection('host').doc(hostId).get();
-    if (doc.exists) {
-      return doc.data()?['emp_name'] ?? '';
-    }
-    return '';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -199,43 +272,158 @@ class _VisitorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
-                  child: const Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(visitor['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016))),
-                      const SizedBox(height: 2),
-                      FutureBuilder<String>(
-                        future: _getHostName(visitor['emp_id']),
-                        builder: (context, snapshot) {
-                          final hostName = snapshot.data ?? '';
-                          return Text('Host: $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016)));
-                        },
-                      ),
-                      const SizedBox(height: 2),
-                      Text('Check-in: ${visitor['check_in_time'] ?? 'Not checked in'}', style: const TextStyle(fontSize: 13, color: Color(0xFF22C55E))),
-                      const SizedBox(height: 2),
-                      Text('Check-out: ${visitor['check_out_time'] ?? 'Not checked out'}', style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444))),
-                    ],
-                  ),
-                ),
-              ],
+            const Icon(Icons.person, size: 28, color: Colors.black),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(visitor['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016))),
+                  if ((visitor['v_email'] ?? '').toString().isNotEmpty)
+                    Text('Email: ${visitor['v_email']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  if ((visitor['v_company_name'] ?? '').toString().isNotEmpty)
+                    Text('Company: ${visitor['v_company_name']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  if ((visitor['v_contactno'] ?? '').toString().isNotEmpty)
+                    Text('Contact: ${visitor['v_contactno']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  // Add date field
+                  if (visitor['v_date'] != null)
+                    Text('Date: ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.visibility, color: Colors.black),
+              onPressed: () => _showVisitorDetailsDialog(context, visitor),
+              tooltip: 'View Details',
             ),
           ],
         ),
       ),
     );
   }
+}
+
+void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visitor) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            elevation: 8,
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundColor: Colors.blue.shade100,
+                            child: const Icon(Icons.person, size: 38, color: Colors.blue),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Visitor Details',
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Card(
+                      color: Colors.grey[50],
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _detailRow('Name', visitor['v_name'] ?? ''),
+                            _detailRow('Email', visitor['v_email'] ?? ''),
+                            _detailRow('Designation', visitor['v_designation'] ?? ''),
+                            _detailRow('Contact No', visitor['v_contactno'] ?? ''),
+                            _detailRow('Company', visitor['v_company_name'] ?? ''),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Divider(),
+                    Card(
+                      color: Colors.grey[50],
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _detailRow('Total Visitors', visitor['v_totalno']?.toString() ?? ''),
+                            _detailRow('Date', _formatDate(visitor['v_date'])),
+                            _detailRow('Time', visitor['v_time'] ?? ''),
+                            // No Pass Generated By
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        child: const Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _detailRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+        Expanded(
+          child: Text(value, style: TextStyle(color: Colors.black87)),
+        ),
+      ],
+    ),
+  );
+}
+
+String _formatDate(dynamic date) {
+  if (date == null) return '';
+  if (date is Timestamp) {
+    final d = date.toDate();
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+  if (date is DateTime) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+  return date.toString();
 } 
