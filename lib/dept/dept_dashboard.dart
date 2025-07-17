@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/dept_theme.dart';
 import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 
 class DiagonalAppBarClipper extends CustomClipper<Path> {
   @override
@@ -182,15 +183,17 @@ class _DeptHomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
-          // Dashboard Card (now above analytics)
-          Center(
+          SizedBox(height: 52),
+          // Dashboard Card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               color: Colors.white,
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Padding(
+              margin: const EdgeInsets.symmetric(vertical: 24),
+              child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -222,15 +225,149 @@ class _DeptHomePage extends StatelessWidget {
               ),
             ),
           ),
-          // Analytics Header (now below dashboard card)
+          // Stat Cards (Analytics) before the graph
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
             child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
+          ),
+          // Appointments Line Chart
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Card(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              elevation: 4,
+              color: Colors.white,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 180,
+                      child: LineChart(
+                        LineChartData(
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: [
+                                FlSpot(0, 5),
+                                FlSpot(1, 8),
+                                FlSpot(2, 6),
+                                FlSpot(3, 10),
+                                FlSpot(4, 7),
+                              ],
+                              isCurved: true,
+                              color: Colors.blue,
+                              barWidth: 4,
+                              dotData: FlDotData(show: true),
+                            ),
+                          ],
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+                                  if (value % 1 == 0 && value.toInt() >= 0 && value.toInt() < days.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(days[value.toInt()]),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                                interval: 1,
+                              ),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          gridData: FlGridData(show: false),
+                          minX: 0,
+                          maxX: 4,
+                          minY: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+Widget appointmentsLineChart() {
+  final List<FlSpot> mockData = [
+    FlSpot(0, 5),
+    FlSpot(1, 8),
+    FlSpot(2, 6),
+    FlSpot(3, 10),
+    FlSpot(4, 7),
+  ];
+  final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  return Card(
+    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    elevation: 4,
+    color: Colors.white, // Set background to white
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: mockData,
+                    isCurved: true,
+                    color: Colors.blue,
+                    barWidth: 4,
+                    dotData: FlDotData(show: true),
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        // Only show label if value is an integer and in range
+                        if (value.toInt() >= 0 && value.toInt() < days.length && value == value.toInt()) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(days[value.toInt()]),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                      interval: 1,
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(show: false),
+                minX: 0,
+                maxX: 4,
+                minY: 0,
+                // Optionally set maxY if you want to control y-axis
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _DeptAnalytics extends StatelessWidget {

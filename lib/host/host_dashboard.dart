@@ -199,12 +199,12 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          SizedBox(height: kToolbarHeight + MediaQuery.of(context).padding.top),
+          SizedBox(height: 32),
           // Welcome Card
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
