@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dashboard.dart' show VisitorsPage;
 
 class HostPassesPage extends StatefulWidget {
   const HostPassesPage({Key? key}) : super(key: key);
@@ -186,11 +187,14 @@ class _HostPassesPageState extends State<HostPassesPage> {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/dashboard');
           } else if (index == 1) {
-            // Already here
+            // Already here (Visitors)
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/manual_entry');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const VisitorsPage()),
+            );
           } else if (index == 3) {
-            Navigator.pushReplacementNamed(context, '/receptionist_reports');
+            Navigator.pushReplacementNamed(context, '/manual_entry');
           }
         },
         items: const [
@@ -199,16 +203,16 @@ class _HostPassesPageState extends State<HostPassesPage> {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.vpn_key_rounded),
-            label: 'Host Passes',
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Checked In',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
             label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),

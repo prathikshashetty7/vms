@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/receptionist_theme.dart';
 import 'receptionist_reports_page.dart';
+import 'dashboard.dart' show VisitorsPage;
 
 class ManualEntryPage extends StatefulWidget {
   const ManualEntryPage({Key? key}) : super(key: key);
@@ -364,7 +365,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
         backgroundColor: Colors.white,
         selectedItemColor: Color(0xFF6CA4FE),
         unselectedItemColor: Color(0xFF091016),
-        currentIndex: 2,
+        currentIndex: 3,
         onTap: (index) {
           if (index == 4) {
             Navigator.pushReplacementNamed(context, '/signin');
@@ -373,11 +374,14 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/dashboard');
           } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/host_passes');
-          } else if (index == 2) {
-            // Already here
-          } else if (index == 3) {
             Navigator.pushReplacementNamed(context, '/receptionist_reports');
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const VisitorsPage()),
+            );
+          } else if (index == 3) {
+            // Already here (Add Visitor)
           }
         },
         items: const [
@@ -386,16 +390,16 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.vpn_key_rounded),
-            label: 'Host Passes',
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Checked In',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
             label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),

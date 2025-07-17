@@ -63,14 +63,14 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
     if (index == 0) {
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+    } else if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const VisitorsPage()),
       );
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/manual_entry');
     } else if (index == 3) {
-      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+      Navigator.pushReplacementNamed(context, '/manual_entry');
     }
   }
 
@@ -109,12 +109,12 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
             label: 'Visitors',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_add_alt_1_rounded),
-            label: 'Add Visitor',
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Checked In',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
+            icon: Icon(Icons.person_add_alt_1_rounded),
+            label: 'Add Visitor',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),
@@ -731,6 +731,7 @@ class VisitorsPage extends StatelessWidget {
               final status = data['checked_out'] == true ? 'Checked Out' : 'Checked In';
               final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
               return Card(
+                color: Colors.white,
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
                   leading: Icon(
@@ -745,6 +746,50 @@ class VisitorsPage extends StatelessWidget {
             },
           );
         },
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Color(0xFF6CA4FE),
+        unselectedItemColor: Color(0xFF091016),
+        currentIndex: 2,
+        onTap: (index) {
+          if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/signin');
+            return;
+          }
+          if (index == 0) {
+            Navigator.pushReplacementNamed(context, '/dashboard');
+          } else if (index == 1) {
+            Navigator.pushReplacementNamed(context, '/receptionist_reports');
+          } else if (index == 2) {
+            // Already here (Checked In)
+          } else if (index == 3) {
+            Navigator.pushReplacementNamed(context, '/manual_entry');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Checked In',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_add_alt_1_rounded),
+            label: 'Add Visitor',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout_rounded),
+            label: 'Logout',
+          ),
+        ],
       ),
     );
   }

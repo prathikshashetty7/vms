@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:printing/printing.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'dashboard.dart' show VisitorsPage;
 
 class ThemedVisitorListPage extends StatelessWidget {
   final String collection;
@@ -30,8 +28,8 @@ class ThemedVisitorListPage extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 10),
+            Image.asset('assets/images/rdl.png', height: 36),
+            const SizedBox(width: 12),
             Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -64,52 +62,79 @@ class ThemedVisitorListPage extends StatelessWidget {
                 final data = docs[index].data() as Map<String, dynamic>;
                 final docId = docs[index].id;
                 final name = data[nameField] ?? 'Unknown';
-                final mobile = data[mobileField] ?? '';
                 final time = (data[timeField] as Timestamp?)?.toDate();
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.10),
+                        color: Color(0x22005FFE),
                         blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: color.withOpacity(0.18),
-                      child: Icon(icon, color: color),
-                    ),
-                    title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 16)),
-                    subtitle: Text('Mobile: $mobile', style: const TextStyle(color: Color(0xFF6CA4FE), fontSize: 13)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.black),
-                          onPressed: () => _showEditVisitorSheet(context, data, docId),
+                        CircleAvatar(
+                          backgroundColor: color.withOpacity(0.13),
+                          radius: 26,
+                          child: data['photo'] != null && data['photo'].toString().isNotEmpty
+                              ? ClipOval(
+                                  child: Image.memory(
+                                    const Base64Decoder().convert(data['photo']),
+                                    fit: BoxFit.cover,
+                                    width: 48,
+                                    height: 48,
+                                  ),
+                                )
+                              : Icon(icon, color: color, size: 32),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _confirmDeleteVisitor(context, docId),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 17)),
+                              if (time != null)
+                                Text(
+                                  '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')}/${time.year}',
+                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)),
+                                ),
+                            ],
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.remove_red_eye, color: Colors.blue),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => _VisitorDetailsDialog(
-                                data: data,
-                                color: color,
-                                icon: icon,
-                                name: name,
-                              ),
-                            );
-                          },
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.black),
+                              onPressed: () => _showEditVisitorSheet(context, data, docId),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _confirmDeleteVisitor(context, docId),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove_red_eye, color: Colors.blue),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => _VisitorDetailsDialog(
+                                    data: data,
+                                    color: color,
+                                    icon: icon,
+                                    name: name,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -125,7 +150,7 @@ class ThemedVisitorListPage extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: Color(0xFF6CA4FE),
         unselectedItemColor: Color(0xFF091016),
-        currentIndex: 3,
+        currentIndex: 1,
         onTap: (index) {
           if (index == 4) {
             Navigator.pushReplacementNamed(context, '/signin');
@@ -134,11 +159,14 @@ class ThemedVisitorListPage extends StatelessWidget {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/dashboard');
           } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/host_passes');
+            // Already here (Visitors)
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/manual_entry');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const VisitorsPage()),
+            );
           } else if (index == 3) {
-            // Already here
+            Navigator.pushReplacementNamed(context, '/manual_entry');
           }
         },
         items: const [
@@ -147,16 +175,16 @@ class ThemedVisitorListPage extends StatelessWidget {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.vpn_key_rounded),
-            label: 'Host Passes',
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Checked In',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
             label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),
@@ -169,138 +197,128 @@ class ThemedVisitorListPage extends StatelessWidget {
 
   void _showEditVisitorSheet(BuildContext context, Map<String, dynamic> data, String docId) {
     final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController(text: data['fullName']);
-    final mobileController = TextEditingController(text: data['mobile']);
-    final emailController = TextEditingController(text: data['email']);
-    final companyController = TextEditingController(text: data['company']);
-    final purposeController = TextEditingController(text: data['purpose']);
-    final appointmentController = TextEditingController(text: data['appointment']);
-    final departmentController = TextEditingController(text: data['department']);
-    final hostController = TextEditingController(text: data['host']);
-    final accompanyingController = TextEditingController(text: data['accompanying']);
-    final accompanyingCountController = TextEditingController(text: data['accompanyingCount']);
-    final laptopController = TextEditingController(text: data['laptop']);
-    final laptopDetailsController = TextEditingController(text: data['laptopDetails']);
+    final fullNameController = TextEditingController(text: data['fullName'] ?? '');
+    final mobileController = TextEditingController(text: data['mobile'] ?? '');
+    final emailController = TextEditingController(text: data['email'] ?? '');
+    final companyController = TextEditingController(text: data['company'] ?? '');
+    final hostController = TextEditingController(text: data['host'] ?? '');
+    final purposeController = TextEditingController(text: data['purpose'] ?? '');
+    final purposeOtherController = TextEditingController(text: data['purposeOther'] ?? '');
+    final appointmentController = TextEditingController(text: data['appointment'] ?? '');
+    final departmentController = TextEditingController(text: data['department'] ?? '');
+    final accompanyingController = TextEditingController(text: data['accompanying'] ?? '');
+    final accompanyingCountController = TextEditingController(text: data['accompanyingCount']?.toString() ?? '');
+    final laptopController = TextEditingController(text: data['laptop'] ?? '');
+    final laptopDetailsController = TextEditingController(text: data['laptopDetails'] ?? '');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
+      backgroundColor: Colors.transparent,
+      builder: (context) => SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 20,
-            right: 20,
-            top: 20,
+            left: 16,
+            right: 16,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Edit Visitor',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Name'),
-                  validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: mobileController,
-                  decoration: InputDecoration(labelText: 'Mobile'),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) => value!.isEmpty ? 'Mobile cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: emailController,
-                  decoration: InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) => value!.isEmpty ? 'Email cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: companyController,
-                  decoration: InputDecoration(labelText: 'Company'),
-                  validator: (value) => value!.isEmpty ? 'Company cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: purposeController,
-                  decoration: InputDecoration(labelText: 'Purpose'),
-                  validator: (value) => value!.isEmpty ? 'Purpose cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: appointmentController,
-                  decoration: InputDecoration(labelText: 'Appointment'),
-                  validator: (value) => value!.isEmpty ? 'Appointment cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: departmentController,
-                  decoration: InputDecoration(labelText: 'Department'),
-                  validator: (value) => value!.isEmpty ? 'Department cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: hostController,
-                  decoration: InputDecoration(labelText: 'Host'),
-                  validator: (value) => value!.isEmpty ? 'Host cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: accompanyingController,
-                  decoration: InputDecoration(labelText: 'Accompanying'),
-                  validator: (value) => value!.isEmpty ? 'Accompanying cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: accompanyingCountController,
-                  decoration: InputDecoration(labelText: 'Accompanying Count'),
-                  keyboardType: TextInputType.number,
-                  validator: (value) => value!.isEmpty ? 'Accompanying Count cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: laptopController,
-                  decoration: InputDecoration(labelText: 'Laptop'),
-                  validator: (value) => value!.isEmpty ? 'Laptop cannot be empty' : null,
-                ),
-                TextFormField(
-                  controller: laptopDetailsController,
-                  decoration: InputDecoration(labelText: 'Laptop Details'),
-                  validator: (value) => value!.isEmpty ? 'Laptop Details cannot be empty' : null,
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final updatedData = {
-                        'fullName': nameController.text,
-                        'mobile': mobileController.text,
-                        'email': emailController.text,
-                        'company': companyController.text,
-                        'purpose': purposeController.text,
-                        'appointment': appointmentController.text,
-                        'department': departmentController.text,
-                        'host': hostController.text,
-                        'accompanying': accompanyingController.text,
-                        'accompanyingCount': int.tryParse(accompanyingCountController.text) ?? 0,
-                        'laptop': laptopController.text,
-                        'laptopDetails': laptopDetailsController.text,
-                      };
-                      await FirebaseFirestore.instance.collection(collection).doc(docId).update(updatedData);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF6CA4FE),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Save Changes'),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 16,
+                  offset: Offset(0, 6),
                 ),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        'Edit Visitor',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                          color: Color(0xFF091016),
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _buildEditField(fullNameController, 'Full Name', Icons.person, TextInputType.text, true),
+                    const SizedBox(height: 14),
+                    _buildEditField(mobileController, 'Mobile', Icons.phone, TextInputType.phone, true),
+                    const SizedBox(height: 14),
+                    _buildEditField(emailController, 'Email', Icons.email, TextInputType.emailAddress, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(companyController, 'Company', Icons.business, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(hostController, 'Host', Icons.person_outline, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(purposeController, 'Purpose', Icons.info_outline, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(purposeOtherController, 'Other Purpose', Icons.edit, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(appointmentController, 'Appointment', Icons.event_available, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(departmentController, 'Department', Icons.apartment, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(accompanyingController, 'Accompanying', Icons.group, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(accompanyingCountController, 'Accompanying Count', Icons.format_list_numbered, TextInputType.number, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(laptopController, 'Laptop', Icons.laptop, TextInputType.text, false),
+                    const SizedBox(height: 14),
+                    _buildEditField(laptopDetailsController, 'Laptop Details', Icons.laptop_mac, TextInputType.text, false),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (formKey.currentState!.validate()) {
+                            final updatedData = {
+                              'fullName': fullNameController.text,
+                              'mobile': mobileController.text,
+                              'email': emailController.text,
+                              'company': companyController.text,
+                              'host': hostController.text,
+                              'purpose': purposeController.text,
+                              'purposeOther': purposeOtherController.text,
+                              'appointment': appointmentController.text,
+                              'department': departmentController.text,
+                              'accompanying': accompanyingController.text,
+                              'accompanyingCount': accompanyingCountController.text,
+                              'laptop': laptopController.text,
+                              'laptopDetails': laptopDetailsController.text,
+                            };
+                            await FirebaseFirestore.instance.collection(collection).doc(docId).update(updatedData);
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save Changes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF6CA4FE),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                          elevation: 6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -308,36 +326,57 @@ class ThemedVisitorListPage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDeleteVisitor(BuildContext context, String docId) async {
-    final bool? shouldDelete = await showDialog<bool>(
+  Widget _buildEditField(TextEditingController controller, String label, IconData icon, TextInputType type, bool required) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: type,
+      validator: required ? (v) => v == null || v.isEmpty ? 'Required' : null : null,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.black12),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.black12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Color(0xFF6CA4FE), width: 2),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteVisitor(BuildContext context, String docId) {
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Deletion'),
         content: const Text('Are you sure you want to delete this visitor? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
+              Navigator.of(context).pop();
+            },
             child: const Text('Delete'),
           ),
         ],
       ),
     );
-
-    if (shouldDelete == true) {
-      await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Visitor deleted successfully!')),
-      );
-    }
   }
 }
 
-class _VisitorDetailsDialog extends StatefulWidget {
+class _VisitorDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> data;
   final Color color;
   final IconData icon;
@@ -345,297 +384,111 @@ class _VisitorDetailsDialog extends StatefulWidget {
   const _VisitorDetailsDialog({required this.data, required this.color, required this.icon, required this.name, Key? key}) : super(key: key);
 
   @override
-  State<_VisitorDetailsDialog> createState() => _VisitorDetailsDialogState();
-}
-
-class _VisitorDetailsDialogState extends State<_VisitorDetailsDialog> {
-  bool _isPassGenerated = false;
-  Map<String, dynamic>? _passDetails;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkPassStatus();
-  }
-
-  Future<void> _checkPassStatus() async {
-    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
-    final passDoc = await passRef.get();
-    if (passDoc.exists) {
-      setState(() {
-        _isPassGenerated = true;
-        _passDetails = passDoc.data() as Map<String, dynamic>;
-      });
-    }
-  }
-
-  Future<void> _generatePass() async {
-    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
-    await passRef.set({
-      'visitorId': widget.data['_id'],
-      'fullName': widget.data['fullName'],
-      'mobile': widget.data['mobile'],
-      'email': widget.data['email'],
-      'company': widget.data['company'],
-      'purpose': widget.data['purpose'],
-      'purposeOther': widget.data['purposeOther'],
-      'appointment': widget.data['appointment'],
-      'department': widget.data['department'],
-      'host': widget.data['host'],
-      'accompanying': widget.data['accompanying'],
-      'accompanyingCount': widget.data['accompanyingCount'],
-      'laptop': widget.data['laptop'],
-      'laptopDetails': widget.data['laptopDetails'],
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-    setState(() {
-      _isPassGenerated = true;
-      _passDetails = widget.data; // Store the full visitor data as pass details
-    });
-  }
-
-  Future<void> _printPass() async {
-    final passRef = FirebaseFirestore.instance.collection('visitorPasses').doc(widget.data['_id']);
-    final passDoc = await passRef.get();
-    if (passDoc.exists) {
-      final passData = passDoc.data() as Map<String, dynamic>;
-      await Printing.layoutPdf(onLayout: (format) async {
-        final pdf = pw.Document();
-        pdf.addPage(
-          pw.Page(
-            pageFormat: format,
-            build: (context) => pw.Center(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('Visitor Pass', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 16),
-                  pw.Text('Name: ${passData['fullName'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Mobile: ${passData['mobile'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Email: ${passData['email'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Company: ${passData['company'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Purpose: ${passData['purpose'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Appointment: ${passData['appointment'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Department: ${passData['department'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Host: ${passData['host'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Accompanying: ${passData['accompanying'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Accompanying Count: ${passData['accompanyingCount'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Laptop: ${passData['laptop'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Laptop Details: ${passData['laptopDetails'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                  pw.Text('Timestamp: ${passData['timestamp'] ?? ''}', style: pw.TextStyle(fontSize: 16)),
-                ],
-              ),
-            ),
-          ),
-        );
-        return pdf.save();
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+      child: SingleChildScrollView(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: widget.color.withOpacity(0.13),
-                  child: Icon(widget.icon, color: widget.color),
-                  radius: 28,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    widget.name,
-                    style: TextStyle(
-                      color: widget.color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      fontFamily: 'Poppins',
+                Row(
+                  children: [
+                    data['photo'] != null && data['photo'].toString().isNotEmpty
+                        ? CircleAvatar(
+                            radius: 36,
+                            backgroundImage: MemoryImage(const Base64Decoder().convert(data['photo'])),
+                          )
+                        : CircleAvatar(
+                            radius: 36,
+                            backgroundColor: color.withOpacity(0.13),
+                            child: Icon(icon, color: color, size: 36),
+                          ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _buildDetailRow(Icons.phone, 'Mobile', data['mobile']),
+                _buildDetailRow(Icons.email, 'Email', data['email']),
+                _buildDetailRow(Icons.business, 'Company', data['company']),
+                _buildDetailRow(Icons.person_outline, 'Host', data['host']),
+                _buildDetailRow(Icons.info_outline, 'Purpose', data['purpose']),
+                _buildDetailRow(Icons.edit, 'Other Purpose', data['purposeOther']),
+                _buildDetailRow(Icons.event_available, 'Appointment', data['appointment']),
+                _buildDetailRow(Icons.apartment, 'Department', data['department']),
+                _buildDetailRow(Icons.group, 'Accompanying', data['accompanying']),
+                _buildDetailRow(Icons.format_list_numbered, 'Accompanying Count', data['accompanyingCount']),
+                _buildDetailRow(Icons.laptop, 'Laptop', data['laptop']),
+                _buildDetailRow(Icons.laptop_mac, 'Laptop Details', data['laptopDetails']),
+                if (data['timestamp'] != null)
+                  _buildDetailRow(
+                    Icons.access_time,
+                    'Registered At',
+                    (data['timestamp'] is Timestamp)
+                        ? (data['timestamp'] as Timestamp).toDate().toString()
+                        : data['timestamp'].toString(),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black54),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
               ],
             ),
-            const SizedBox(height: 18),
-            if (!_isPassGenerated)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ElevatedButton(
-                  onPressed: _generatePass,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.color,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Generate Pass'),
-                ),
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ..._displayFields(),
-                  const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: ElevatedButton(
-                      onPressed: _printPass,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.color,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Print Pass'),
-                    ),
-                  ),
-                ],
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  List<Widget> _displayFields() {
-    final List<Widget> fields = [];
-    final List<String> displayOrder = [
-      'photo',
-      'fullName',
-      'mobile',
-      'email',
-      'company',
-      'purpose',
-      'purposeOther',
-      'appointment',
-      'department',
-      'host',
-      'accompanying',
-      'accompanyingCount',
-      'laptop',
-      'laptopDetails',
-      'timestamp',
-    ];
-
-    for (final key in displayOrder) {
-      final value = widget.data[key];
-      if (value == null || value.toString().isEmpty) continue;
-
-      fields.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              Icon(_iconForKey(key), size: 18, color: widget.color.withOpacity(0.7)),
-              const SizedBox(width: 8),
-              Text(
-                '${_prettifyKey(key)}: ',
-                style: TextStyle(fontWeight: FontWeight.bold, color: widget.color),
-              ),
-              Expanded(
-                child: Text(
-                  value.toString(),
-                  style: const TextStyle(color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+  Widget _buildDetailRow(IconData icon, String label, dynamic value) {
+    if (value == null || value.toString().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Color(0xFF6CA4FE), size: 22),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016)),
           ),
-        ),
-      );
-    }
-    return fields;
-  }
-
-  String _prettifyKey(String key) {
-    switch (key) {
-      case 'fullName':
-        return 'Name';
-      case 'mobile':
-        return 'Mobile';
-      case 'email':
-        return 'Email';
-      case 'company':
-        return 'Company';
-      case 'host':
-        return 'Host';
-      case 'purpose':
-        return 'Purpose';
-      case 'appointment':
-        return 'Appointment';
-      case 'department':
-        return 'Department';
-      case 'accompanying':
-        return 'Accompanying';
-      case 'accompanyingCount':
-        return 'Accompanying Count';
-      case 'laptop':
-        return 'Laptop';
-      case 'laptopDetails':
-        return 'Laptop Details';
-      case 'purposeOther':
-        return 'Other Purpose';
-      case 'visitor':
-        return 'Visitor';
-      case 'passcode':
-        return 'Passcode';
-      case 'status':
-        return 'Status';
-      default:
-        return key[0].toUpperCase() + key.substring(1);
-    }
-  }
-
-  IconData _iconForKey(String key) {
-    switch (key) {
-      case 'fullName':
-        return Icons.person;
-      case 'mobile':
-        return Icons.phone;
-      case 'email':
-        return Icons.email;
-      case 'company':
-        return Icons.business;
-      case 'host':
-        return Icons.person_outline;
-      case 'purpose':
-        return Icons.info_outline;
-      case 'appointment':
-        return Icons.event_available;
-      case 'department':
-        return Icons.apartment;
-      case 'accompanying':
-        return Icons.group;
-      case 'accompanyingCount':
-        return Icons.format_list_numbered;
-      case 'laptop':
-        return Icons.laptop;
-      case 'laptopDetails':
-        return Icons.laptop_mac;
-      case 'purposeOther':
-        return Icons.edit;
-      case 'visitor':
-        return Icons.person;
-      case 'passcode':
-        return Icons.vpn_key;
-      case 'status':
-        return Icons.verified_user;
-      default:
-        return Icons.label;
-    }
+          Expanded(
+            child: Text(
+              value.toString(),
+              style: const TextStyle(color: Colors.black87),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 } 
