@@ -123,6 +123,8 @@ class _CreatePassPageState extends State<CreatePassPage> {
                     }
                   }
                   final now = DateTime.now();
+                  // Only show if pass_generated_by == 'host'
+                  if (v['pass_generated_by'] != 'host') return false;
                   return !visitDate.isBefore(DateTime(now.year, now.month, now.day));
                 }).toList();
                 return ListView.builder(

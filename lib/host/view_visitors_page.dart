@@ -147,7 +147,6 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection('visitor')
-                          .where('pass_generated', isEqualTo: true)
                           .where('emp_id', isEqualTo: hostDocId)
                           .where('departmentId', isEqualTo: departmentId)
                           .snapshots(),
@@ -183,6 +182,15 @@ class _VisitorCard extends StatelessWidget {
   final Map<String, dynamic> visitor;
   const _VisitorCard({required this.visitor});
 
+  Future<String> _getHostName(String? hostId) async {
+    if (hostId == null || hostId.isEmpty) return '';
+    final doc = await FirebaseFirestore.instance.collection('host').doc(hostId).get();
+    if (doc.exists) {
+      return doc.data()?['emp_name'] ?? '';
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -209,7 +217,13 @@ class _VisitorCard extends StatelessWidget {
                     children: [
                       Text(visitor['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016))),
                       const SizedBox(height: 2),
-                      Text('Host: ${visitor['host_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                      FutureBuilder<String>(
+                        future: _getHostName(visitor['emp_id']),
+                        builder: (context, snapshot) {
+                          final hostName = snapshot.data ?? '';
+                          return Text('Host: $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016)));
+                        },
+                      ),
                       const SizedBox(height: 2),
                       Text('Check-in: ${visitor['check_in_time'] ?? 'Not checked in'}', style: const TextStyle(fontSize: 13, color: Color(0xFF22C55E))),
                       const SizedBox(height: 2),
