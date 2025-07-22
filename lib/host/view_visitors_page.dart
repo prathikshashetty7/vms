@@ -273,7 +273,7 @@ class _VisitorCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // <-- center vertically
           children: [
             const Icon(Icons.person, size: 28, color: Colors.black),
             const SizedBox(width: 14),
@@ -294,10 +294,13 @@ class _VisitorCard extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.visibility, color: Colors.black),
-              onPressed: () => _showVisitorDetailsDialog(context, visitor),
-              tooltip: 'View Details',
+            Align(
+              alignment: Alignment.center,
+              child: IconButton(
+                icon: const Icon(Icons.visibility, color: Colors.black),
+                onPressed: () => _showVisitorDetailsDialog(context, visitor),
+                tooltip: 'View Details',
+              ),
             ),
           ],
         ),

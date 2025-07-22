@@ -738,14 +738,38 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               );
                             }
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(icon: const Icon(Icons.edit, color: Colors.black), onPressed: () => _showVisitorForm(doc)),
-                              IconButton(icon: const Icon(Icons.delete, color: Colors.black), onPressed: () => doc.reference.delete()),
-                              IconButton(icon: const Icon(Icons.visibility, color: Colors.black), onPressed: () => _showVisitorDetailsDialog(doc)),
-                            ],
-                          ),
+                          trailing: PopupMenuButton<String>(
+  icon: const Icon(Icons.more_vert, color: Colors.black),
+  onSelected: (value) {
+    if (value == 'view') {
+      _showVisitorDetailsDialog(doc);
+    } else if (value == 'edit') {
+      _showVisitorForm(doc);
+    } else if (value == 'delete') {
+      doc.reference.delete();
+    }
+  },
+  itemBuilder: (context) => [
+    PopupMenuItem(
+      value: 'view',
+      child: Row(
+        children: const [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('View')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'edit',
+      child: Row(
+        children: const [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'delete',
+      child: Row(
+        children: const [Icon(Icons.delete, size: 18), SizedBox(width: 8), Text('Delete')],
+      ),
+    ),
+  ],
+),
                         ),
                       );
                     },

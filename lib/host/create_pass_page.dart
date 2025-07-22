@@ -221,14 +221,8 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
                                 label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                                 onPressed: () async {
+                                  // Prepare pass data for preview
                                   final visitorId = snapshot.data!.docs[idx].id;
-                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
-                                    'pass_generated': true,
-                                    'departmentId': departmentId ?? '',
-                                    'department': departmentName ?? '',
-                                    'host_name': hostName ?? '',
-                                  });
-                                  // Prepare pass data
                                   dynamic vDate = v['v_date'];
                                   Timestamp passDate;
                                   if (vDate is Timestamp) {
@@ -252,19 +246,62 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'v_date': passDate,
                                     'v_time': v['v_time'],
                                     'photoBase64': v['photoBase64'] ?? _visitorImageBase64[idx],
+                                    'v_designation': v['v_designation'] ?? '',
                                   };
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _VisitorPassCard(
+                                              visitor: passData,
+                                              hostName: hostName ?? '',
+                                              passNo: 0, // You can update this if you have a pass number
+                                              imageBytes: passData['photoBase64'] != null && passData['photoBase64'] != '' ? base64Decode(passData['photoBase64']) : null,
+                                              departmentName: departmentName ?? '',
+                                            ),
+                                            const SizedBox(height: 18),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              children: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                ElevatedButton(
+                                                  onPressed: () => Navigator.of(context).pop(true),
+                                                  child: const Text('Generate'),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                  if (confirm != true) return;
+                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
+                                    'pass_generated': true,
+                                    'departmentId': departmentId ?? '',
+                                    'department': departmentName ?? '',
+                                    'host_name': hostName ?? '',
+                                  });
                                   await FirebaseFirestore.instance.collection('passes').add({
                                     ...passData,
                                     'created_at': FieldValue.serverTimestamp(),
                                   });
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => Dialog(
-                                      insetPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 24), // Add this for better responsiveness
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                      child: PassDetailDialog(pass: passData, showPrint: false),
-                                    ),
-                                  );
+                                  // Show a snackbar for success after generating
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Pass generated successfully!')),
+                                    );
+                                  }
                                 },
                               ),
                             ),
@@ -353,6 +390,8 @@ class _VisitorPassCard extends StatelessWidget {
                   children: [
                     Text('Pass No      : $passNo', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
                     Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
+                    if (visitor['v_designation'] != null && visitor['v_designation'].toString().isNotEmpty)
+                      Text('Designation : ${visitor['v_designation']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
                   ],
                 ),
               ),
