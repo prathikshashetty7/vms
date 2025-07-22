@@ -31,6 +31,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
         'carrying_laptop': 'No',
         'photo_url': 'https://example.com/photo.jpg',
         'accomplished_visitors': 2,
+        // No laptop_name for this visitor
       },
       {
         'v_name': 'Alice Brown',
@@ -43,6 +44,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
         'checkin_time': '09:30 AM',
         'checkout_time': '10:15 AM',
         'carrying_laptop': 'Yes',
+        'laptop_name': 'Dell Inspiron 15',
         'photo_url': '',
         'accomplished_visitors': 1,
       },
@@ -163,6 +165,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                               _detailRow('Check-in Time', doc['checkin_time'] ?? ''),
                               _detailRow('Check-out Time', doc['checkout_time'] ?? ''),
                               _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
+                              if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
+                                _detailRow('Laptop Name', doc['laptop_name']),
                               _detailRow('Accomplished No of visitors', doc['accomplished_visitors']?.toString() ?? ''),
                             ],
                           ),

@@ -53,6 +53,106 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return date.toString();
   }
 
+  // Add this function to show details dialog
+  void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 8,
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.blue.shade100,
+                              child: const Icon(Icons.person, size: 44, color: Colors.blue),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Visitor Details',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Card(
+                        color: Colors.grey[50],
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _detailRow('Full Name', doc['v_name'] ?? ''),
+                              _detailRow('Email', doc['v_email'] ?? ''),
+                              _detailRow('Mobile Number', doc['v_contactno'] ?? ''),
+                              _detailRow('Company Name', doc['v_company_name'] ?? ''),
+                              _detailRow('Purpose of Visit', doc['purpose'] ?? ''),
+                              _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
+                              _detailRow('Host Name', doc['host_name'] ?? ''),
+                              _detailRow('Check-in Time', doc['checkin_time'] ?? ''),
+                              _detailRow('Check-out Time', doc['checkout_time'] ?? ''),
+                              _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
+                              if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
+                                _detailRow('Laptop Name', doc['laptop_name'] ?? ''),
+                              _detailRow('Accomplished No of visitors', doc['accomplished_visitors']?.toString() ?? ''),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          child: const Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.black87)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -85,62 +185,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   itemCount: visitors.length,
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
-                    Widget avatar;
-                    final photoBase64 = v['photoBase64'];
-                    if (photoBase64 != null && photoBase64 != '') {
-                      final bytes = base64Decode(photoBase64);
-                      avatar = CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
-                        backgroundImage: MemoryImage(bytes),
-                      );
-                    } else {
-                      avatar = const CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Color(0xFF6CA4FE),
-                        child: Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
-                      );
-                    }
-                    return Card(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      elevation: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18.0),
-                        child: Column(
+                    final name = v['v_name'] ?? '';
+                    final checkin = v['checkin_time'] ?? v['checkin'] ?? '';
+                    final checkout = v['checkout_time'] ?? v['checkout'] ?? '';
+                    final hostNameValue = v['host_name'] ?? hostName ?? '';
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: ListTile(
+                        leading: const Icon(Icons.person, color: Colors.black),
+                        title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                        subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                avatar,
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(v['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016))),
-                                      const SizedBox(height: 4),
-                                      Text('Host: ', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                                      Text('Company: ${v['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
-                                const SizedBox(width: 4),
-                                Text('Date: ${_formatDate(v['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                                const SizedBox(width: 16),
-                                const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
-                                const SizedBox(width: 4),
-                                Text('Time: ${v['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                              ],
-                            ),
+                            Text('Host Name: $hostNameValue'),
+                            Text('Check-in Time: $checkin'),
+                            Text('Check-out Time: $checkout'),
                           ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.visibility, color: Colors.black),
+                          onPressed: () => _showVisitorDetailsDialog(context, v),
                         ),
                       ),
                     );

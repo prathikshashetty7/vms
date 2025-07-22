@@ -540,12 +540,36 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                 leading: const Icon(Icons.person, color: Colors.black),
                 title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                 subtitle: Text('Email: $email | Contact Number: $contact', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(icon: const Icon(Icons.edit, color: Colors.black), onPressed: () => showForm(doc, collection)),
-                    IconButton(icon: const Icon(Icons.delete, color: Colors.black), onPressed: () => _deleteEmployee(doc.id, collection)),
-                    IconButton(icon: const Icon(Icons.visibility, color: Colors.black), onPressed: () => _showEmployeeDetailsDialog(doc)),
+                trailing: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.black),
+                  onSelected: (value) {
+                    if (value == 'view') {
+                      _showEmployeeDetailsDialog(doc);
+                    } else if (value == 'edit') {
+                      showForm(doc, collection);
+                    } else if (value == 'delete') {
+                      _deleteEmployee(doc.id, collection);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'view',
+                      child: Row(
+                        children: const [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('View')],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: const [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: const [Icon(Icons.delete, size: 18), SizedBox(width: 8), Text('Delete')],
+                      ),
+                    ),
                   ],
                 ),
               ),

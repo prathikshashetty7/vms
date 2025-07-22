@@ -32,10 +32,29 @@ class _HostMainScreenState extends State<HostMainScreen> {
 
   void _onNavBarTap(int index) async {
     if (index == 4) {
-      // Logout
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/signin');
+      // Logout with confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
