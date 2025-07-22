@@ -169,7 +169,7 @@ class ReceptionistReportsPage extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_circle_rounded),
-            label: 'Checked In',
+            label: 'Status',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),

@@ -208,7 +208,7 @@ class _HostPassesPageState extends State<HostPassesPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_circle_rounded),
-            label: 'Checked In',
+            label: 'Status',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
@@ -341,6 +341,16 @@ class PassDetailDialog extends StatelessWidget {
                             icon: const Icon(Icons.print),
                             label: const Text('Print'),
                             onPressed: () async {
+                              // Save print time to Firestore
+                              if (pass['visitorId'] != null) {
+                                await FirebaseFirestore.instance.collection('visitor').doc(pass['visitorId']).update({
+                                  'printed_at': FieldValue.serverTimestamp(),
+                                });
+                              } else if (pass['id'] != null) {
+                                await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
+                                  'printed_at': FieldValue.serverTimestamp(),
+                                });
+                              }
                               // Load logo bytes for PDF
                               final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
                               final logoUint8List = logoBytes.buffer.asUint8List();

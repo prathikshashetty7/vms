@@ -327,51 +327,6 @@ class _SignInPageState extends State<SignInPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: DesignSystem.spacing32),
-                  // Quick Login Buttons (now at the bottom)
-                  Column(
-                    children: [
-                      _QuickLoginButton(
-                        text: 'Go to Admin Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AdminDashboard()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Department Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const DeptDashboard()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Host Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const HostMainScreen()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Receptionist Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),

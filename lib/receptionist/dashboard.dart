@@ -110,7 +110,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.check_circle_rounded),
-            label: 'Checked In',
+            label: 'Status',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
@@ -707,89 +707,148 @@ class VisitorsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Visitors'),
-        backgroundColor: Color(0xFF6CA4FE),
-      ),
-      backgroundColor: Color(0xFFD4E9FF),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
-        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No visitors found.'));
-          }
-          final docs = snapshot.data!.docs;
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final name = data['v_name'] ?? 'Unknown';
-              final status = data['checked_out'] == true ? 'Checked Out' : 'Checked In';
-              final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
-              return Card(
-                color: Colors.white,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  leading: Icon(
-                    status == 'Checked In' ? Icons.login : Icons.logout,
-                    color: status == 'Checked In' ? Colors.green : Colors.red,
-                  ),
-                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(date != null ? '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' : ''),
-                  trailing: Text(status, style: TextStyle(color: status == 'Checked In' ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Checked In/Out', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFF6CA4FE),
+          bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              Tab(text: 'Checked In'),
+              Tab(text: 'Checked Out'),
+            ],
+          ),
+        ),
+        backgroundColor: Color(0xFFD4E9FF),
+        body: StreamBuilder(
+          stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
+          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No visitors found.'));
+            }
+            final docs = snapshot.data!.docs;
+            final checkedInDocs = docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['checked_out'] != true && data['printed_at'] != null;
+            }).toList();
+            final checkedOutDocs = docs.where((doc) => (doc.data() as Map<String, dynamic>)['checked_out'] == true).toList();
+            return TabBarView(
+              children: [
+                // Checked In tab
+                ListView.builder(
+                  itemCount: checkedInDocs.length,
+                  itemBuilder: (context, index) {
+                    final data = checkedInDocs[index].data() as Map<String, dynamic>;
+                    final name = data['v_name'] ?? 'Unknown';
+                    final printedAt = data['printed_at'];
+                    String printInfo = '';
+                    if (printedAt != null) {
+                      final dt = printedAt is Timestamp ? printedAt.toDate() : DateTime.tryParse(printedAt.toString());
+                      if (dt != null) {
+                        printInfo = 'Printed: '
+                          '${dt.day.toString().padLeft(2, '0')}/'
+                          '${dt.month.toString().padLeft(2, '0')}/'
+                          '${dt.year} '
+                          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                      }
+                    }
+                    return Card(
+                      color: Colors.white,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        leading: Icon(Icons.login, color: Colors.green),
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                        subtitle: printInfo.isNotEmpty ? Text(printInfo, style: const TextStyle(color: Color(0xFF6CA4FE))) : null,
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          );
-        },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6CA4FE),
-        unselectedItemColor: Color(0xFF091016),
-        currentIndex: 2,
-        onTap: (index) {
-          if (index == 4) {
-            Navigator.pushReplacementNamed(context, '/signin');
-            return;
-          }
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/dashboard');
-          } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/receptionist_reports');
-          } else if (index == 2) {
-            // Already here (Checked In)
-          } else if (index == 3) {
-            Navigator.pushReplacementNamed(context, '/manual_entry');
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_rounded),
-            label: 'Visitors',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_rounded),
-            label: 'Checked In',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_add_alt_1_rounded),
-            label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.logout_rounded),
-            label: 'Logout',
-          ),
-        ],
+                // Checked Out tab
+                ListView.builder(
+                  itemCount: checkedOutDocs.length,
+                  itemBuilder: (context, index) {
+                    final data = checkedOutDocs[index].data() as Map<String, dynamic>;
+                    final name = data['v_name'] ?? 'Unknown';
+                    final status = 'Checked Out';
+                    final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
+                    return Card(
+                      color: Colors.white,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        leading: Icon(Icons.logout, color: Colors.red),
+                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(date != null ? '${date.day}/${date.month}/${date.year}' : ''),
+                        trailing: Text(status, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Color(0xFF6CA4FE),
+          unselectedItemColor: Color(0xFF091016),
+          currentIndex: 2,
+          onTap: (index) {
+            if (index == 4) {
+              Navigator.pushReplacementNamed(context, '/signin');
+              return;
+            }
+            if (index == 0) {
+              Navigator.pushReplacementNamed(context, '/dashboard');
+            } else if (index == 1) {
+              Navigator.pushReplacementNamed(context, '/receptionist_reports');
+            } else if (index == 2) {
+              // Already here (Checked In)
+            } else if (index == 3) {
+              Navigator.pushReplacementNamed(context, '/manual_entry');
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_alt_rounded),
+              label: 'Visitors',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.check_circle_rounded),
+              label: 'Status',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_rounded),
+              label: 'Add Visitor',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.logout_rounded),
+              label: 'Logout',
+            ),
+          ],
+        ),
       ),
     );
   }
