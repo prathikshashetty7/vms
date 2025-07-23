@@ -181,26 +181,70 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                         // Search bar below AppBar
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF181F2C), // dark background
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                                hintText: 'Search by name or email',
-                                hintStyle: const TextStyle(color: Colors.white54),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          child: Row(
+                            children: [
+                              // Expanded search bar
+                              Expanded(
+                                flex: 2,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    style: const TextStyle(color: Colors.black),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                                      hintText: 'Search by name or email',
+                                      hintStyle: const TextStyle(color: Colors.black38),
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
                               ),
-                              onChanged: (value) {
-                                setState(() {});
-                              },
-                            ),
+                              const SizedBox(width: 12),
+                              // Department dropdown
+                              Expanded(
+                                flex: 1,
+                                child: Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedDepartment,
+                                      icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                                      isExpanded: true,
+                                      style: const TextStyle(color: Colors.black, fontSize: 16),
+                                      items: _departments.map((dept) {
+                                        return DropdownMenuItem<String>(
+                                          value: dept,
+                                          child: Text(dept),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() {
+                                            _selectedDepartment = value;
+                                            _applyFilters();
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         // Custom tab-like toggle for Host/Receptionist
