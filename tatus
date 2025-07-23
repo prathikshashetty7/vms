@@ -1,0 +1,144 @@
+*   [33m692c93f[m[33m ([m[1;31morigin/main[m[33m)[m Merge pull request #27 from prathikshashetty7/feature/prath
+[31m|[m[32m\[m  
+[31m|[m * [33m12dc3c3[m[33m ([m[1;31morigin/feature/prath[m[33m, [m[1;32mfeature/prath[m[33m)[m Host Donee
+* [32m|[m   [33m8ef0808[m Merge pull request #26 from prathikshashetty7/feature/san
+[33m|[m[34m\[m [32m\[m  
+[33m|[m * [32m|[m [33m271a560[m[33m ([m[1;31morigin/feature/san[m[33m)[m Initial commit
+[33m|[m * [32m|[m   [33maa917cf[m Initial commit
+[33m|[m [35m|[m[36m\[m [32m\[m  
+[33m|[m * [36m|[m [32m|[m [33m8fe8936[m Initial commit
+[33m|[m * [36m|[m [32m|[m [33ma12fa1c[m Initial commit
+[33m|[m * [36m|[m [32m|[m [33m9d7d6f5[m Initial commit
+* [36m|[m [36m|[m [32m|[m   [33m1f803ed[m Merge pull request #25 from prathikshashetty7/feature/prath
+[36m|[m[32m\[m [36m\[m [36m\[m [32m\[m  
+[36m|[m [32m|[m[36m_[m[36m|[m[36m/[m [32m/[m  
+[36m|[m[36m/[m[32m|[m [36m|[m [32m/[m   
+[36m|[m [32m|[m [36m|[m[32m/[m    
+[36m|[m [32m|[m[32m/[m[36m|[m     
+[36m|[m * [36m|[m   [33m138dfdc[m Merge branch 'main' into feature/prath
+[36m|[m [1;33m|[m[36m\[m [36m\[m  
+[36m|[m [1;33m|[m[36m/[m [36m/[m  
+[36m|[m[36m/[m[1;33m|[m [36m|[m   
+* [1;33m|[m [36m|[m   [33mb68ba56[m Merge pull request #24 from prathikshashetty7/feature/prathik
+[1;35m|[m[1;36m\[m [1;33m\[m [36m\[m  
+[1;35m|[m * [1;33m\[m [36m\[m   [33m00fda20[m Merge branch 'main' into feature/prathik
+[1;35m|[m [31m|[m[1;35m\[m [1;33m\[m [36m\[m  
+[1;35m|[m [31m|[m[1;35m/[m [1;33m/[m [36m/[m  
+[1;35m|[m[1;35m/[m[31m|[m [1;33m|[m [36m|[m   
+[1;35m|[m * [1;33m|[m [36m|[m [33me291585[m[33m ([m[1;31morigin/feature/prathik[m[33m)[m dept Done
+[1;35m|[m [32m|[m * [36m|[m [33md44d9ee[m host done
+[1;35m|[m [32m|[m * [36m|[m [33m9a30347[m Kiosk app added to git
+[1;35m|[m [32m|[m[1;35m/[m [36m/[m  
+[1;35m|[m[1;35m/[m[32m|[m [36m|[m   
+* [32m|[m [36m|[m   [33me895766[m Merge pull request #23 from prathikshashetty7/feature/san
+[33m|[m[36m\[m [32m\[m [36m\[m  
+[33m|[m [36m|[m [32m|[m[36m/[m  
+[33m|[m [36m|[m[36m/[m[32m|[m   
+[33m|[m * [32m|[m [33m1154354[m Initial commit
+[33m|[m[33m/[m [32m/[m  
+* [32m|[m   [33m690223e[m Merge pull request #22 from prathikshashetty7/feature/host
+[35m|[m[36m\[m [32m\[m  
+[35m|[m * [32m|[m [33m7aac384[m[33m ([m[1;31morigin/feature/host[m[33m)[m save
+* [36m|[m [32m|[m [33mf19f175[m Merge pull request #21 from prathikshashetty7/feature/host
+[32m|[m[36m\[m[36m|[m [32m|[m 
+[32m|[m [36m|[m[32m/[m  
+[32m|[m[32m/[m[36m|[m   
+[32m|[m * [33m2c7795b[m save
+* [1;32m|[m [33m0e28f50[m Merge pull request #20 from prathikshashetty7/feature/host
+[1;33m|[m[1;32m\[m[1;32m|[m 
+[1;33m|[m * [33m788b22b[m save
+* [1;34m|[m [33m48bd4ef[m Merge pull request #19 from prathikshashetty7/feature/host
+[1;35m|[m[1;34m\[m[1;34m|[m 
+[1;35m|[m * [33m0f6eb03[m save
+* [1;36m|[m [33mdf2789c[m Merge pull request #18 from prathikshashetty7/feature/host
+[31m|[m[1;36m\[m[1;36m|[m 
+[31m|[m * [33md599dd0[m save
+[31m|[m * [33md230c86[m save
+* [32m|[m [33m2440d1a[m Merge pull request #17 from prathikshashetty7/feature/host
+[33m|[m[32m\[m[32m|[m 
+[33m|[m * [33m98d0d95[m save
+[33m|[m * [33ma824971[m save
+[33m|[m * [33m0b20dd6[m save
+[33m|[m * [33m611ea6b[m j
+[33m|[m * [33ma215b28[m j
+[33m|[m * [33m68032a7[m j
+* [34m|[m [33mac4a0e0[m Merge pull request #16 from prathikshashetty7/feature/adminn
+[35m|[m[34m\[m[34m|[m 
+[35m|[m * [33m0cf7be1[m[33m ([m[1;31morigin/feature/adminn[m[33m)[m j
+* [36m|[m [33m2786bd3[m Merge pull request #15 from prathikshashetty7/feature/adminn
+[1;31m|[m[36m\[m[36m|[m 
+[1;31m|[m * [33ma833d2a[m j
+[1;31m|[m[1;31m/[m  
+[1;31m|[m * [33mf2e25fa[m[33m ([m[1;32mfeature/recep[m[33m, [m[1;32mfeature/dept[m[33m)[m done signin
+[1;31m|[m[1;31m/[m  
+*   [33mb5e21a8[m Merge pull request #14 from prathikshashetty7/feature/admin
+[1;34m|[m[1;35m\[m  
+[1;34m|[m *   [33m0a2872d[m hu
+[1;34m|[m [1;36m|[m[1;34m\[m  
+[1;34m|[m [1;36m|[m[1;34m/[m  
+[1;34m|[m[1;34m/[m[1;36m|[m   
+* [1;36m|[m   [33mf020b2b[m Merge pull request #13 from prathikshashetty7/feature/sanjana
+[32m|[m[33m\[m [1;36m\[m  
+[32m|[m * [1;36m|[m [33me195e92[m[33m ([m[1;31morigin/feature/sanjana[m[33m)[m Visitor tyftfgv
+* [33m|[m [1;36m|[m [33m872c710[m Merge pull request #12 from prathikshashetty7/feature/sanjana
+[34m|[m[33m\[m[33m|[m [1;36m|[m 
+[34m|[m * [1;36m|[m [33mce75848[m Visitor tyftfgv
+* [35m|[m [1;36m|[m [33mf31aa6a[m Merge pull request #11 from prathikshashetty7/feature/sanjana
+[36m|[m[35m\[m[35m|[m [1;36m|[m 
+[36m|[m * [1;36m|[m [33m8455b78[m Visitor tyftfgv
+[36m|[m[36m/[m [1;36m/[m  
+* [1;36m|[m   [33ma05dbe1[m Merge pull request #10 from prathikshashetty7/feature/admin
+[1;32m|[m[1;33m\[m [1;36m\[m  
+[1;32m|[m [1;33m|[m * [33mf3586fb[m saved
+[1;32m|[m [1;33m|[m[1;33m/[m  
+[1;32m|[m [1;33m|[m *   [33m757380d[m[33m ([m[1;35mrefs/stash[m[33m)[m WIP on feature/admin: 662def5 done
+[1;32m|[m [1;33m|[m [1;34m|[m[1;35m\[m  
+[1;32m|[m [1;33m|[m [1;34m|[m * [33m6fb38fe[m index on feature/admin: 662def5 done
+[1;32m|[m [1;33m|[m [1;34m|[m[1;34m/[m  
+[1;32m|[m [1;33m|[m * [33m662def5[m[33m ([m[1;32mfeature/admin[m[33m)[m done
+[1;32m|[m [1;33m|[m[1;33m/[m  
+[1;32m|[m *   [33m217c5a5[m[33m ([m[1;31morigin/feature/admin[m[33m)[m Merge branch 'main' into feature/admin
+[1;32m|[m [1;36m|[m[1;32m\[m  
+[1;32m|[m [1;36m|[m[1;32m/[m  
+[1;32m|[m[1;32m/[m[1;36m|[m   
+* [1;36m|[m   [33m598a11a[m Merge pull request #9 from prathikshashetty7/feature/sanjana
+[32m|[m[33m\[m [1;36m\[m  
+[32m|[m * [1;36m|[m [33m885bafd[m Visitor tyftfgv
+[32m|[m[32m/[m [1;36m/[m  
+[32m|[m * [33mc523ad8[m save
+[32m|[m * [33mcbed7f9[m save
+[32m|[m * [33mffff393[m save
+[32m|[m * [33m4530e21[m save
+[32m|[m *   [33m5437eb8[m Merge branch 'main' of https://github.com/prathikshashetty7/vms into feature/admin
+[32m|[m [34m|[m[32m\[m  
+[32m|[m [34m|[m[32m/[m  
+[32m|[m[32m/[m[34m|[m   
+* [34m|[m   [33m3baef32[m Merge pull request #8 from prathikshashetty7/feature/recep
+[36m|[m[1;31m\[m [34m\[m  
+[36m|[m * [34m|[m [33me91345a[m Initial recep change complete
+[36m|[m[36m/[m [34m/[m  
+* [34m|[m   [33m52b62a4[m Merge pull request #7 from prathikshashetty7/feature/sanjana
+[1;32m|[m[1;33m\[m [34m\[m  
+[1;32m|[m * [34m\[m   [33m5e7302d[m Visitor tyftfgv
+[1;32m|[m [1;34m|[m[1;35m\[m [34m\[m  
+[1;32m|[m * [1;35m|[m [34m|[m [33mb4d7ebb[m Visitor tyftfgv
+[1;32m|[m [1;35m|[m [1;35m|[m * [33mc3d5a3e[m save
+[1;32m|[m [1;35m|[m [1;35m|[m * [33ma3f8aad[m save
+[1;32m|[m [1;35m|[m[1;32m_[m[1;35m|[m[1;32m/[m  
+[1;32m|[m[1;32m/[m[1;35m|[m [1;35m|[m   
+* [1;35m|[m [1;35m|[m   [33m85acbf8[m Merge pull request #5 from prathikshashetty7/feature/sanjana
+[1;36m|[m[1;35m\[m [1;35m\[m [1;35m\[m  
+[1;36m|[m [1;35m|[m [1;35m|[m[1;35m/[m  
+[1;36m|[m [1;35m|[m[1;35m/[m[1;35m|[m   
+[1;36m|[m * [1;35m|[m   [33m7fe8860[m Merge branch 'main' into feature/sanjana
+[1;36m|[m [1;35m|[m[1;36m\[m [1;35m\[m  
+[1;36m|[m [1;35m|[m[1;36m/[m [1;35m/[m  
+[1;36m|[m[1;36m/[m[1;35m|[m [1;35m/[m   
+[1;36m|[m [1;35m|[m[1;35m/[m    
+* [1;35m|[m   [33m9df5b62[m Merge pull request #6 from prathikshashetty7/feature/admin
+[34m|[m[35m\[m [1;35m\[m  
+[34m|[m * [1;35m\[m   [33mef5c90d[m Merge branch 'main' into feature/admin
+[34m|[m [36m|[m[34m\[m [1;35m\[m  
+[34m|[m [36m|[m[34m/[m [1;35m/[m  
+[34m|[m[34m/[m[36m|[m [1;35m|[m   
+* [36m|[m [1;35m|[m   [33m69e0c57[m Merge pull request #4 from prathikshashett
