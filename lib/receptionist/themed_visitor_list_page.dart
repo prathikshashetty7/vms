@@ -1085,52 +1085,15 @@ class _ManualPassDetailDialog extends StatelessWidget {
                   onPressed: () async {
                     final now = Timestamp.now();
                     try {
-                      print('Attempting to update passes and add visitor to Firestore...');
+                      print('Attempting to update printed_at for pass: ${pass['id']}');
                       if (pass['id'] != null) {
                         await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
                           'printed_at': now,
                         });
-                        print('Updated passes collection. Now adding to visitor collection...');
-                        final visitorData = {
-                          'fullName': pass['fullName'],
-                          'v_name': pass['fullName'],
-                          'mobile': pass['mobile'],
-                          'email': pass['email'],
-                          'designation': pass['designation'],
-                          'company': pass['company'],
-                          'host': pass['host'],
-                          'purpose': pass['purpose'],
-                          'purposeOther': pass['purposeOther'],
-                          'appointment': pass['appointment'],
-                          'department': pass['department'],
-                          'accompanying': pass['accompanying'],
-                          'accompanyingCount': pass['accompanyingCount'],
-                          'laptop': pass['laptop'],
-                          'laptopDetails': pass['laptopDetails'],
-                          'photo': pass['photo'],
-                          'printed_at': now,
-                          'v_date': now,
-                          'checked_out': false,
-                        };
-                        // Remove any null values
-                        visitorData.removeWhere((key, value) => value == null);
-                        // Remove photo if too large
-                        if (visitorData['photo'] != null && visitorData['photo'] is String && visitorData['photo'].length > 1000000) {
-                          print('Photo is too large, skipping upload.');
-                          visitorData.remove('photo');
-                        }
-                        print('Visitor data to be added:');
-                        print(visitorData);
-                        await FirebaseFirestore.instance.collection('visitor').add(visitorData);
-                        print('Visitor added to Firestore successfully.');
-                      } else if (pass['visitorId'] != null) {
-                        await FirebaseFirestore.instance.collection('visitor').doc(pass['visitorId']).update({
-                          'printed_at': now,
-                        });
-                        print('Updated visitor document with printed_at.');
+                        print('printed_at updated!');
                       }
                     } catch (e) {
-                      print('Error adding/updating visitor: $e');
+                      print('Error updating printed_at: ${e.toString()}');
                     }
                     final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
                     final logoUint8List = logoBytes.buffer.asUint8List();
@@ -1225,9 +1188,9 @@ class _ManualPassDetailDialog extends StatelessWidget {
                                     if (pass['accompanyingCount'] != null && pass['accompanyingCount'].toString().isNotEmpty)
                                       pw.Text('Accompanying Count: ${pass['accompanyingCount']}', style: pw.TextStyle(fontSize: 13)),
                                   ],
-                              ),
-                            );
-                          },
+                                ),
+                              );
+                            },
                           ),
                         );
                         return pdf.save();
@@ -1514,39 +1477,39 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
                         departments.add(selectedDepartment);
                       }
                       return InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'Department',
-                          labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.85),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Department',
+                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.85),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
                             value: departments.contains(selectedDepartment) ? selectedDepartment : (departments.isNotEmpty ? departments.first : 'Select Dept'),
-                            isExpanded: true,
-                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                            dropdownColor: Colors.white,
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                        isExpanded: true,
+                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
+                        dropdownColor: Colors.white,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
                             items: ['Select Dept', ...departments].map((e) => DropdownMenuItem(
-                              value: e,
-                              enabled: e != 'Select Dept',
-                              child: Text(e, style: TextStyle(color: e == 'Select Dept' ? Color(0xFF888888) : Colors.black)),
-                            )).toList(),
-                            onChanged: (v) {
+                          value: e,
+                          enabled: e != 'Select Dept',
+                          child: Text(e, style: TextStyle(color: e == 'Select Dept' ? Color(0xFF888888) : Colors.black)),
+                        )).toList(),
+                        onChanged: (v) {
                               if (v != null && v != 'Select Dept') {
                                 setState(() => selectedDepartment = v);
                               } else {
                                 setState(() => selectedDepartment = 'Select Dept');
-                              }
-                            },
-                          ),
-                        ),
+                          }
+                        },
+                      ),
+                    ),
                       );
                     },
                   ),
@@ -2202,52 +2165,15 @@ class _AppointedPassDetailDialog extends StatelessWidget {
                   onPressed: () async {
                     final now = Timestamp.now();
                     try {
-                      print('Attempting to update passes and add visitor to Firestore...');
+                      print('Attempting to update printed_at for pass: ${pass['id']}');
                       if (pass['id'] != null) {
                         await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
                           'printed_at': now,
                         });
-                        print('Updated passes collection. Now adding to visitor collection...');
-                        final visitorData = {
-                          'fullName': pass['fullName'],
-                          'v_name': pass['fullName'],
-                          'mobile': pass['mobile'],
-                          'email': pass['email'],
-                          'designation': pass['designation'],
-                          'company': pass['company'],
-                          'host': pass['host'],
-                          'purpose': pass['purpose'],
-                          'purposeOther': pass['purposeOther'],
-                          'appointment': pass['appointment'],
-                          'department': pass['department'],
-                          'accompanying': pass['accompanying'],
-                          'accompanyingCount': pass['accompanyingCount'],
-                          'laptop': pass['laptop'],
-                          'laptopDetails': pass['laptopDetails'],
-                          'photo': pass['photo'],
-                          'printed_at': now,
-                          'v_date': now,
-                          'checked_out': false,
-                        };
-                        // Remove any null values
-                        visitorData.removeWhere((key, value) => value == null);
-                        // Remove photo if too large
-                        if (visitorData['photo'] != null && visitorData['photo'] is String && visitorData['photo'].length > 1000000) {
-                          print('Photo is too large, skipping upload.');
-                          visitorData.remove('photo');
-                        }
-                        print('Visitor data to be added:');
-                        print(visitorData);
-                        await FirebaseFirestore.instance.collection('visitor').add(visitorData);
-                        print('Visitor added to Firestore successfully.');
-                      } else if (pass['visitorId'] != null) {
-                        await FirebaseFirestore.instance.collection('visitor').doc(pass['visitorId']).update({
-                          'printed_at': now,
-                        });
-                        print('Updated visitor document with printed_at.');
+                        print('printed_at updated!');
                       }
                     } catch (e) {
-                      print('Error adding/updating visitor: $e');
+                      print('Error updating printed_at: ${e.toString()}');
                     }
                     final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
                     final logoUint8List = logoBytes.buffer.asUint8List();
