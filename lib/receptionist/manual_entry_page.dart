@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'receptionist_reports_page.dart';
 import 'dashboard.dart' show VisitorsPage;
 import 'package:image/image.dart' as img;

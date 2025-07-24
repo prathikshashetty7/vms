@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'widgets/visitor_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -12,7 +12,7 @@ class VisitorTrackingPage extends StatelessWidget {
       backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: const Text('Visitor Tracking'),
-        backgroundColor: Color(0xFF6CA4FE),
+        backgroundColor: SystemTheme.accent,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -53,7 +53,7 @@ class VisitorTrackingPage extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: ReceptionistTheme.accent,
+                    backgroundColor: SystemTheme.accent,
                     child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                   title: Row(
@@ -69,7 +69,7 @@ class VisitorTrackingPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  subtitle: printInfo.isNotEmpty ? Text(printInfo, style: const TextStyle(color: Color(0xFF6CA4FE))) : null,
+                  subtitle: printInfo.isNotEmpty ? Text(printInfo, style: const TextStyle(color: SystemTheme.accent)) : null,
                 ),
               );
             },

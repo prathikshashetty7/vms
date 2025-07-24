@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DeptReport extends StatefulWidget {
@@ -50,7 +50,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       },
     ];
     return Container(
-      decoration: ReceptionistTheme.backgroundGradient,
+      decoration: SystemTheme.backgroundGradient,
       child: Scaffold(
         backgroundColor: const Color(0xFFD4E9FF),
         body: Padding(
@@ -74,7 +74,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                       ),
                       child: ListTile(
                         leading: const Icon(Icons.person, color: Colors.black),
-                        title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                        title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

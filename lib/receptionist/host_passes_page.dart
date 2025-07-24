@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'widgets/visitor_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ViewVisitorsPage extends StatefulWidget {

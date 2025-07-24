@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
@@ -197,7 +197,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       child: ListTile(
                         leading: const Icon(Icons.person, color: Colors.black),
-                        title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                        title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
