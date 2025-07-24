@@ -248,129 +248,152 @@ class _VisitorListView extends StatelessWidget {
                 final vCompany = data['v_company_name'] ?? '-';
                 final vDesignation = data['v_designation'] ?? '-';
                 final vContact = data['v_contactno'] ?? '-';
-                final department = data['department'] ?? '-';
-                final host = data['host_name'] ?? data['emp_name'] ?? '-';
-                final empId = data['emp_id'] ?? '';
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 3,
-                  color: Colors.white.withOpacity(0.95),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                final department = data['department'];
+                final departmentId = data['departmentId'];
+                final host = data['host_name'] ?? data['emp_name'];
+                final empId = data['emp_id'];
+                return FutureBuilder<Map<String, String>>(
+                  future: () async {
+                    String deptName = '-';
+                    String hostName = '-';
+                    if (department != null && department.toString().isNotEmpty) {
+                      deptName = department.toString();
+                    } else if (departmentId != null && departmentId.toString().isNotEmpty) {
+                      try {
+                        final deptSnap = await FirebaseFirestore.instance.collection('department').doc(departmentId).get();
+                        if (deptSnap.exists) {
+                          deptName = deptSnap.data()?['d_name']?.toString() ?? '-';
+                        }
+                      } catch (_) {}
+                    }
+                    if (host != null && host.toString().isNotEmpty) {
+                      hostName = host.toString();
+                    } else if (empId != null && empId.toString().isNotEmpty) {
+                      try {
+                        final hostSnap = await FirebaseFirestore.instance.collection('host').doc(empId).get();
+                        if (hostSnap.exists) {
+                          hostName = hostSnap.data()?['emp_name']?.toString() ?? '-';
+                        }
+                      } catch (_) {}
+                    }
+                    return {'deptName': deptName, 'hostName': hostName};
+                  }(),
+                  builder: (context, snapshot) {
+                    final deptName = snapshot.data?['deptName'] ?? '-';
+                    final hostName = snapshot.data?['hostName'] ?? '-';
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 3,
+                      color: Colors.white.withOpacity(0.95),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.person, color: Colors.deepPurple),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                visitorName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.remove_red_eye, color: Colors.deepPurple),
-                              tooltip: 'View Details',
-                              onPressed: () async {
-                                String hostName = host;
-                                if (hostName == '-' && empId.isNotEmpty) {
-                                  try {
-                                    final hostSnap = await FirebaseFirestore.instance.collection('host').doc(empId).get();
-                                    final hostData = hostSnap.data() as Map<String, dynamic>?;
-                                    if (hostData != null) {
-                                      hostName = hostData['emp_name'] ?? hostData['name'] ?? '-';
-                                    }
-                                  } catch (_) {}
-                                }
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                      title: const Text('Visitor Details', style: TextStyle(fontWeight: FontWeight.bold)),
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _visitorDetailRow('Name', visitorName),
-                                          _visitorDetailRow('Host', hostName),
-                                          _visitorDetailRow('Company', vCompany),
-                                          _visitorDetailRow('Designation', vDesignation),
-                                          _visitorDetailRow('Email', vEmail),
-                                          _visitorDetailRow('Contact', vContact),
-                                          _visitorDetailRow('Date', vDate),
-                                          _visitorDetailRow('Time', vTime),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text('Close'),
-                                        ),
-                                      ],
+                            Row(
+                              children: [
+                                const Icon(Icons.person, color: Colors.deepPurple),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    visitorName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.remove_red_eye, color: Colors.deepPurple),
+                                  tooltip: 'View Details',
+                                  onPressed: () async {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          title: const Text('Visitor Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _visitorDetailRow('Name', visitorName),
+                                              _visitorDetailRow('Host', hostName),
+                                              _visitorDetailRow('Department', deptName),
+                                              _visitorDetailRow('Company', vCompany),
+                                              _visitorDetailRow('Designation', vDesignation),
+                                              _visitorDetailRow('Email', vEmail),
+                                              _visitorDetailRow('Contact', vContact),
+                                              _visitorDetailRow('Date', vDate),
+                                              _visitorDetailRow('Time', vTime),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(context).pop(),
+                                              child: const Text('Close'),
+                                            ),
+                                          ],
+                                        );
+                                      },
                                     );
                                   },
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Delete Visitor',
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete Visitor'),
-                                    content: const Text("Are you sure you want to delete this visitor's record?"),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(false),
-                                        child: const Text('Cancel'),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  tooltip: 'Delete Visitor',
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Visitor'),
+                                        content: const Text("Are you sure you want to delete this visitor's record?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                          ),
+                                        ],
                                       ),
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(true),
-                                        child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (confirm == true) {
-                                  await doc.reference.delete();
-                                }
-                              },
+                                    );
+                                    if (confirm == true) {
+                                      await doc.reference.delete();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time, color: Colors.grey, size: 18),
+                                const SizedBox(width: 4),
+                                Text('$vTime - $vTimeOut', style: const TextStyle(color: Colors.black87)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.apartment, color: Colors.grey, size: 18),
+                                const SizedBox(width: 4),
+                                Text('Department: $deptName', style: const TextStyle(color: Colors.black87)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.person_outline, color: Colors.grey, size: 18),
+                                const SizedBox(width: 4),
+                                Text('Host: $hostName', style: const TextStyle(color: Colors.black87)),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time, color: Colors.grey, size: 18),
-                            const SizedBox(width: 4),
-                            Text('$vTime - $vTimeOut', style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.apartment, color: Colors.grey, size: 18),
-                            const SizedBox(width: 4),
-                            Text('Department: $department', style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.person_outline, color: Colors.grey, size: 18),
-                            const SizedBox(width: 4),
-                            Text('Host: $host', style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 );
               }).toList(),
             ],
