@@ -18,30 +18,18 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _obscurePassword = true;
-  String? _selectedDepartment = null;
-  List<Map<String, String>> _departments = [];
-  String? _selectedDepartmentId;
+  // Removed department fields
+  // String? _selectedDepartment = null;
+  // List<Map<String, String>> _departments = [];
+  // String? _selectedDepartmentId;
 
   @override
   void initState() {
     super.initState();
-    _fetchDepartments();
-    // One-time batch update for existing receptionists
-    batchUpdateReceptionistDepartmentIds();
+    // Removed _fetchDepartments and batchUpdateReceptionistDepartmentIds
   }
 
-  Future<void> _fetchDepartments() async {
-    final snapshot = await FirebaseFirestore.instance.collection('department').get();
-    setState(() {
-      _departments = snapshot.docs.map((doc) => {
-        'id': doc.id,
-        'name': doc['d_name'] as String,
-      }).toList();
-      // Do not pre-select any department
-      _selectedDepartment = null;
-      _selectedDepartmentId = null;
-    });
-  }
+  // Removed _fetchDepartments
 
   @override
   void dispose() {
@@ -59,8 +47,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.clear();
     _passwordController.clear();
     _obscurePassword = true;
-    _selectedDepartment = null;
-    _selectedDepartmentId = null;
+    // Removed department reset
 
     showDialog(
       context: context,
@@ -73,34 +60,9 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DropdownButtonFormField<String>(
-                      value: _selectedDepartment,
-                      decoration: const InputDecoration(
-                        labelText: 'Department',
-                        border: OutlineInputBorder(),
-                      ),
-                      hint: const Text('Department'),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Department'),
-                        ),
-                        ..._departments.map((dept) => DropdownMenuItem<String>(
-                          value: dept['name'],
-                          child: Text(dept['name']!),
-                        ))
-                      ],
-                      onChanged: (value) {
-                        setStateSB(() {
-                          _selectedDepartment = value;
-                          _selectedDepartmentId = _departments.firstWhere((dept) => dept['name'] == value)['id'];
-                        });
-                      },
-                      validator: (value) => value == null ? 'Please select a department' : null,
-                    ),
-                    const SizedBox(height: 16),
                     TextField(
                       controller: _nameController,
+                      autofocus: true,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         border: OutlineInputBorder(),
@@ -168,10 +130,9 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     if (_nameController.text.isEmpty || 
         _emailController.text.isEmpty || 
         _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _selectedDepartment == null) {
+        _passwordController.text.isEmpty) { // Removed department check
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields and select a department')),
+        const SnackBar(content: Text('Please fill all fields')), // Updated message
       );
       return;
     }
@@ -210,8 +171,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
         'phone': _phoneController.text,
         'password': _passwordController.text,
         'role': 'receptionist',
-        'department': _selectedDepartment,
-        'departmentId': _selectedDepartmentId,
+        // Removed department fields
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -271,8 +231,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.text = data['phone'] ?? '';
     _passwordController.text = data['password'] ?? '';
     _obscurePassword = true;
-    _selectedDepartment = data['department'];
-    _selectedDepartmentId = data['departmentId'];
+    // Removed department fields
 
     showDialog(
       context: context,
@@ -287,6 +246,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                   children: [
                     TextField(
                       controller: _nameController,
+                      autofocus: true,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         border: OutlineInputBorder(),
@@ -327,32 +287,6 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: _selectedDepartment,
-                      decoration: const InputDecoration(
-                        labelText: 'Department',
-                        border: OutlineInputBorder(),
-                      ),
-                      hint: const Text('Department'),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Department'),
-                        ),
-                        ..._departments.map((dept) => DropdownMenuItem<String>(
-                          value: dept['name'],
-                          child: Text(dept['name']!),
-                        ))
-                      ],
-                      onChanged: (value) {
-                        setStateSB(() {
-                          _selectedDepartment = value;
-                          _selectedDepartmentId = _departments.firstWhere((dept) => dept['name'] == value)['id'];
-                        });
-                      },
-                      validator: (value) => value == null ? 'Please select a department' : null,
-                    ),
                   ],
                 );
               },
@@ -380,10 +314,9 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _selectedDepartment == null) {
+        _passwordController.text.isEmpty) { // Removed department check
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields and select a department')),
+        const SnackBar(content: Text('Please fill all fields')), // Updated message
       );
       return;
     }
@@ -399,8 +332,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
         'email': _emailController.text,
         'phone': _phoneController.text,
         'password': _passwordController.text,
-        'department': _selectedDepartment,
-        'departmentId': _selectedDepartmentId,
+        // Removed department fields
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Receptionist updated successfully')),
@@ -412,24 +344,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     }
   }
 
-  // Utility: Batch update all receptionists to add departmentId based on department name
-  Future<void> batchUpdateReceptionistDepartmentIds() async {
-    final departmentSnaps = await FirebaseFirestore.instance.collection('department').get();
-    final Map<String, String> nameToId = {
-      for (var doc in departmentSnaps.docs) (doc['d_name'] as String): doc.id
-    };
-    final receptionists = await FirebaseFirestore.instance.collection('receptionist').get();
-    for (var doc in receptionists.docs) {
-      final deptName = doc['department'];
-      final deptId = nameToId[deptName];
-      if (deptId != null) {
-        await doc.reference.update({'departmentId': deptId});
-        print('Updated ${doc.id} with departmentId $deptId');
-      } else {
-        print('No departmentId found for department $deptName');
-      }
-    }
-  }
+  // Removed batchUpdateReceptionistDepartmentIds
 
   @override
   Widget build(BuildContext context) {
@@ -556,89 +471,61 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                       final name = data['name'] ?? 'Unknown';
                       final email = data['email'] ?? 'No email';
                       final phone = data['phone'] ?? 'No phone';
-                      final department = data['department'];
-                      final departmentId = data['departmentId'];
-                      return FutureBuilder<String>(
-                        future: (() async {
-                          if (department != null && department.toString().isNotEmpty) {
-                            return department.toString();
-                          } else if (departmentId != null && departmentId.toString().isNotEmpty) {
-                            final deptSnap = await FirebaseFirestore.instance.collection('department').doc(departmentId).get();
-                            if (deptSnap.exists) {
-                              return deptSnap.data()?['d_name']?.toString() ?? departmentId.toString();
-                            } else {
-                              return departmentId.toString();
-                            }
-                          } else {
-                            return 'No department';
-                          }
-                        })(),
-                        builder: (context, snapshot) {
-                          final deptName = snapshot.data ?? 'Loading...';
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      // Removed department and departmentId from data
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.deepPurple,
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'R',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.deepPurple,
-                                child: Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : 'R',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              title: Text(
-                                name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          title: Text(
+                            name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Row(
                                 children: [
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.email, size: 16, color: Colors.grey[600]),
-                                      const SizedBox(width: 8),
-                                      Expanded(child: Text(email)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                                      const SizedBox(width: 8),
-                                      Text(phone),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.apartment, size: 16, color: Colors.grey[600]),
-                                      const SizedBox(width: 8),
-                                      Text(deptName),
-                                    ],
-                                  ),
+                                  Icon(Icons.email, size: 16, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(email)),
                                 ],
                               ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
+                              const SizedBox(height: 2),
+                              Row(
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.deepPurple),
-                                    onPressed: () => _showEditReceptionistDialog(doc.id, data),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _deleteReceptionist(doc.id, name),
-                                  ),
+                                  Icon(Icons.phone, size: 16, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  Text(phone),
                                 ],
                               ),
-                            ),
-                          );
-                        },
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.deepPurple),
+                                onPressed: () => _showEditReceptionistDialog(doc.id, data),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteReceptionist(doc.id, name),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   );
