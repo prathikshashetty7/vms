@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'widgets/stat_card.dart';
 import '../signin.dart';
 import 'dart:ui';

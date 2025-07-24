@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 
 class KioskQRPage extends StatelessWidget {
   const KioskQRPage({Key? key}) : super(key: key);
@@ -20,11 +20,11 @@ class KioskQRPage extends StatelessWidget {
               width: 220,
               height: 220,
               decoration: BoxDecoration(
-                color: ReceptionistTheme.secondary,
+                color: SystemTheme.secondary,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: ReceptionistTheme.primary.withOpacity(0.2),
+                    color: SystemTheme.primary.withOpacity(0.2),
                     blurRadius: 16,
                   ),
                 ],
@@ -37,7 +37,7 @@ class KioskQRPage extends StatelessWidget {
             Text(
               'Scan this QR code to fill the kiosk form',
               style: TextStyle(
-                color: ReceptionistTheme.accent,
+                color: SystemTheme.accent,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),

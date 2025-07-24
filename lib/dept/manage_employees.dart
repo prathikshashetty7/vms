@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
-import '../theme/dept_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -219,7 +218,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: DeptTheme.background,
+                  color: SystemTheme.background,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -237,13 +236,13 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.person, color: DeptTheme.text, size: 28),
+                          Icon(Icons.person, color: SystemTheme.text, size: 28),
                           const SizedBox(width: 10),
                           Text(
                             _editingId == null ? 'Add Host' : 'Edit Host',
-                            style: DeptTheme.heading.copyWith(
+                            style: SystemTheme.heading.copyWith(
                               fontSize: 22,
-                              color: DeptTheme.text,
+                              color: SystemTheme.text,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -260,7 +259,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Employee ID',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.black, width: 1),
@@ -286,7 +285,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Employee Name',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -312,7 +311,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Email',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -341,7 +340,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Password',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -378,7 +377,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Contact Number',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -405,7 +404,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                           hintText: 'Address',
                           filled: true,
                           fillColor: Colors.white,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -430,9 +429,9 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                               Navigator.of(context).pop();
                             },
                             icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
-                            label: Text(_editingId == null ? 'Add' : 'Update', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                            label: Text(_editingId == null ? 'Add' : 'Update', style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: DeptTheme.text,
+                              backgroundColor: SystemTheme.text,
                               padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -517,7 +516,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
         if (docs.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(child: Text('No $title found.', style: ReceptionistTheme.body)),
+            child: Center(child: Text('No $title found.', style: SystemTheme.body)),
           );
         }
         return ListView.builder(
@@ -538,8 +537,8 @@ class _ManageEmployeesState extends State<ManageEmployees> {
               ),
               child: ListTile(
                 leading: const Icon(Icons.person, color: Colors.black),
-                title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
-                subtitle: Text('Email: $email | Contact Number: $contact', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                subtitle: Text('Email: $email | Contact Number: $contact', style: SystemTheme.body.copyWith(color: Colors.black54)),
                 trailing: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.black),
                   onSelected: (value) {
@@ -602,7 +601,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
                     Center(
                       child: Text(
                         'Employee Details',
-                        style: DeptTheme.heading.copyWith(
+                        style: SystemTheme.heading.copyWith(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
