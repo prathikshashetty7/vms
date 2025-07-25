@@ -243,12 +243,36 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                         if (visitors.isEmpty) {
                           return const Center(child: Text('No visitors with generated pass.'));
                         }
-                        return ListView.builder(
-                          itemCount: visitors.length,
-                          itemBuilder: (context, idx) {
-                            final v = visitors[idx];
-                            return _VisitorCard(visitor: v);
-                          },
+                        // Group by date (formatted as dd/MM/yyyy)
+                        final Map<String, List<Map<String, dynamic>>> grouped = {};
+                        for (final v in visitors) {
+                          String dateStr = '';
+                          if (v['v_date'] != null) {
+                            if (v['v_date'] is Timestamp) {
+                              dateStr = DateFormat('dd/MM/yyyy').format((v['v_date'] as Timestamp).toDate());
+                            } else if (v['v_date'] is String) {
+                              try {
+                                dateStr = DateFormat('dd/MM/yyyy').format(DateTime.parse(v['v_date']));
+                              } catch (_) {
+                                dateStr = v['v_date'].toString().split(' ').first;
+                              }
+                            }
+                          }
+                          if (dateStr.isEmpty) dateStr = 'Unknown Date';
+                          grouped.putIfAbsent(dateStr, () => []).add(v);
+                        }
+                        final sortedDates = grouped.keys.toList()
+                          ..sort((a, b) => b.compareTo(a)); // newest first
+                        return ListView(
+                          children: [
+                            for (final date in sortedDates) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
+                                child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                              ),
+                              ...grouped[date]!.map((v) => _VisitorCard(visitor: v)).toList(),
+                            ]
+                          ],
                         );
                       },
                     ),
@@ -288,6 +312,8 @@ class _VisitorCard extends StatelessWidget {
                     Text('Company: ${visitor['v_company_name']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   if ((visitor['v_contactno'] ?? '').toString().isNotEmpty)
                     Text('Contact: ${visitor['v_contactno']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  if ((visitor['purpose'] ?? '').toString().isNotEmpty)
+                    Text('Purpose: ${visitor['purpose']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   // Add date field
                   if (visitor['v_date'] != null)
                     Text('Date: ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
@@ -360,6 +386,7 @@ void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visito
                             _detailRow('Designation', visitor['v_designation'] ?? ''),
                             _detailRow('Contact No', visitor['v_contactno'] ?? ''),
                             _detailRow('Company', visitor['v_company_name'] ?? ''),
+                            _detailRow('Purpose', (visitor['purpose'] ?? 'N/A').toString().trim().isEmpty ? 'N/A' : visitor['purpose'].toString().trim()),
                           ],
                         ),
                       ),

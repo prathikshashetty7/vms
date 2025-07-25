@@ -22,6 +22,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
   final FocusNode _companyFocus = FocusNode();
   final FocusNode _contactFocus = FocusNode();
   final FocusNode _totalNoFocus = FocusNode();
+  final FocusNode _purposeFocus = FocusNode();
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     _companyFocus.dispose();
     _contactFocus.dispose();
     _totalNoFocus.dispose();
+    _purposeFocus.dispose();
     super.dispose();
   }
 
@@ -49,6 +51,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final vCompanyNameController = TextEditingController(text: visitor?['v_company_name']);
     final vContactNoController = TextEditingController(text: visitor?['v_contactno']);
     final vTotalNoController = TextEditingController(text: visitor?['v_totalno']?.toString() ?? '1');
+    final vPurposeController = TextEditingController(text: visitor?['purpose']);
     String? selectedHostId = visitor?['emp_id'];
     DateTime selectedDate = (visitor?['v_date'] as Timestamp?)?.toDate() ?? DateTime.now();
     TimeOfDay selectedTime = visitor != null && visitor['v_time'] != null
@@ -189,7 +192,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             focusNode: _companyFocus,
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) {
-                              FocusScope.of(context).requestFocus(_contactFocus);
+                              FocusScope.of(context).requestFocus(_purposeFocus);
                             },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
@@ -209,6 +212,35 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
+                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vPurposeController,
+                            focusNode: _purposeFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_contactFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Purpose',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -428,6 +460,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     'v_email': vEmailController.text,
                     'v_designation': vDesignationController.text,
                     'v_company_name': vCompanyNameController.text,
+                    'purpose': vPurposeController.text,
                     'v_contactno': vContactNoController.text,
                     'v_totalno': int.tryParse(vTotalNoController.text) ?? 1,
                     'v_date': Timestamp.fromDate(selectedDate),
@@ -491,7 +524,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                   elevation: 12,
                   backgroundColor: Colors.white,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                     child: SingleChildScrollView(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -517,7 +550,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 15),
                           Card(
                             color: Colors.grey[50],
                             elevation: 0,
@@ -527,35 +560,19 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _interactiveDetailRow('Name', visitor['v_name']),
-                                  Row(
-                                    children: [
-                                      Expanded(child: _interactiveDetailRow('Email', visitor['v_email'])),
-                                      IconButton(
-                                        icon: const Icon(Icons.copy, size: 18),
-                                        tooltip: 'Copy Email',
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: visitor['v_email']));
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email copied!')));
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  _interactiveDetailRow('Designation', visitor['v_designation']),
-                                  Row(
-                                    children: [
-                                      Expanded(child: _interactiveDetailRow('Contact No', visitor['v_contactno'])),
-                                      IconButton(
-                                        icon: const Icon(Icons.copy, size: 18),
-                                        tooltip: 'Copy Contact',
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: visitor['v_contactno']));
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact copied!')));
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  _interactiveDetailRow('Company', visitor['v_company_name']),
+                                  detailRow('Name', visitor['v_name']),
+                                  detailRow('Email', visitor['v_email'], onCopy: () {
+                                    Clipboard.setData(ClipboardData(text: visitor['v_email']));
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email copied!'), backgroundColor: Colors.green));
+                                  }),
+                                  detailRow('Designation', visitor['v_designation']),
+                                  detailRow('Contact No', visitor['v_contactno'], onCopy: () {
+                                    Clipboard.setData(ClipboardData(text: visitor['v_contactno']));
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact copied!'), backgroundColor: Colors.green));
+                                  }),
+                                  detailRow('Company', visitor['v_company_name']),
+                                  SizedBox(height: 6),
+                                  detailRow('Purpose', visitor['purpose']),
                                 ],
                               ),
                             ),
@@ -571,23 +588,23 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _interactiveDetailRow('Total Visitors', visitor['v_totalno'].toString()),
-                FutureBuilder<String>(
-                  future: _getHostName(visitor['emp_id']),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                        return _interactiveDetailRow('Host', 'Loading...', highlight: true);
-                    }
-                                      return _interactiveDetailRow('Host', snapshot.data ?? 'N/A', highlight: true);
-                  },
-                ),
-                                  _interactiveDetailRow('Date', _formatDate((visitor['v_date'] as Timestamp).toDate())),
-                                  _interactiveDetailRow('Time', visitor['v_time']),
-                                  _interactiveDetailRow('Pass Generated By', (visitor.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'Host', highlight: true),
-              ],
-            ),
-          ),
-        ),
+                                  detailRow('Total Visitors', visitor['v_totalno'].toString()),
+                                  FutureBuilder<String>(
+                                    future: _getHostName(visitor['emp_id']),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                        return detailRow('Host', 'Loading...');
+                                      }
+                                      return detailRow('Host', snapshot.data ?? 'N/A');
+                                    },
+                                  ),
+                                  detailRow('Date', _formatDate((visitor['v_date'] as Timestamp).toDate())),
+                                  detailRow('Time', visitor['v_time']),
+                                  detailRow('Pass Generated By', (visitor.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'Host'),
+                                ],
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 18),
                           Align(
                             alignment: Alignment.centerRight,
@@ -611,20 +628,23 @@ class _ManageVisitorsState extends State<ManageVisitors> {
   );
 }
 
-  Widget _interactiveDetailRow(String label, String value, {bool highlight = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-          Expanded(
-            child: Text(value, style: TextStyle(color: Colors.black87)),
+  Widget detailRow(String label, String value, {VoidCallback? onCopy}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+        Expanded(child: Text(value, style: TextStyle(color: Colors.black87))),
+        if (onCopy != null)
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16),
+            tooltip: 'Copy $label',
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
+            onPressed: onCopy,
           ),
-        ],
-      ),
-  );
-}
+      ],
+    );
+  }
 
   Future<List<DropdownMenuItem<String>>> _getHostDropdownItems() async {
     print('DEBUG: _currentDepartmentId =  [32m [1m [4m [7m' + (_currentDepartmentId ?? 'null') + '\u001b[0m');
@@ -684,8 +704,8 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 600;
     return Scaffold(
-        backgroundColor: SystemTheme.dsPrimary,
-        body: Padding(
+      backgroundColor: const Color(0xFFD4E9FF),
+      body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
           children: [
@@ -731,6 +751,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 children: [
                                   Text('Email: $email', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Company: $company', style: SystemTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Purpose:  [38;5;248m${doc['purpose'] ?? 'N/A'}  [0m', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Contact: $contact', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Host: $host', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                 ],
@@ -787,4 +808,4 @@ class _ManageVisitorsState extends State<ManageVisitors> {
       ),
     );
   }
-} 
+}

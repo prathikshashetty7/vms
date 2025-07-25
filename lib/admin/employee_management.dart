@@ -99,7 +99,7 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
           role: 'Host',
           department: deptName,
           email: data['emp_email'] ?? '',
-          phone: data['emp_phone'] ?? '',
+          phone: data['emp_contno'] ?? '', // Use emp_contno for host contact number
         ));
       }
       
@@ -183,16 +183,16 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                           padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFF181F2C), // dark background
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: TextField(
                               controller: _searchController,
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(color: Colors.black87),
                               decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                                hintText: 'Search by name or email',
-                                hintStyle: const TextStyle(color: Colors.white54),
+                                prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                                hintText: _selectedType == 'Host' ? 'Search hosts...' : 'Search receptionists...',
+                                hintStyle: const TextStyle(color: Colors.black54),
                                 border: InputBorder.none,
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
@@ -213,6 +213,36 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                             ],
                           ),
                         ),
+                        // After the tab row, add the dropdown (only for Host)
+                        if (_selectedType == 'Host')
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: DropdownButton<String>(
+                                value: _selectedDepartment,
+                                isExpanded: true,
+                                items: _departments.map((dept) => DropdownMenuItem<String>(
+                                  value: dept,
+                                  child: Text(dept, style: const TextStyle(color: Colors.black87)),
+                                )).toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedDepartment = val!;
+                                    _applyFilters();
+                                  });
+                                },
+                                underline: Container(),
+                                style: const TextStyle(color: Colors.black, fontSize: 15),
+                                dropdownColor: Colors.white,
+                                icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 12),
                         // Cards for filtered employees
                         Expanded(
@@ -256,32 +286,7 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                   ],
                 ),
                 SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.badge, color: Colors.deepPurple),
-                    SizedBox(width: 8),
-                    Text(emp.role, style: TextStyle(fontSize: 16, color: Colors.black87)),
-                  ],
-                ),
-                // Always show department for both hosts and receptionists
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.apartment, color: Colors.deepPurple),
-                    SizedBox(width: 8),
-                    Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.email, color: Colors.deepPurple),
-                    SizedBox(width: 8),
-                    Text(emp.email, style: TextStyle(fontSize: 16, color: Colors.black87)),
-                  ],
-                ),
-                if (emp.phone.isNotEmpty) ...[
-                  SizedBox(height: 8),
+                if (emp.role == 'Host') ...[
                   Row(
                     children: [
                       Icon(Icons.phone, color: Colors.deepPurple),
@@ -289,7 +294,31 @@ class _EmployeeManagementPageState extends State<EmployeeManagementPage> with Si
                       Text(emp.phone, style: TextStyle(fontSize: 16, color: Colors.black87)),
                     ],
                   ),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.apartment, color: Colors.deepPurple),
+                      SizedBox(width: 8),
+                      Text(emp.department, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Icon(Icons.badge, color: Colors.deepPurple),
+                      SizedBox(width: 8),
+                      Text(emp.role, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    ],
+                  ),
+                  SizedBox(height: 8),
                 ],
+                Row(
+                  children: [
+                    Icon(Icons.email, color: Colors.deepPurple),
+                    SizedBox(width: 8),
+                    Text(emp.email, style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  ],
+                ),
               ],
             ),
           ),
