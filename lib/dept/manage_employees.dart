@@ -63,14 +63,14 @@ class _ManageEmployeesState extends State<ManageEmployees> {
     final role = 'Host'; // Always Host
     if ([empId, empName, empEmail, empPassword, empContNo, empAddress].any((e) => e == null || e.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All fields are required.')),
+        const SnackBar(content: Text('All fields are required.'), backgroundColor: Colors.red),
       );
       print('DEBUG: Not adding host - missing field.');
       return;
     }
     if (_currentDepartmentId == null || _currentDepartmentId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Department ID not found. Cannot add host.')),
+        const SnackBar(content: Text('Error: Department ID not found. Cannot add host.'), backgroundColor: Colors.red),
       );
       print('DEBUG: Not adding host - departmentId missing.');
       return;
@@ -96,20 +96,20 @@ class _ManageEmployeesState extends State<ManageEmployees> {
         await FirebaseFirestore.instance.collection('host').add(employeeData);
         print('DEBUG: Host added to Firestore.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Host added successfully!')),
+          const SnackBar(content: Text('Host added successfully!'), backgroundColor: Colors.green),
         );
       } else {
         // Update existing host
         await FirebaseFirestore.instance.collection('host').doc(_editingId).update(employeeData);
         print('DEBUG: Host updated in Firestore.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Host updated successfully!')),
+          const SnackBar(content: Text('Host updated successfully!'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       print('DEBUG: Error adding/updating host: ' + e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Firestore error: ${e.toString()}')),
+        SnackBar(content: Text('Firestore error:  [38;5;248m${e.toString()} [0m'), backgroundColor: Colors.red),
       );
     }
     _empIdController.clear();
@@ -155,7 +155,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
   Future<void> _updateHostsDepartmentId() async {
     if (_currentDepartmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Department ID not found.')),
+        const SnackBar(content: Text('Department ID not found.'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -167,7 +167,7 @@ class _ManageEmployeesState extends State<ManageEmployees> {
       await doc.reference.update({'departmentId': _currentDepartmentId});
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All hosts updated with departmentId!')),
+      const SnackBar(content: Text('All hosts updated with departmentId!'), backgroundColor: Colors.green),
     );
   }
 

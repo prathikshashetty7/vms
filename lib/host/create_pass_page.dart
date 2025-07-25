@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:vms/receptionist/host_passes_page.dart' show PassDetailDialog;
+import 'dart:math';
 
 class CreatePassPage extends StatefulWidget {
   const CreatePassPage({Key? key}) : super(key: key);
@@ -77,13 +78,27 @@ class _CreatePassPageState extends State<CreatePassPage> {
           await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'photoBase64': base64Str});
         } catch (e) {
           print('Firestore update error: $e');
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save image: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save image: $e'), backgroundColor: Colors.red));
         }
       }
     } catch (e) {
       print('Image pick error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image selection failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image selection failed: $e'), backgroundColor: Colors.red));
     }
+  }
+
+  // Add this function to generate a unique 4-digit pass number
+  Future<int> _generateUniquePassNo() async {
+    final random = Random();
+    int passNo;
+    bool exists = true;
+    final passesRef = FirebaseFirestore.instance.collection('passes');
+    do {
+      passNo = 1000 + random.nextInt(9000); // 4-digit number
+      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+      exists = query.docs.isNotEmpty;
+    } while (exists);
+    return passNo;
   }
 
   @override
@@ -149,6 +164,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                         child: Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
                       );
                     }
+                    final bool isGenerated = v['pass_generated'] == true;
                     return Card(
                       color: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -214,13 +230,17 @@ class _CreatePassPageState extends State<CreatePassPage> {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF898AC4),
+                                  backgroundColor: isGenerated ? Colors.green : Color(0xFF898AC4),
+                                  foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                                 ),
                                 icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
-                                label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                                onPressed: () async {
+                                label: Text(
+                                  isGenerated ? 'Generated' : 'Generate Pass',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                onPressed: isGenerated ? () {} : () async {
                                   // Prepare pass data for preview
                                   final visitorId = snapshot.data!.docs[idx].id;
                                   dynamic vDate = v['v_date'];
@@ -236,6 +256,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       passDate = Timestamp.now();
                                     }
                                   }
+                                  final passNo = await _generateUniquePassNo();
                                   final passData = {
                                     'visitorId': visitorId,
                                     'v_name': v['v_name'] ?? '',
@@ -247,6 +268,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'v_time': v['v_time'],
                                     'photoBase64': v['photoBase64'] ?? _visitorImageBase64[idx],
                                     'v_designation': v['v_designation'] ?? '',
+                                    'pass_no': passNo,
                                   };
                                   final confirm = await showDialog<bool>(
                                     context: context,
@@ -261,7 +283,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                             _VisitorPassCard(
                                               visitor: passData,
                                               hostName: hostName ?? '',
-                                              passNo: 0, // You can update this if you have a pass number
+                                              passNo: passNo,
                                               imageBytes: passData['photoBase64'] != null && passData['photoBase64'] != '' ? base64Decode(passData['photoBase64']) : null,
                                               departmentName: departmentName ?? '',
                                             ),
@@ -299,7 +321,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                   // Show a snackbar for success after generating
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Pass generated successfully!')),
+                                      const SnackBar(content: Text('Pass generated successfully!'), backgroundColor: Colors.green),
                                     );
                                   }
                                 },

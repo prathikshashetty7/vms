@@ -53,7 +53,7 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
           password: adminPassword,
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Department added successfully!')),
+          const SnackBar(content: Text('Department added successfully!'), backgroundColor: Colors.green),
         );
       } on FirebaseAuthException catch (e) {
         String msg = 'Error: ';
@@ -64,7 +64,7 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
         } else {
           msg += e.message ?? 'Unknown error';
         }
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
         // Try to sign admin back in if needed
         try {
           await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -83,7 +83,7 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
       });
       _editingId = null;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Successfully updated!')),
+        const SnackBar(content: Text('Successfully updated!'), backgroundColor: Colors.green),
       );
     }
     _nameController.clear();
@@ -93,10 +93,40 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
   }
 
   Future<void> _deleteDepartment(String id) async {
+    // Fetch department email and password before deleting
+    final docSnap = await FirebaseFirestore.instance.collection('department').doc(id).get();
+    final data = docSnap.data() as Map<String, dynamic>? ?? {};
+    final email = data['d_email']?.toString() ?? '';
+    final password = data['d_password']?.toString() ?? '';
+
+    // 1. Delete from Firestore
     await FirebaseFirestore.instance.collection('department').doc(id).delete();
+
+    // 2. Sign in as the department user to delete from Auth
+    if (email.isNotEmpty && password.isNotEmpty) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await userCredential.user?.delete();
+      } catch (e) {
+        // Handle error (user may already be deleted, wrong password, etc.)
+      }
+    }
+
+    // 3. Sign admin back in (if needed)
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: adminEmail,
+        password: adminPassword,
+      );
+    } catch (_) {}
+
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Deleted successfully!')),
+      const SnackBar(content: Text('Deleted successfully!'), backgroundColor: Colors.green),
     );
   }
 
@@ -143,13 +173,13 @@ class _ManageDepartmentsState extends State<ManageDepartments> {
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
               child: TextField(
                 controller: _searchController,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Search departments...',
-                  hintStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                  hintStyle: const TextStyle(color: Colors.black54),
+                  prefixIcon: const Icon(Icons.search, color: Colors.black54),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.08),
+                  fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
