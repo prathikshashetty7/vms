@@ -7,6 +7,7 @@ import 'manual_entry_page.dart';
 import 'receptionist_reports_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert'; // Added for Base64Decoder
 
 class ReceptionistDashboard extends StatefulWidget {
   const ReceptionistDashboard({Key? key}) : super(key: key);
@@ -702,8 +703,15 @@ class _FrequentVisitorsStatCard extends StatelessWidget {
   }
 }
 
-class VisitorsPage extends StatelessWidget {
+class VisitorsPage extends StatefulWidget {
   const VisitorsPage({Key? key}) : super(key: key);
+
+  @override
+  State<VisitorsPage> createState() => _VisitorsPageState();
+}
+
+class _VisitorsPageState extends State<VisitorsPage> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -711,105 +719,389 @@ class VisitorsPage extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Checked In/Out', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFF6CA4FE),
+          title: Row(
+            children: [
+              Image.asset('assets/images/rdl.png', height: 36),
+              const SizedBox(width: 12),
+              const Text('Checked In/Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 22)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF6CA4FE),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          titleTextStyle: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+          automaticallyImplyLeading: false,
           bottom: const TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: 'Checked In'),
               Tab(text: 'Checked Out'),
             ],
           ),
         ),
-        backgroundColor: Color(0xFFD4E9FF),
-        body: StreamBuilder(
-          stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
-          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No visitors found.'));
-            }
-            final docs = snapshot.data!.docs;
-            final checkedInDocs = docs.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return data['checked_out'] != true && data['printed_at'] != null;
-            }).toList();
-            final checkedOutDocs = docs.where((doc) => (doc.data() as Map<String, dynamic>)['checked_out'] == true).toList();
-            return TabBarView(
-              children: [
-                // Checked In tab
-                ListView.builder(
-                  itemCount: checkedInDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = checkedInDocs[index].data() as Map<String, dynamic>;
-                    final name = data['v_name'] ?? 'Unknown';
-                    final printedAt = data['printed_at'];
-                    String printInfo = '';
-                    if (printedAt != null) {
-                      final dt = printedAt is Timestamp ? printedAt.toDate() : DateTime.tryParse(printedAt.toString());
-                      if (dt != null) {
-                        printInfo = 'Printed: '
-                          '${dt.day.toString().padLeft(2, '0')}/'
-                          '${dt.month.toString().padLeft(2, '0')}/'
-                          '${dt.year} '
-                          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        backgroundColor: const Color(0xFFD4E9FF),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF6CA4FE)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE).withOpacity(0.2)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE).withOpacity(0.2)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE), width: 2),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+                builder: (context, visitorSnapshot) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('passes').snapshots(),
+                    builder: (context, passesSnapshot) {
+                      if (visitorSnapshot.connectionState == ConnectionState.waiting ||
+                          passesSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
-                    }
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: Icon(Icons.login, color: Colors.green),
-                        title: Row(
-                          children: [
-                            Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                            ),
-                          ],
-                        ),
-                        subtitle: printInfo.isNotEmpty ? Text(printInfo, style: const TextStyle(color: Color(0xFF6CA4FE))) : null,
-                      ),
-                    );
-                  },
-                ),
-                // Checked Out tab
-                ListView.builder(
-                  itemCount: checkedOutDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = checkedOutDocs[index].data() as Map<String, dynamic>;
-                    final name = data['v_name'] ?? 'Unknown';
-                    final status = 'Checked Out';
-                    final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(date != null ? '${date.day}/${date.month}/${date.year}' : ''),
-                        trailing: Text(status, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
+                      if ((!visitorSnapshot.hasData || visitorSnapshot.data!.docs.isEmpty) &&
+                          (!passesSnapshot.hasData || passesSnapshot.data!.docs.isEmpty)) {
+                        return const Center(child: Text('No visitors found.', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold, fontSize: 18)));
+                      }
+                      // Appointed visitors (from 'visitor')
+                      final visitorDocs = visitorSnapshot.data?.docs ?? [];
+                      final appointedCheckedIn = <Map<String, dynamic>>[];
+                      final appointedCheckedOut = <Map<String, dynamic>>[];
+                      for (var doc in visitorDocs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final printedAt = data['printed_at'];
+                        final checkedOut = data['checked_out'] == true;
+                        if (printedAt != null) {
+                          if (!checkedOut) {
+                            appointedCheckedIn.add({
+                              'name': data['v_name'] ?? data['fullName'] ?? 'Unknown',
+                              'pass_time': printedAt,
+                              'type': 'appointed',
+                              'doc': data,
+                            });
+                          } else {
+                            appointedCheckedOut.add({
+                              'name': data['v_name'] ?? data['fullName'] ?? 'Unknown',
+                              'pass_time': printedAt,
+                              'type': 'appointed',
+                              'doc': data,
+                            });
+                          }
+                        }
+                      }
+                      // Manual visitors (from 'passes')
+                      final passesDocs = passesSnapshot.data?.docs ?? [];
+                      final manualCheckedIn = <Map<String, dynamic>>[];
+                      final manualCheckedOut = <Map<String, dynamic>>[];
+                      for (var doc in passesDocs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final passTime = data['printed_at'] ?? data['generated_at'];
+                        final checkedOut = data['checked_out'] == true;
+                        if (passTime != null) {
+                          if (!checkedOut) {
+                            manualCheckedIn.add({
+                              'name': data['fullName'] ?? data['v_name'] ?? 'Unknown',
+                              'pass_time': passTime,
+                              'type': 'manual',
+                              'doc': data,
+                            });
+                          } else {
+                            manualCheckedOut.add({
+                              'name': data['fullName'] ?? data['v_name'] ?? 'Unknown',
+                              'pass_time': passTime,
+                              'type': 'manual',
+                              'doc': data,
+                            });
+                          }
+                        }
+                      }
+                      // Merge and sort by pass_time descending
+                      final checkedInList = [...appointedCheckedIn, ...manualCheckedIn];
+                      checkedInList.sort((a, b) {
+                        final aTime = a['pass_time'];
+                        final bTime = b['pass_time'];
+                        DateTime? aDt, bDt;
+                        if (aTime is Timestamp) aDt = aTime.toDate();
+                        else if (aTime is DateTime) aDt = aTime;
+                        else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                        if (bTime is Timestamp) bDt = bTime.toDate();
+                        else if (bTime is DateTime) bDt = bTime;
+                        else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                        if (aDt == null && bDt == null) return 0;
+                        if (aDt == null) return 1;
+                        if (bDt == null) return -1;
+                        return bDt.compareTo(aDt);
+                      });
+                      final checkedOutList = [...appointedCheckedOut, ...manualCheckedOut];
+                      checkedOutList.sort((a, b) {
+                        final aTime = a['pass_time'];
+                        final bTime = b['pass_time'];
+                        DateTime? aDt, bDt;
+                        if (aTime is Timestamp) aDt = aTime.toDate();
+                        else if (aTime is DateTime) aDt = aTime;
+                        else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                        if (bTime is Timestamp) bDt = bTime.toDate();
+                        else if (bTime is DateTime) bDt = bTime;
+                        else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                        if (aDt == null && bDt == null) return 0;
+                        if (aDt == null) return 1;
+                        if (bDt == null) return -1;
+                        return bDt.compareTo(aDt);
+                      });
+                      final filteredCheckedInList = _searchQuery.isEmpty
+                        ? checkedInList
+                        : checkedInList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                      final filteredCheckedOutList = _searchQuery.isEmpty
+                        ? checkedOutList
+                        : checkedOutList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                      return TabBarView(
+                        children: [
+                          // Checked In tab
+                          ListView.builder(
+                            itemCount: filteredCheckedInList.length,
+                            itemBuilder: (context, index) {
+                              final entry = filteredCheckedInList[index];
+                              final name = entry['name'] ?? 'Unknown';
+                              final passTime = entry['pass_time'];
+                              String passInfo = '';
+                              if (passTime != null) {
+                                DateTime? dt;
+                                if (passTime is Timestamp) dt = passTime.toDate();
+                                else if (passTime is DateTime) dt = passTime;
+                                else dt = DateTime.tryParse(passTime.toString());
+                                if (dt != null) {
+                                  passInfo =  ''
+                                  '${dt.day.toString().padLeft(2, '0')}/'
+                                  '${dt.month.toString().padLeft(2, '0')}/'
+                                  '${dt.year} '
+                                  '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                                }
+                              }
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.07),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Accent bar
+                                    Container(
+                                      width: 8,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          bottomLeft: Radius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 18), // Increase spacing since avatar is removed
+                                    // Main content (name + date/time)
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF6CA4FE).withOpacity(0.13),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  passInfo,
+                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Status badge (always visible, never overflows)
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 8, right: 16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          // Checked Out tab
+                          ListView.builder(
+                            itemCount: filteredCheckedOutList.length,
+                            itemBuilder: (context, index) {
+                              final entry = filteredCheckedOutList[index];
+                              final name = entry['name'] ?? 'Unknown';
+                              final passTime = entry['pass_time'];
+                              String passInfo = '';
+                              if (passTime != null) {
+                                DateTime? dt;
+                                if (passTime is Timestamp) dt = passTime.toDate();
+                                else if (passTime is DateTime) dt = passTime;
+                                else dt = DateTime.tryParse(passTime.toString());
+                                if (dt != null) {
+                                  passInfo = '${dt.day.toString().padLeft(2, '0')}/'
+                                    '${dt.month.toString().padLeft(2, '0')}/'
+                                    '${dt.year}  '
+                                    '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                                }
+                              }
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.07),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Accent bar
+                                    Container(
+                                      width: 8,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          bottomLeft: Radius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Avatar
+                                    CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: const Color(0xFFEF4444).withOpacity(0.15),
+                                      child: Text(
+                                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 18),
+                                    // Main content
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEF4444).withOpacity(0.13),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      passInfo,
+                                                      style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Status badge
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 8, right: 16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFF6CA4FE),
-          unselectedItemColor: Color(0xFF091016),
+          selectedItemColor: const Color(0xFF6CA4FE),
+          unselectedItemColor: const Color(0xFF091016),
           currentIndex: 2,
           onTap: (index) {
             if (index == 4) {

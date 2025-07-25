@@ -309,7 +309,7 @@ class ThemedVisitorListPage extends StatelessWidget {
       padding: const EdgeInsets.all(0.0),
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection(appointed ? 'visitorPasses' : 'passes')
+            .collection('passes') // Always use 'passes' collection
             .orderBy('generated_at', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -652,7 +652,7 @@ class ThemedVisitorListPage extends StatelessWidget {
                                           icon: const Icon(Icons.delete, color: Colors.red),
                                           tooltip: 'Delete',
                                           onPressed: () async {
-                                            await FirebaseFirestore.instance.collection('visitorPasses').doc(filteredDocs[index].id).delete();
+                                            await FirebaseFirestore.instance.collection('passes').doc(filteredDocs[index].id).delete();
                                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pass deleted.')));
                                           },
                                         ),
@@ -2025,7 +2025,7 @@ class _AppointedVisitorDetailsDialog extends StatelessWidget {
                         'generated_at': FieldValue.serverTimestamp(),
                         'visitor_doc_id': docId,
                       };
-                      await FirebaseFirestore.instance.collection('visitorPasses').add(passData);
+                      await FirebaseFirestore.instance.collection('passes').add(passData); // Use 'passes' collection
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pass generated and saved!')));
                     },
