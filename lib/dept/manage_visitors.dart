@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
-import '../theme/dept_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
@@ -78,7 +77,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: ReceptionistTheme.primary.withOpacity(0.12),
+                    color: SystemTheme.primary.withOpacity(0.12),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -98,7 +97,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 children: [
                           Text(
                             isEditing ? 'Edit Visitor' : 'Add Visitor',
-                            style: DeptTheme.heading.copyWith(fontSize: 20, color: DeptTheme.text),
+                            style: SystemTheme.heading.copyWith(fontSize: 20, color: SystemTheme.text),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -112,7 +111,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Name',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -140,7 +139,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Email',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -168,7 +167,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Designation',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -195,7 +194,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Company Name',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -222,7 +221,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Contact No',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -249,7 +248,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
                               hintText: 'Total Visitors',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -286,7 +285,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 readOnly: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select Date',
-                                  hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -325,7 +324,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 readOnly: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select Time',
-                                  hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                                   labelStyle: const TextStyle(color: Colors.black),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -353,7 +352,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                         onChanged: (val) => selectedHostId = val,
                             decoration: InputDecoration(
                               hintText: 'Host',
-                              hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -373,7 +372,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           // Pass Generation Radio Buttons
                           Text(
                             'Pass Generated By:',
-                            style: ReceptionistTheme.body.copyWith(
+                            style: SystemTheme.body.copyWith(
                               color: Colors.black,
                               fontWeight: FontWeight.w600,
                             ),
@@ -386,7 +385,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                   RadioListTile<String>(
                                     title: Text(
                                       'Host',
-                                      style: ReceptionistTheme.body.copyWith(color: Colors.black),
+                                      style: SystemTheme.body.copyWith(color: Colors.black),
                                     ),
                                     value: 'host',
                                     groupValue: passGeneratedBy,
@@ -395,13 +394,13 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                         passGeneratedBy = value!;
                                       });
                                     },
-                                    activeColor: ReceptionistTheme.primary,
+                                    activeColor: SystemTheme.primary,
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                   RadioListTile<String>(
                                     title: Text(
                                       'Receptionist',
-                                      style: ReceptionistTheme.body.copyWith(color: Colors.black),
+                                      style: SystemTheme.body.copyWith(color: Colors.black),
               ),
                                     value: 'receptionist',
                                     groupValue: passGeneratedBy,
@@ -410,7 +409,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                         passGeneratedBy = value!;
                                       });
                                     },
-                                    activeColor: ReceptionistTheme.primary,
+                                    activeColor: SystemTheme.primary,
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ],
@@ -446,9 +445,9 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                 }
               },
                                 icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
-                                label: Text(isEditing ? 'Update' : 'Add', style: DeptTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                label: Text(isEditing ? 'Update' : 'Add', style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: DeptTheme.text,
+                                  backgroundColor: SystemTheme.text,
                                   padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
@@ -509,7 +508,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 const SizedBox(height: 10),
                                 Text(
                                   'Visitor Details',
-                                  style: DeptTheme.heading.copyWith(
+                                  style: SystemTheme.heading.copyWith(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
@@ -685,7 +684,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isLargeScreen = screenWidth > 600;
     return Scaffold(
-        backgroundColor: const Color(0xFFD4E9FF),
+        backgroundColor: SystemTheme.dsPrimary,
         body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -714,7 +713,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                         ),
                         child: ListTile(
                           leading: const Icon(Icons.person, color: Colors.black),
-                          title: Text(doc['v_name'], style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                          title: Text(doc['v_name'], style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                           subtitle: FutureBuilder<String>(
                             future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
                             builder: (context, hostSnapshot) {
@@ -730,22 +729,46 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Email: $email', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Company: $company', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Contact: $contact', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Host: $host', style: ReceptionistTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Email: $email', style: SystemTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Company: $company', style: SystemTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Contact: $contact', style: SystemTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Host: $host', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                 ],
                               );
                             }
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(icon: const Icon(Icons.edit, color: Colors.black), onPressed: () => _showVisitorForm(doc)),
-                              IconButton(icon: const Icon(Icons.delete, color: Colors.black), onPressed: () => doc.reference.delete()),
-                              IconButton(icon: const Icon(Icons.visibility, color: Colors.black), onPressed: () => _showVisitorDetailsDialog(doc)),
-                            ],
-                          ),
+                          trailing: PopupMenuButton<String>(
+  icon: const Icon(Icons.more_vert, color: Colors.black),
+  onSelected: (value) {
+    if (value == 'view') {
+      _showVisitorDetailsDialog(doc);
+    } else if (value == 'edit') {
+      _showVisitorForm(doc);
+    } else if (value == 'delete') {
+      doc.reference.delete();
+    }
+  },
+  itemBuilder: (context) => [
+    PopupMenuItem(
+      value: 'view',
+      child: Row(
+        children: const [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('View')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'edit',
+      child: Row(
+        children: const [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'delete',
+      child: Row(
+        children: const [Icon(Icons.delete, size: 18), SizedBox(width: 8), Text('Delete')],
+      ),
+    ),
+  ],
+),
                         ),
                       );
                     },
@@ -757,7 +780,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-          backgroundColor: ReceptionistTheme.primary,
+          backgroundColor: SystemTheme.primary,
         onPressed: () => _showVisitorForm(),
         child: const Icon(Icons.add, color: Colors.black),
         tooltip: 'Add Visitor',

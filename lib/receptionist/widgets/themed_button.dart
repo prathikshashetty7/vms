@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/receptionist_theme.dart';
+import '../../theme/system_theme.dart';
 
 class ThemedButton extends StatelessWidget {
   final String label;
@@ -20,11 +20,11 @@ class ThemedButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
-          color: ReceptionistTheme.primary,
+          color: SystemTheme.primary,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: ReceptionistTheme.primary.withOpacity(0.2),
+              color: SystemTheme.primary.withOpacity(0.2),
               blurRadius: 8,
             ),
           ],
@@ -33,14 +33,14 @@ class ThemedButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: ReceptionistTheme.accent),
+            Icon(icon, size: 40, color: SystemTheme.accent),
             const SizedBox(height: 12),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: ReceptionistTheme.text,
+                color: SystemTheme.text,
               ),
             ),
           ],

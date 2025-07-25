@@ -4,7 +4,7 @@ import 'dept/dept_dashboard.dart';
 import 'host/host_dashboard.dart';
 import 'receptionist/dashboard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'theme/design_system.dart';
+import 'theme/system_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SignInPage extends StatefulWidget {
@@ -163,17 +163,17 @@ class _SignInPageState extends State<SignInPage> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(DesignSystem.spacing24),
+              padding: const EdgeInsets.all(SystemTheme.spacing24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Logo and Welcome Card
                   Container(
-                    padding: const EdgeInsets.all(DesignSystem.spacing24),
+                    padding: const EdgeInsets.all(SystemTheme.spacing24),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(DesignSystem.radiusLarge),
+                      borderRadius: BorderRadius.circular(SystemTheme.radiusLarge),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF068FFF).withOpacity(0.3),
@@ -185,7 +185,7 @@ class _SignInPageState extends State<SignInPage> {
                     child: Column(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(DesignSystem.spacing16),
+                          padding: const EdgeInsets.all(SystemTheme.spacing16),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
@@ -206,26 +206,26 @@ class _SignInPageState extends State<SignInPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: DesignSystem.spacing16),
+                        const SizedBox(height: SystemTheme.spacing16),
                         Text(
                           'Welcome Back',
-                          style: DesignSystem.heading2.copyWith(color: Colors.white),
+                          style: SystemTheme.heading2.copyWith(color: Colors.white),
                         ),
-                        const SizedBox(height: DesignSystem.spacing8),
+                        const SizedBox(height: SystemTheme.spacing8),
                         Text(
                           'Sign in to continue',
-                          style: DesignSystem.bodyLarge.copyWith(color: Colors.white.withOpacity(0.8)),
+                          style: SystemTheme.bodyLarge.copyWith(color: Colors.white.withOpacity(0.8)),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: DesignSystem.spacing32),
+                  const SizedBox(height: SystemTheme.spacing32),
                   // Sign In Form
                   Container(
-                    padding: const EdgeInsets.all(DesignSystem.spacing24),
+                    padding: const EdgeInsets.all(SystemTheme.spacing24),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(DesignSystem.radiusLarge),
+                      borderRadius: BorderRadius.circular(SystemTheme.radiusLarge),
                       border: Border.all(
                         color: const Color(0xFF068FFF).withOpacity(0.3),
                         width: 1,
@@ -248,7 +248,7 @@ class _SignInPageState extends State<SignInPage> {
                             textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocus),
                             style: const TextStyle(color: Colors.white),
-                            decoration: DesignSystem.inputDecoration(
+                            decoration: SystemTheme.inputDecoration(
                               label: 'Email',
                               hint: 'Enter your email',
                               prefixIcon: const Icon(Icons.email_outlined, color: Colors.white70),
@@ -269,7 +269,7 @@ class _SignInPageState extends State<SignInPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: DesignSystem.spacing16),
+                          const SizedBox(height: SystemTheme.spacing16),
                           TextFormField(
                             controller: _passwordController,
                             focusNode: _passwordFocus,
@@ -277,7 +277,7 @@ class _SignInPageState extends State<SignInPage> {
                             onFieldSubmitted: (_) => _signIn(),
                             obscureText: _obscurePassword,
                             style: const TextStyle(color: Colors.white),
-                            decoration: DesignSystem.inputDecoration(
+                            decoration: SystemTheme.inputDecoration(
                               label: 'Password',
                               hint: 'Enter your password',
                               prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
@@ -308,12 +308,12 @@ class _SignInPageState extends State<SignInPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: DesignSystem.spacing24),
+                          const SizedBox(height: SystemTheme.spacing24),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _signIn,
-                              style: DesignSystem.primaryButtonStyle,
+                              style: SystemTheme.primaryButtonStyle,
                               child: _isLoading
                                   ? const SizedBox(
                                       width: 24,
@@ -326,51 +326,6 @@ class _SignInPageState extends State<SignInPage> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: DesignSystem.spacing32),
-                  // Quick Login Buttons (now at the bottom)
-                  Column(
-                    children: [
-                      _QuickLoginButton(
-                        text: 'Go to Admin Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AdminDashboard()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Department Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const DeptDashboard()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Host Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const HostMainScreen()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: DesignSystem.spacing8),
-                      _QuickLoginButton(
-                        text: 'Go to Receptionist Dashboard',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const ReceptionistDashboard()),
-                          );
-                        },
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -405,7 +360,7 @@ class _QuickLoginButton extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: DesignSystem.bodyLarge.copyWith(color: Colors.white),
+          style: SystemTheme.bodyLarge.copyWith(color: Colors.white),
         ),
       ),
     );
