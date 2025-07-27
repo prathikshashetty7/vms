@@ -551,12 +551,7 @@ class ThemedVisitorListPage extends StatelessWidget {
                                                               pw.Text('Purpose  : ${data['purpose']}', style: pw.TextStyle(fontSize: 13)),
                                                             if (data['purposeOther'] != null && data['purposeOther'].toString().isNotEmpty)
                                                               pw.Text('Other Purpose: ${data['purposeOther']}', style: pw.TextStyle(fontSize: 13)),
-                                                            if (data['laptop'] != null && data['laptop'].toString().isNotEmpty) ...[
-                                                              if (data['laptop'].toString().toLowerCase() == 'no')
-                                                                pw.Text('Laptop   : No', style: pw.TextStyle(fontSize: 13)),
-                                                              if (data['laptop'].toString().toLowerCase() != 'no' && data['laptopDetails'] != null && data['laptopDetails'].toString().isNotEmpty)
-                                                                pw.Text('Laptop   : ${data['laptopDetails']}', style: pw.TextStyle(fontSize: 13)),
-                                                            ],
+                                                            
                                                             if (data['accompanyingCount'] != null && data['accompanyingCount'].toString().isNotEmpty)
                                                               pw.Text('Accompanying Count: ${data['accompanyingCount']}', style: pw.TextStyle(fontSize: 13)),
                                                           ],
@@ -832,7 +827,7 @@ class _VisitorDetailsDialog extends StatelessWidget {
                 _buildDetailRow(Icons.person_outline, 'Host', data['host']),
                 // 10. Accompanying
                 _buildDetailRow(Icons.group, 'Accompanying', data['accompanying']),
-                // 11. Accompanying Count
+                                // 11. Accompanying Count
                 _buildDetailRow(Icons.format_list_numbered, 'Accompanying Count', data['accompanyingCount']),
                 // 12. Laptop
                 _buildDetailRow(Icons.laptop, 'Laptop', data['laptop']),
@@ -872,11 +867,11 @@ class _VisitorDetailsDialog extends StatelessWidget {
                           'appointment': data['appointment'] ?? '',
                           'department': data['department'] ?? '',
                           'host': data['host'] ?? '',
-                          'accompanying': data['accompanying'] ?? '',
-                          'accompanyingCount': data['accompanyingCount'] ?? '',
-                          'laptop': data['laptop'] ?? '',
-                          'laptopDetails': data['laptopDetails'] ?? '',
-                          'photo': data['photo'] ?? '',
+                                                      'accompanying': data['accompanying'] ?? '',
+                            'accompanyingCount': data['accompanyingCount'] ?? '',
+                            'laptop': data['laptop'] ?? '',
+                            'laptopDetails': data['laptopDetails'] ?? '',
+                            'photo': data['photo'] ?? '',
                           'generated_at': FieldValue.serverTimestamp(),
                         };
                         await FirebaseFirestore.instance.collection('passes').add(passData);
@@ -1067,12 +1062,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
               Text('Purpose  : ${pass['purpose']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
             if (pass['purposeOther'] != null && pass['purposeOther'].toString().isNotEmpty)
               Text('Other Purpose: ${pass['purposeOther']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            if (pass['laptop'] != null && pass['laptop'].toString().isNotEmpty) ...[
-              if (pass['laptop'].toString().toLowerCase() == 'no')
-                Text('Laptop   : No', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-              if (pass['laptop'].toString().toLowerCase() != 'no' && pass['laptopDetails'] != null && pass['laptopDetails'].toString().isNotEmpty)
-                Text('Laptop   : ${pass['laptopDetails']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            ],
+
             if (pass['accompanyingCount'] != null && pass['accompanyingCount'].toString().isNotEmpty)
               Text('Accompanying Count: ${pass['accompanyingCount']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
             const SizedBox(height: 18),
@@ -1179,12 +1169,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
                                       pw.Text('Purpose  : ${pass['purpose']}', style: pw.TextStyle(fontSize: 13)),
                                     if (pass['purposeOther'] != null && pass['purposeOther'].toString().isNotEmpty)
                                       pw.Text('Other Purpose: ${pass['purposeOther']}', style: pw.TextStyle(fontSize: 13)),
-                                    if (pass['laptop'] != null && pass['laptop'].toString().isNotEmpty) ...[
-                                      if (pass['laptop'].toString().toLowerCase() == 'no')
-                                        pw.Text('Laptop   : No', style: pw.TextStyle(fontSize: 13)),
-                                      if (pass['laptop'].toString().toLowerCase() != 'no' && pass['laptopDetails'] != null && pass['laptopDetails'].toString().isNotEmpty)
-                                        pw.Text('Laptop   : ${pass['laptopDetails']}', style: pw.TextStyle(fontSize: 13)),
-                                    ],
+
                                     if (pass['accompanyingCount'] != null && pass['accompanyingCount'].toString().isNotEmpty)
                                       pw.Text('Accompanying Count: ${pass['accompanyingCount']}', style: pw.TextStyle(fontSize: 13)),
                                   ],

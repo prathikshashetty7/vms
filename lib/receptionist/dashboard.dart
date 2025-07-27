@@ -923,7 +923,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                       width: 8,
                                       height: 80,
                                       decoration: BoxDecoration(
-                                        color: Colors.green,
+                                        color: Color(0xFF6CA4FE),
                                         borderRadius: const BorderRadius.only(
                                           topLeft: Radius.circular(20),
                                           bottomLeft: Radius.circular(20),

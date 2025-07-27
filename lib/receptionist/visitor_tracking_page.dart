@@ -62,7 +62,7 @@ class VisitorTrackingPage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green,
+                          color: Color(0xFF6CA4FE),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
