@@ -54,7 +54,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // Add this function to show details dialog
-  void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) {
+  void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) async {
+    // Fetch extra details from visitor table if visitorId is present
+    Map<String, dynamic> visitorData = {};
+    if (doc['visitorId'] != null) {
+      final visitorSnap = await FirebaseFirestore.instance.collection('visitor').doc(doc['visitorId']).get();
+      if (visitorSnap.exists) {
+        visitorData = visitorSnap.data() ?? {};
+      }
+    }
     showDialog(
       context: context,
       builder: (context) {
@@ -100,14 +108,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _detailRow('Full Name', doc['v_name'] ?? ''),
-                              _detailRow('Email', doc['v_email'] ?? ''),
-                              _detailRow('Mobile Number', doc['v_contactno'] ?? ''),
-                              _detailRow('Company Name', doc['v_company_name'] ?? ''),
-                              _detailRow('Purpose of Visit', doc['purpose'] ?? ''),
+                              _detailRow('Full Name', visitorData['v_name'] ?? ''),
+                              _detailRow('Email', visitorData['v_email'] ?? ''),
+                              _detailRow('Mobile Number', visitorData['v_contactno'] ?? ''),
+                              _detailRow('Company Name', visitorData['v_company_name'] ?? ''),
+                              _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
                               _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
                               _detailRow('Host Name', doc['host_name'] ?? ''),
-                              _detailRow('Check-in Time', doc['checkin_time'] ?? ''),
+                              _detailRow('Check-in Time', doc['v_time'] ?? ''),
                               _detailRow('Check-out Time', doc['checkout_time'] ?? ''),
                               _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
                               if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
@@ -176,7 +184,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
                 }
                 // TEMP: Show all passes for debugging
-                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) => v['checkout_code'] != null && v['checkout_code'].toString().isNotEmpty).toList();
                 if (visitors.isEmpty) {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
                 }
@@ -186,8 +194,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
                     final name = v['v_name'] ?? '';
-                    final checkin = v['checkin_time'] ?? v['checkin'] ?? '';
-                    final checkout = v['checkout_time'] ?? v['checkout'] ?? '';
+                    final checkin = v['v_time'] ?? '';
+                    final checkout = v['checkout_time'] ?? '';
                     final hostNameValue = v['host_name'] ?? hostName ?? '';
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),

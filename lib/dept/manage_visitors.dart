@@ -751,7 +751,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 children: [
                                   Text('Email: $email', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Company: $company', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Purpose:  [38;5;248m${doc['purpose'] ?? 'N/A'}  [0m', style: SystemTheme.body.copyWith(color: Colors.black54)),
+                                  Text('Purpose: ${doc['purpose'] ?? 'N/A'}', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Contact: $contact', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                   Text('Host: $host', style: SystemTheme.body.copyWith(color: Colors.black54)),
                                 ],

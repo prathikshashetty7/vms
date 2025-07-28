@@ -269,6 +269,8 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'photoBase64': v['photoBase64'] ?? _visitorImageBase64[idx],
                                     'v_designation': v['v_designation'] ?? '',
                                     'pass_no': passNo,
+                                    'v_totalno': v['v_totalno'] ?? '',
+                                    'purpose': v['purpose'] ?? '',
                                   };
                                   final confirm = await showDialog<bool>(
                                     context: context,
@@ -289,13 +291,13 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                             ),
                                             const SizedBox(height: 18),
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 TextButton(
                                                   onPressed: () => Navigator.of(context).pop(false),
                                                   child: const Text('Cancel'),
                                                 ),
-                                                const SizedBox(width: 8),
+                                                const SizedBox(width: 16),
                                                 ElevatedButton(
                                                   onPressed: () => Navigator.of(context).pop(true),
                                                   child: const Text('Generate'),
@@ -372,7 +374,7 @@ class _VisitorPassCard extends StatelessWidget {
       );
     }
     return Container(
-      width: 340,
+      width: 300,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -383,6 +385,7 @@ class _VisitorPassCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Company name at the top
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -401,6 +404,7 @@ class _VisitorPassCard extends StatelessWidget {
             child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           const SizedBox(height: 12),
+          // Image on left with details beside it
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -410,22 +414,104 @@ class _VisitorPassCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pass No      : $passNo', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
-                    Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
-                    if (visitor['v_designation'] != null && visitor['v_designation'].toString().isNotEmpty)
-                      Text('Designation : ${visitor['v_designation']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          const TextSpan(text: 'Pass No      : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                          TextSpan(text: '$passNo', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          const TextSpan(text: 'Visitor Name : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                          TextSpan(text: '${visitor['v_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (visitor['v_designation'] != null && visitor['v_designation'].toString().isNotEmpty) ...[
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(text: 'Designation : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                            TextSpan(text: '${visitor['v_designation']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (visitor['v_company_name'] != null && visitor['v_company_name'].toString().isNotEmpty)
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(text: 'Company : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                            TextSpan(text: '${visitor['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          if (visitor['v_company_name'] != null && visitor['v_company_name'].toString().isNotEmpty)
-            Text('Company : ${visitor['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Department: $departmentName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Date     : ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          // Details below the image
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Accompanying Count: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['v_totalno'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Purpose: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['purpose'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Department: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '$departmentName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Host     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '$hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Date     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Time     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
         ],
       ),
     );
