@@ -11,8 +11,15 @@ class VisitorTrackingPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
-        title: const Text('Visitor Tracking'),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 36),
+            const SizedBox(width: 12),
+            const Text('Visitor Tracking', style: TextStyle(color: Colors.white)),
+          ],
+        ),
         backgroundColor: SystemTheme.accent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -62,7 +69,7 @@ class VisitorTrackingPage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green,
+                          color: Color(0xFF6CA4FE),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),

@@ -528,4 +528,4 @@ String _formatDate(dynamic date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
   return date.toString();
-} 
+}

@@ -775,322 +775,326 @@ class _VisitorsPageState extends State<VisitorsPage> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
-                builder: (context, visitorSnapshot) {
-                  return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('passes').snapshots(),
-                    builder: (context, passesSnapshot) {
-                      if (visitorSnapshot.connectionState == ConnectionState.waiting ||
-                          passesSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if ((!visitorSnapshot.hasData || visitorSnapshot.data!.docs.isEmpty) &&
-                          (!passesSnapshot.hasData || passesSnapshot.data!.docs.isEmpty)) {
-                        return const Center(child: Text('No visitors found.', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold, fontSize: 18)));
-                      }
-                      // Appointed visitors (from 'visitor')
-                      final visitorDocs = visitorSnapshot.data?.docs ?? [];
-                      final appointedCheckedIn = <Map<String, dynamic>>[];
-                      final appointedCheckedOut = <Map<String, dynamic>>[];
-                      for (var doc in visitorDocs) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final printedAt = data['printed_at'];
-                        final checkedOut = data['checked_out'] == true;
-                        if (printedAt != null) {
-                          if (!checkedOut) {
-                            appointedCheckedIn.add({
-                              'name': data['v_name'] ?? data['fullName'] ?? 'Unknown',
-                              'pass_time': printedAt,
-                              'type': 'appointed',
-                              'doc': data,
-                            });
-                          } else {
-                            appointedCheckedOut.add({
-                              'name': data['v_name'] ?? data['fullName'] ?? 'Unknown',
-                              'pass_time': printedAt,
-                              'type': 'appointed',
-                              'doc': data,
-                            });
-                          }
-                        }
-                      }
-                      // Manual visitors (from 'passes')
-                      final passesDocs = passesSnapshot.data?.docs ?? [];
-                      final manualCheckedIn = <Map<String, dynamic>>[];
-                      final manualCheckedOut = <Map<String, dynamic>>[];
-                      for (var doc in passesDocs) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final passTime = data['printed_at'] ?? data['generated_at'];
-                        final checkedOut = data['checked_out'] == true;
-                        if (passTime != null) {
-                          if (!checkedOut) {
-                            manualCheckedIn.add({
-                              'name': data['fullName'] ?? data['v_name'] ?? 'Unknown',
-                              'pass_time': passTime,
-                              'type': 'manual',
-                              'doc': data,
-                            });
-                          } else {
-                            manualCheckedOut.add({
-                              'name': data['fullName'] ?? data['v_name'] ?? 'Unknown',
-                              'pass_time': passTime,
-                              'type': 'manual',
-                              'doc': data,
-                            });
-                          }
-                        }
-                      }
-                      // Merge and sort by pass_time descending
-                      final checkedInList = [...appointedCheckedIn, ...manualCheckedIn];
-                      checkedInList.sort((a, b) {
-                        final aTime = a['pass_time'];
-                        final bTime = b['pass_time'];
-                        DateTime? aDt, bDt;
-                        if (aTime is Timestamp) aDt = aTime.toDate();
-                        else if (aTime is DateTime) aDt = aTime;
-                        else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
-                        if (bTime is Timestamp) bDt = bTime.toDate();
-                        else if (bTime is DateTime) bDt = bTime;
-                        else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
-                        if (aDt == null && bDt == null) return 0;
-                        if (aDt == null) return 1;
-                        if (bDt == null) return -1;
-                        return bDt.compareTo(aDt);
+                stream: FirebaseFirestore.instance.collection('checked_in_out').snapshots(),
+                builder: (context, checkedInOutSnapshot) {
+                  if (checkedInOutSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!checkedInOutSnapshot.hasData || checkedInOutSnapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('No visitors found.', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold, fontSize: 18)));
+                  }
+                  
+                  // Process checked_in_out collection data (all visitors)
+                  final checkedInOutDocs = checkedInOutSnapshot.data?.docs ?? [];
+                  final allCheckedIn = <Map<String, dynamic>>[];
+                  final allCheckedOut = <Map<String, dynamic>>[];
+                  for (var doc in checkedInOutDocs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final checkInTime = data['check_in_time'];
+                    final status = data['status'];
+                    if (checkInTime != null && status == 'Checked In') {
+                      allCheckedIn.add({
+                        'name': data['visitor_name'] ?? 'Unknown',
+                        'pass_time': checkInTime,
+                        'type': 'all',
+                        'doc': data,
+                        'photo': data['visitor_photo'],
                       });
-                      final checkedOutList = [...appointedCheckedOut, ...manualCheckedOut];
-                      checkedOutList.sort((a, b) {
-                        final aTime = a['pass_time'];
-                        final bTime = b['pass_time'];
-                        DateTime? aDt, bDt;
-                        if (aTime is Timestamp) aDt = aTime.toDate();
-                        else if (aTime is DateTime) aDt = aTime;
-                        else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
-                        if (bTime is Timestamp) bDt = bTime.toDate();
-                        else if (bTime is DateTime) bDt = bTime;
-                        else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
-                        if (aDt == null && bDt == null) return 0;
-                        if (aDt == null) return 1;
-                        if (bDt == null) return -1;
-                        return bDt.compareTo(aDt);
+                    } else if (checkInTime != null && status == 'Checked Out') {
+                      allCheckedOut.add({
+                        'name': data['visitor_name'] ?? 'Unknown',
+                        'pass_time': checkInTime,
+                        'type': 'all',
+                        'doc': data,
+                        'photo': data['visitor_photo'],
                       });
-                      final filteredCheckedInList = _searchQuery.isEmpty
-                        ? checkedInList
-                        : checkedInList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
-                      final filteredCheckedOutList = _searchQuery.isEmpty
-                        ? checkedOutList
-                        : checkedOutList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
-                      return TabBarView(
-                        children: [
-                          // Checked In tab
-                          ListView.builder(
-                            itemCount: filteredCheckedInList.length,
-                            itemBuilder: (context, index) {
-                              final entry = filteredCheckedInList[index];
-                              final name = entry['name'] ?? 'Unknown';
-                              final passTime = entry['pass_time'];
-                              String passInfo = '';
-                              if (passTime != null) {
-                                DateTime? dt;
-                                if (passTime is Timestamp) dt = passTime.toDate();
-                                else if (passTime is DateTime) dt = passTime;
-                                else dt = DateTime.tryParse(passTime.toString());
-                                if (dt != null) {
-                                  passInfo =  ''
-                                  '${dt.day.toString().padLeft(2, '0')}/'
-                                  '${dt.month.toString().padLeft(2, '0')}/'
-                                  '${dt.year} '
-                                  '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-                                }
-                              }
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.07),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                    }
+                  }
+                  
+                  // Use only checked_in_out collection data
+                  final checkedInList = allCheckedIn;
+                  checkedInList.sort((a, b) {
+                    final aTime = a['pass_time'];
+                    final bTime = b['pass_time'];
+                    DateTime? aDt, bDt;
+                    if (aTime is Timestamp) aDt = aTime.toDate();
+                    else if (aTime is DateTime) aDt = aTime;
+                    else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                    if (bTime is Timestamp) bDt = bTime.toDate();
+                    else if (bTime is DateTime) bDt = bTime;
+                    else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                    if (aDt == null && bDt == null) return 0;
+                    if (aDt == null) return 1;
+                    if (bDt == null) return -1;
+                    return bDt.compareTo(aDt);
+                  });
+                  final checkedOutList = allCheckedOut;
+                  checkedOutList.sort((a, b) {
+                    final aTime = a['pass_time'];
+                    final bTime = b['pass_time'];
+                    DateTime? aDt, bDt;
+                    if (aTime is Timestamp) aDt = aTime.toDate();
+                    else if (aTime is DateTime) aDt = aTime;
+                    else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                    if (bTime is Timestamp) bDt = bTime.toDate();
+                    else if (bTime is DateTime) bDt = bTime;
+                    else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                    if (aDt == null && bDt == null) return 0;
+                    if (aDt == null) return 1;
+                    if (bDt == null) return -1;
+                    return bDt.compareTo(aDt);
+                  });
+                  final filteredCheckedInList = _searchQuery.isEmpty
+                    ? checkedInList
+                    : checkedInList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                  final filteredCheckedOutList = _searchQuery.isEmpty
+                    ? checkedOutList
+                    : checkedOutList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                  return TabBarView(
+                    children: [
+                      // Checked In tab
+                      ListView.builder(
+                        itemCount: filteredCheckedInList.length,
+                        itemBuilder: (context, index) {
+                          final entry = filteredCheckedInList[index];
+                          final name = entry['visitor_name'] ?? entry['visitorName'] ?? entry['fullName'] ?? entry['v_name'] ?? entry['name'] ?? 'Unknown';
+                          final passTime = entry['pass_time'];
+                          final type = entry['type'] ?? '';
+                          final photo = entry['photo'];
+                          DateTime? dt;
+                          String dateInfo = '';
+                          String timeInfo = '';
+                          if (passTime != null) {
+                            if (passTime is Timestamp) dt = passTime.toDate();
+                            else if (passTime is DateTime) dt = passTime;
+                            else dt = DateTime.tryParse(passTime.toString());
+                            if (dt != null) {
+                              dateInfo = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+                              timeInfo = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                            }
+                          }
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // Accent bar
-                                    Container(
-                                      width: 8,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(20),
-                                          bottomLeft: Radius.circular(20),
-                                        ),
-                                      ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
                                     ),
-                                    const SizedBox(width: 18), // Increase spacing since avatar is removed
-                                    // Main content (name + date/time)
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            name,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF6CA4FE).withOpacity(0.13),
-                                              borderRadius: BorderRadius.circular(12),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                              },
                                             ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  passInfo,
-                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Status badge (always visible, never overflows)
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8, right: 16),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          // Checked Out tab
-                          ListView.builder(
-                            itemCount: filteredCheckedOutList.length,
-                            itemBuilder: (context, index) {
-                              final entry = filteredCheckedOutList[index];
-                              final name = entry['name'] ?? 'Unknown';
-                              final passTime = entry['pass_time'];
-                              String passInfo = '';
-                              if (passTime != null) {
-                                DateTime? dt;
-                                if (passTime is Timestamp) dt = passTime.toDate();
-                                else if (passTime is DateTime) dt = passTime;
-                                else dt = DateTime.tryParse(passTime.toString());
-                                if (dt != null) {
-                                  passInfo = '${dt.day.toString().padLeft(2, '0')}/'
-                                    '${dt.month.toString().padLeft(2, '0')}/'
-                                    '${dt.year}  '
-                                    '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-                                }
-                              }
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.07),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // Accent bar
-                                    Container(
-                                      width: 8,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(20),
-                                          bottomLeft: Radius.circular(20),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // Avatar
-                                    CircleAvatar(
-                                      radius: 28,
-                                      backgroundColor: const Color(0xFFEF4444).withOpacity(0.15),
-                                      child: Text(
-                                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 18),
-                                    // Main content
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            name,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFEF4444).withOpacity(0.13),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      passInfo,
-                                                      style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
-                                                    ),
-                                                  ],
-                                                ),
+                                        const SizedBox(height: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF10B981)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF10B981)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
                                               ),
                                             ],
-                                          ),
-                                        ],
-                                      ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                    // Status badge
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8, right: 16),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
+                                  // Status badge
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
-                                  ],
+                                    child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      // Checked Out tab
+                      ListView.builder(
+                        itemCount: filteredCheckedOutList.length,
+                        itemBuilder: (context, index) {
+                          final entry = filteredCheckedOutList[index];
+                          final name = entry['visitor_name'] ?? entry['visitorName'] ?? entry['fullName'] ?? entry['v_name'] ?? entry['name'] ?? 'Unknown';
+                          final passTime = entry['pass_time'];
+                          final type = entry['type'] ?? '';
+                          final photo = entry['photo'];
+                          DateTime? dt;
+                          String dateInfo = '';
+                          String timeInfo = '';
+                          if (passTime != null) {
+                            if (passTime is Timestamp) dt = passTime.toDate();
+                            else if (passTime is DateTime) dt = passTime;
+                            else dt = DateTime.tryParse(passTime.toString());
+                            if (dt != null) {
+                              dateInfo = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+                              timeInfo = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                            }
+                          }
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                              );
-                            },
-                          ),
-                        ],
-                      );
-                    },
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
+                                    ),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                              },
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFFEF4444)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Status badge
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8, right: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   );
                 },
               ),

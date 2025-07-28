@@ -9,8 +9,15 @@ class KioskQRPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
-        title: const Text('Kiosk QR Registration'),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 36),
+            const SizedBox(width: 12),
+            const Text('Kiosk QR Registration', style: TextStyle(color: Colors.white)),
+          ],
+        ),
         backgroundColor: Color(0xFF6CA4FE),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
         child: Column(
