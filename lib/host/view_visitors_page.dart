@@ -239,7 +239,11 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                           return const Center(child: Text('No visitors found.'));
                         }
-                        final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+                        final visitors = snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          data['docId'] = doc.id;
+                          return data;
+                        }).where((v) => v['checkout_code'] == null || v['checkout_code'].toString().isEmpty).toList();
                         if (visitors.isEmpty) {
                           return const Center(child: Text('No visitors with generated pass.'));
                         }
@@ -296,8 +300,11 @@ class _VisitorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center, // <-- center vertically
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(Icons.person, size: 28, color: Colors.black),
             const SizedBox(width: 14),
@@ -310,23 +317,96 @@ class _VisitorCard extends StatelessWidget {
                     Text('Email: ${visitor['v_email']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   if ((visitor['v_company_name'] ?? '').toString().isNotEmpty)
                     Text('Company: ${visitor['v_company_name']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                  if ((visitor['v_contactno'] ?? '').toString().isNotEmpty)
-                    Text('Contact: ${visitor['v_contactno']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   if ((visitor['purpose'] ?? '').toString().isNotEmpty)
                     Text('Purpose: ${visitor['purpose']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                  // Add date field
-                  if (visitor['v_date'] != null)
-                    Text('Date: ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                ],
-              ),
+                      if ((visitor['v_time'] ?? '').toString().isNotEmpty)
+                        Text('Time: ${visitor['v_time']}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                    ],
+                  ),
+                ),
+                // Removed the view icon button
+              ],
             ),
-            Align(
-              alignment: Alignment.center,
-              child: IconButton(
-                icon: const Icon(Icons.visibility, color: Colors.black),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6CA4FE),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    final docId = visitor['docId'];
+                    if (docId == null) return;
+                    // Only check passes collection for checkout_code
+                    final passesQuery = await FirebaseFirestore.instance.collection('passes').where('visitorId', isEqualTo: docId).limit(1).get();
+                    if (passesQuery.docs.isNotEmpty) {
+                      final passData = passesQuery.docs.first.data();
+                      if (passData['checkout_code'] != null && passData['checkout_code'].toString().isNotEmpty) {
+                        // Already generated, show the same code
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Checkout Code'),
+                            content: Text('Your checkout code is: ${passData['checkout_code']}'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                    }
+                    // Generate unique 4-digit code
+                    final code = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
+                    final now = DateTime.now();
+                    // Add/update in passes collection only
+                    if (passesQuery.docs.isNotEmpty) {
+                      // Update existing pass
+                      await FirebaseFirestore.instance.collection('passes').doc(passesQuery.docs.first.id).update({
+                        'checkout_code': code,
+                        'checkout_code_time': now,
+                      });
+                    } else {
+                      // Create new pass entry with minimal info
+                      await FirebaseFirestore.instance.collection('passes').add({
+                        'visitorId': docId,
+                        'checkout_code': code,
+                        'checkout_code_time': now,
+                      });
+                    }
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Checkout Code'),
+                        content: Text('Your checkout code is: $code'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: const Text('Checkout Code'),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6CA4FE),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 onPressed: () => _showVisitorDetailsDialog(context, visitor),
-                tooltip: 'View Details',
+                  child: const Text('View'),
               ),
+              ],
             ),
           ],
         ),
