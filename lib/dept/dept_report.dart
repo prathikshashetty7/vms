@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class DeptReport extends StatefulWidget {
   final String? currentDepartmentId;
@@ -17,38 +18,6 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    final List<Map<String, dynamic>> mockVisitors = [
-      {
-        'v_name': 'John Doe',
-        'v_email': 'john@example.com',
-        'v_contactno': '9876543210',
-        'v_company_name': 'Acme Corp',
-        'purpose': 'Business Meeting',
-        'appointment': 'Yes',
-        'host_name': 'Jane Smith',
-        'checkin_time': '10:00 AM',
-        'checkout_time': '11:00 AM',
-        'carrying_laptop': 'No',
-        'photo_url': 'https://example.com/photo.jpg',
-        'accomplished_visitors': 2,
-        // No laptop_name for this visitor
-      },
-      {
-        'v_name': 'Alice Brown',
-        'v_email': 'alice@example.com',
-        'v_contactno': '9123456789',
-        'v_company_name': 'Globex',
-        'purpose': 'Interview',
-        'appointment': 'No',
-        'host_name': 'Bob White',
-        'checkin_time': '09:30 AM',
-        'checkout_time': '10:15 AM',
-        'carrying_laptop': 'Yes',
-        'laptop_name': 'Dell Inspiron 15',
-        'photo_url': '',
-        'accomplished_visitors': 1,
-      },
-    ];
     return Container(
       decoration: SystemTheme.backgroundGradient,
       child: Scaffold(
@@ -58,36 +27,72 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
           child: Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  itemCount: mockVisitors.length,
-                  itemBuilder: (context, index) {
-                    final doc = mockVisitors[index];
-                    final name = doc['v_name'] ?? '';
-                    final checkin = doc['checkin_time'] ?? '';
-                    final checkout = doc['checkout_time'] ?? '';
-                    final hostName = doc['host_name'] ?? '';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(Icons.person, color: Colors.black),
-                        title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Host Name: $hostName'),
-                            Text('Check-in Time: $checkin'),
-                            Text('Check-out Time: $checkout'),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.visibility, color: Colors.black),
-                          onPressed: () => _showVisitorDetailsDialog(context, doc),
-                        ),
-                      ),
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: widget.currentDepartmentId == null
+                      ? null
+                      : FirebaseFirestore.instance
+                          .collection('passes')
+                          .where('departmentId', isEqualTo: widget.currentDepartmentId)
+                          .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                    final docs = snapshot.data!.docs;
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = docs[index].data() as Map<String, dynamic>;
+                        final name = doc['v_name'] ?? '';
+                        final hostName = doc['host_name'] ?? '';
+                        final vDate = doc['v_date'];
+                        final checkin = doc['v_time'] ?? 'N/A';
+                        final checkoutRaw = doc['checkout_code_time'];
+                        String checkout = 'N/A';
+                        if (checkoutRaw != null) {
+                          if (checkoutRaw is Timestamp) {
+                            final dt = checkoutRaw.toDate();
+                            checkout = DateFormat('hh:mm a').format(dt);
+                          } else if (checkoutRaw is DateTime) {
+                            checkout = DateFormat('hh:mm a').format(checkoutRaw);
+                          } else {
+                            checkout = checkoutRaw.toString();
+                          }
+                        }
+                        String dateStr = 'N/A';
+                        if (vDate != null) {
+                          if (vDate is Timestamp) {
+                            final dt = vDate.toDate();
+                            dateStr = DateFormat('dd/MM/yyyy').format(dt);
+                          } else if (vDate is DateTime) {
+                            dateStr = DateFormat('dd/MM/yyyy').format(vDate);
+                          } else {
+                            dateStr = vDate.toString();
+                          }
+                        }
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ListTile(
+                            leading: const Icon(Icons.person, color: Colors.black),
+                            title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Host Name: $hostName'),
+                                Text('Date: $dateStr'),
+                                Text('Check-in Time: $checkin'),
+                                Text('Check-out Time: $checkout'),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.visibility, color: Colors.black),
+                              onPressed: () => _showVisitorDetailsDialog(context, doc),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

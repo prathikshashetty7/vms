@@ -50,7 +50,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     final vDesignationController = TextEditingController(text: visitor?['v_designation']);
     final vCompanyNameController = TextEditingController(text: visitor?['v_company_name']);
     final vContactNoController = TextEditingController(text: visitor?['v_contactno']);
-    final vTotalNoController = TextEditingController(text: visitor?['v_totalno']?.toString() ?? '1');
+    final vTotalNoController = TextEditingController(text: visitor?['v_totalno']?.toString() ?? (isEditing ? '' : ''));
     final vPurposeController = TextEditingController(text: visitor?['purpose']);
     String? selectedHostId = visitor?['emp_id'];
     DateTime selectedDate = (visitor?['v_date'] as Timestamp?)?.toDate() ?? DateTime.now();
@@ -279,7 +279,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     },
                             style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
-                              hintText: 'Total Visitors',
+                              hintText: 'Accompanying Count',
                               hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                               labelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(
