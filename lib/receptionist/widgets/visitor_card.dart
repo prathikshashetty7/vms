@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../theme/receptionist_theme.dart';
+import '../../theme/system_theme.dart';
 import 'package:image_picker/image_picker.dart';
 
 class VisitorCard extends StatefulWidget {
@@ -74,12 +74,12 @@ class _VisitorCardState extends State<VisitorCard> {
             ),
           ],
         ),
-        title: Text(widget.name, style: TextStyle(fontWeight: FontWeight.bold, color: ReceptionistTheme.text)),
-        subtitle: Text(widget.subtitle, style: TextStyle(color: ReceptionistTheme.text)),
+        title: Text(widget.name, style: TextStyle(fontWeight: FontWeight.bold, color: SystemTheme.text)),
+        subtitle: Text(widget.subtitle, style: TextStyle(color: SystemTheme.text)),
         trailing: widget.showCheckout
             ? ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: ReceptionistTheme.accent,
+                  backgroundColor: SystemTheme.accent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: widget.onCheckout,

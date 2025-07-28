@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageRoles extends StatefulWidget {
@@ -86,11 +86,11 @@ class _ManageRolesState extends State<ManageRoles> {
                 Container(
                   padding: EdgeInsets.all(isLargeScreen ? 20 : 16),
                   decoration: BoxDecoration(
-                    gradient: ReceptionistTheme.deptGradient,
+                    gradient: SystemTheme.deptGradient,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: ReceptionistTheme.primary.withOpacity(0.12),
+                        color: SystemTheme.primary.withOpacity(0.12),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -101,7 +101,7 @@ class _ManageRolesState extends State<ManageRoles> {
                     children: [
                       Text(
                         _editingId == null ? 'Add Role' : 'Edit Role',
-                        style: ReceptionistTheme.heading.copyWith(fontSize: 18, color: Colors.white),
+                        style: SystemTheme.heading.copyWith(fontSize: 18, color: Colors.white),
                       ),
                       const SizedBox(height: 10),
                       TextField(
@@ -110,15 +110,15 @@ class _ManageRolesState extends State<ManageRoles> {
                         decoration: InputDecoration(
                           hintText: 'Enter role name...',
                           filled: true,
-                          fillColor: ReceptionistTheme.secondary,
-                          hintStyle: ReceptionistTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                          fillColor: SystemTheme.secondary,
+                          hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: ReceptionistTheme.primary.withOpacity(0.5)),
+                            borderSide: BorderSide(color: SystemTheme.primary.withOpacity(0.5)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -133,9 +133,9 @@ class _ManageRolesState extends State<ManageRoles> {
                           ElevatedButton.icon(
                             onPressed: _addOrUpdateRole,
                             icon: Icon(_editingId == null ? Icons.add : Icons.update, color: Colors.white),
-                            label: Text(_editingId == null ? 'Add' : 'Update', style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                            label: Text(_editingId == null ? 'Add' : 'Update', style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _editingId == null ? ReceptionistTheme.primary : ReceptionistTheme.text,
+                              backgroundColor: _editingId == null ? SystemTheme.primary : SystemTheme.text,
                               padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -160,7 +160,7 @@ class _ManageRolesState extends State<ManageRoles> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(child: Text('No roles added yet.', style: ReceptionistTheme.body.copyWith(color: ReceptionistTheme.text)));
+                        return Center(child: Text('No roles added yet.', style: SystemTheme.body.copyWith(color: SystemTheme.text)));
                       }
                       final docs = snapshot.data!.docs;
                       return ListView.builder(
@@ -172,11 +172,11 @@ class _ManageRolesState extends State<ManageRoles> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
-                              gradient: ReceptionistTheme.deptGradient,
+                              gradient: SystemTheme.deptGradient,
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: ReceptionistTheme.primary.withOpacity(0.10),
+                                  color: SystemTheme.primary.withOpacity(0.10),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -184,16 +184,16 @@ class _ManageRolesState extends State<ManageRoles> {
                             ),
                             child: ListTile(
                               leading: const Icon(Icons.security, color: Colors.white),
-                              title: Text(name, style: ReceptionistTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                              title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit, color: ReceptionistTheme.primary),
+                                    icon: const Icon(Icons.edit, color: SystemTheme.primary),
                                     onPressed: () => _startEdit(id, name),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: ReceptionistTheme.primary),
+                                    icon: const Icon(Icons.delete, color: SystemTheme.primary),
                                     onPressed: () => _deleteRole(id),
                                   ),
                                 ],

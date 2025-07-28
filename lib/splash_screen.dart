@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/design_system.dart';
+import 'theme/system_theme.dart';
 import 'signin.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: DesignSystem.animationSlow,
+      duration: SystemTheme.animationSlow,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -55,110 +55,102 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   void _navigateToLogin() {
     Navigator.of(context).pushReplacement(
-      DesignSystem.fadeTransition(const SignInPage()),
+      SystemTheme.fadeTransition(const SignInPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignSystem.background,
+      backgroundColor: const Color(0xFFCCE3FD),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.6, -0.7),
+            radius: 1.2,
             colors: [
-              DesignSystem.primary.withOpacity(0.1),
-              DesignSystem.background,
+              Color(0xFFCCE3FD),
+              Color(0xFFA9C8F6),
             ],
           ),
         ),
-        child: SafeArea(
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo
-                    Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Container(
-                        padding: const EdgeInsets.all(DesignSystem.spacing24),
-                        decoration: BoxDecoration(
-                          color: DesignSystem.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(DesignSystem.radiusXLarge),
-                          boxShadow: DesignSystem.shadowMedium,
-                        ),
-                        child: Image.asset(
-                          'assets/images/rdl.png',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DesignSystem.spacing32),
-                    // Title
-                    Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: Text(
-                          'Visitor Management',
-                          style: DesignSystem.heading1.copyWith(
-                            color: DesignSystem.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DesignSystem.spacing12),
-                    // Subtitle
-                    Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: Text(
-                          'Secure • Efficient • Professional',
-                          style: DesignSystem.bodyLarge.copyWith(
-                            color: DesignSystem.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: DesignSystem.spacing48),
-                    // Explore Button
-                    Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: ElevatedButton.icon(
-                          onPressed: _navigateToLogin,
-                          style: DesignSystem.primaryButtonStyle.copyWith(
-                            padding: MaterialStateProperty.all(
-                              const EdgeInsets.symmetric(
-                                horizontal: DesignSystem.spacing32,
-                                vertical: DesignSystem.spacing16,
-                              ),
-                            ),
-                          ),
-                          icon: const Icon(Icons.arrow_forward),
-                          label: Text(
-                            'Explore',
-                            style: DesignSystem.bodyLarge.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo in soft shadowed square
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.35),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
                   ],
-                );
-              },
-            ),
+                ),
+                child: Image.asset(
+                  'assets/images/rdl.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 48),
+              // Title
+              Text(
+                'Visitor Management',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 36,
+                  color: Color(0xFF2563EB),
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              // Subtitle
+              Text(
+                'Secure • Efficient • Professional',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              // Explore Button
+              ElevatedButton.icon(
+                onPressed: _navigateToLogin,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.arrow_forward, size: 22),
+                label: const Text(
+                  'Explore',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

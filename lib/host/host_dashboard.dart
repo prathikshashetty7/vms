@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/receptionist_theme.dart';
+import '../theme/system_theme.dart';
 import 'view_visitors_page.dart';
 import 'create_pass_page.dart';
 import 'history_page.dart';
@@ -32,10 +32,29 @@ class _HostMainScreenState extends State<HostMainScreen> {
 
   void _onNavBarTap(int index) async {
     if (index == 4) {
-      // Logout
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/signin');
+      // Logout with confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
@@ -358,7 +377,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: ReceptionistTheme.primary.withOpacity(0.08),
+            color: SystemTheme.primary.withOpacity(0.08),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -372,12 +391,12 @@ class _StatCard extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: ReceptionistTheme.primary.withOpacity(0.18),
+              color: SystemTheme.primary.withOpacity(0.18),
               shape: BoxShape.circle,
             ),
             // Reduce icon padding
             padding: const EdgeInsets.all(8),
-            child: Icon(icon, color: ReceptionistTheme.primary, size: 28),
+            child: Icon(icon, color: SystemTheme.primary, size: 28),
           ),
           const SizedBox(height: 6),
           Text(
@@ -417,7 +436,7 @@ class _ActivityItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: ReceptionistTheme.primary, size: 22),
+        Icon(icon, color: SystemTheme.primary, size: 22),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

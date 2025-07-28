@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'themed_visitor_list_page.dart';
+import 'dashboard.dart' show VisitorsPage;
 
 class ReceptionistReportsPage extends StatelessWidget {
   const ReceptionistReportsPage({Key? key}) : super(key: key);
@@ -8,12 +9,13 @@ class ReceptionistReportsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
         title: Row(
           children: [
             Image.asset('assets/images/rdl.png', height: 36),
             const SizedBox(width: 12),
-            const Text('Reports', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
+            const Text('Visitor Details', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
         backgroundColor: Color(0xFF6CA4FE),
@@ -83,9 +85,33 @@ class ReceptionistReportsPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _SectionCard(
+                title: 'QR Code Registrations',
+                icon: Icons.qr_code_2,
+                color: Color(0xFF6CA4FE),
+                subtitle: 'Visitors registered via QR code',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ThemedVisitorListPage(
+                        collection: 'qr_code_registrations',
+                        title: 'QR Code Registrations',
+                        icon: Icons.qr_code_2,
+                        color: Color(0xFF6CA4FE),
+                        nameField: 'fullName',
+                        mobileField: 'mobile',
+                        timeField: 'timestamp',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              _SectionCard(
                 title: 'Appointed Visitors',
                 icon: Icons.event_available,
-                color: Color(0xFF60A5FA),
+                color: Color(0xFF6CA4FE),
+                subtitle: 'Details entered by the department',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -113,7 +139,7 @@ class ReceptionistReportsPage extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: Color(0xFF6CA4FE),
         unselectedItemColor: Color(0xFF091016),
-        currentIndex: 3,
+        currentIndex: 1,
         onTap: (index) {
           if (index == 4) {
             Navigator.pushReplacementNamed(context, '/signin');
@@ -122,11 +148,14 @@ class ReceptionistReportsPage extends StatelessWidget {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/dashboard');
           } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/host_passes');
+            // Already here (Visitors)
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/manual_entry');
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const VisitorsPage()),
+            );
           } else if (index == 3) {
-            // Already here
+            Navigator.pushReplacementNamed(context, '/manual_entry');
           }
         },
         items: const [
@@ -135,16 +164,16 @@ class ReceptionistReportsPage extends StatelessWidget {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.vpn_key_rounded),
-            label: 'Host Passes',
+            icon: Icon(Icons.people_alt_rounded),
+            label: 'Visitors',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check_circle_rounded),
+            label: 'Status',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_add_alt_1_rounded),
             label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Reports',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout_rounded),
@@ -161,70 +190,87 @@ class _SectionCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const _SectionCard({required this.title, required this.icon, required this.color, required this.onTap, Key? key}) : super(key: key);
+  final String? subtitle;
+  const _SectionCard({required this.title, required this.icon, required this.color, required this.onTap, this.subtitle, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(32),
-      onTap: onTap,
-      child: Container(
-        height: 160,
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x22005FFE),
-              blurRadius: 18,
-              offset: Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.13),
-                borderRadius: BorderRadius.circular(24),
+    const themeColor = Color(0xFF6CA4FE); // Receptionist theme color
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(36),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: Colors.white, // solid white background
+            borderRadius: BorderRadius.circular(36),
+            border: Border.all(color: themeColor.withOpacity(0.13), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: themeColor.withOpacity(0.18),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
               ),
-              padding: const EdgeInsets.all(22),
-              child: Icon(icon, color: color, size: 48),
-            ),
-            const SizedBox(width: 28),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF091016),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 26,
-                      letterSpacing: 0.5,
-                      fontFamily: 'Poppins',
-                    ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 18),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [themeColor, themeColor.withOpacity(0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _subtitleForTitle(title),
-                    style: TextStyle(
-                      color: color.withOpacity(0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColor.withOpacity(0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Icon(icon, color: Colors.white, size: 38),
               ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Color(0xFF005FFE), size: 28),
-            const SizedBox(width: 24),
-          ],
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFF091016),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24,
+                        letterSpacing: 1.1,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      subtitle ?? _subtitleForTitle(title),
+                      style: TextStyle(
+                        color: themeColor.withOpacity(0.7),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, color: Color(0xFF005FFE), size: 24),
+              const SizedBox(width: 18),
+            ],
+          ),
         ),
       ),
     );
