@@ -198,29 +198,6 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Status Filter
-                      DropdownButtonHideUnderline(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0xFF6CA4FE).withOpacity(0.08),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: DropdownButton<String>(
-                            value: _statusFilter,
-                            items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            onChanged: (val) => setState(() => _statusFilter = val!),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -239,44 +216,53 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                           return const Center(child: Text('No visitors found.'));
                         }
-                        final visitors = snapshot.data!.docs.map((doc) {
+                        final allVisitors = snapshot.data!.docs.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           data['docId'] = doc.id;
                           return data;
-                        }).where((v) => v['checkout_code'] == null || v['checkout_code'].toString().isEmpty).toList();
-                        if (visitors.isEmpty) {
-                          return const Center(child: Text('No visitors with generated pass.'));
-                        }
-                        // Group by date (formatted as dd/MM/yyyy)
-                        final Map<String, List<Map<String, dynamic>>> grouped = {};
-                        for (final v in visitors) {
-                          String dateStr = '';
-                          if (v['v_date'] != null) {
-                            if (v['v_date'] is Timestamp) {
-                              dateStr = DateFormat('dd/MM/yyyy').format((v['v_date'] as Timestamp).toDate());
-                            } else if (v['v_date'] is String) {
-                              try {
-                                dateStr = DateFormat('dd/MM/yyyy').format(DateTime.parse(v['v_date']));
-                              } catch (_) {
-                                dateStr = v['v_date'].toString().split(' ').first;
-                              }
+                        }).toList();
+                        return FutureBuilder<List<Map<String, dynamic>>>(
+                          future: _filterVisitorsWithoutCheckoutCode(allVisitors),
+                          builder: (context, filteredSnapshot) {
+                            if (!filteredSnapshot.hasData) {
+                              return const Center(child: CircularProgressIndicator());
                             }
-                          }
-                          if (dateStr.isEmpty) dateStr = 'Unknown Date';
-                          grouped.putIfAbsent(dateStr, () => []).add(v);
-                        }
-                        final sortedDates = grouped.keys.toList()
-                          ..sort((a, b) => b.compareTo(a)); // newest first
-                        return ListView(
-                          children: [
-                            for (final date in sortedDates) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
-                                child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-                              ),
-                              ...grouped[date]!.map((v) => _VisitorCard(visitor: v)).toList(),
-                            ]
-                          ],
+                            final visitors = filteredSnapshot.data!;
+                            if (visitors.isEmpty) {
+                              return const Center(child: Text('No visitors with generated pass.'));
+                            }
+                            // Group by date (formatted as dd/MM/yyyy)
+                            final Map<String, List<Map<String, dynamic>>> grouped = {};
+                            for (final v in visitors) {
+                              String dateStr = '';
+                              if (v['v_date'] != null) {
+                                if (v['v_date'] is Timestamp) {
+                                  dateStr = DateFormat('dd/MM/yyyy').format((v['v_date'] as Timestamp).toDate());
+                                } else if (v['v_date'] is String) {
+                                  try {
+                                    dateStr = DateFormat('dd/MM/yyyy').format(DateTime.parse(v['v_date']));
+                                  } catch (_) {
+                                    dateStr = v['v_date'].toString().split(' ').first;
+                                  }
+                                }
+                              }
+                              if (dateStr.isEmpty) dateStr = 'Unknown Date';
+                              grouped.putIfAbsent(dateStr, () => []).add(v);
+                            }
+                            final sortedDates = grouped.keys.toList()
+                              ..sort((a, b) => b.compareTo(a)); // newest first
+                            return ListView(
+                              children: [
+                                for (final date in sortedDates) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
+                                    child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                                  ),
+                                  ...grouped[date]!.map((v) => _VisitorCard(visitor: v)).toList(),
+                                ]
+                              ],
+                            );
+                          },
                         );
                       },
                     ),
@@ -536,4 +522,21 @@ String _formatDate(dynamic date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
   return date.toString();
+}
+
+Future<List<Map<String, dynamic>>> _filterVisitorsWithoutCheckoutCode(List<Map<String, dynamic>> visitors) async {
+  List<Map<String, dynamic>> filtered = [];
+  for (final v in visitors) {
+    final passQuery = await FirebaseFirestore.instance
+        .collection('passes')
+        .where('visitorId', isEqualTo: v['docId'])
+        .limit(1)
+        .get();
+    if (passQuery.docs.isEmpty ||
+        passQuery.docs.first.data()['checkout_code'] == null ||
+        passQuery.docs.first.data()['checkout_code'].toString().isEmpty) {
+      filtered.add(v);
+    }
+  }
+  return filtered;
 } 

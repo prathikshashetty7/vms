@@ -3,6 +3,7 @@ import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
@@ -195,8 +196,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final v = visitors[idx];
                     final name = v['v_name'] ?? '';
                     final checkin = v['v_time'] ?? '';
-                    final checkout = v['checkout_time'] ?? '';
                     final hostNameValue = v['host_name'] ?? hostName ?? '';
+                    final vDate = v['v_date'];
+                    String dateStr = 'N/A';
+                    if (vDate != null) {
+                      if (vDate is Timestamp) {
+                        final dt = vDate.toDate();
+                        dateStr = DateFormat('dd/MM/yyyy').format(dt);
+                      } else if (vDate is DateTime) {
+                        dateStr = DateFormat('dd/MM/yyyy').format(vDate);
+                      } else {
+                        dateStr = vDate.toString();
+                      }
+                    }
+                    final checkoutRaw = v['checkout_code_time'];
+                    String checkout = 'N/A';
+                    if (checkoutRaw != null) {
+                      if (checkoutRaw is Timestamp) {
+                        final dt = checkoutRaw.toDate();
+                        checkout = DateFormat('hh:mm a').format(dt);
+                      } else if (checkoutRaw is DateTime) {
+                        checkout = DateFormat('hh:mm a').format(checkoutRaw);
+                      } else {
+                        checkout = checkoutRaw.toString();
+                      }
+                    }
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
@@ -210,6 +234,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Host Name: $hostNameValue'),
+                            Text('Date: $dateStr'),
                             Text('Check-in Time: $checkin'),
                             Text('Check-out Time: $checkout'),
                           ],

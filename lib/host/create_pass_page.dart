@@ -122,7 +122,11 @@ class _CreatePassPageState extends State<CreatePassPage> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No visitors found.'));
                 }
-                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) {
+                final visitors = snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  data['docId'] = doc.id; // Add document ID to the data
+                  return data;
+                }).where((v) {
                   final date = v['v_date'];
                   if (date == null) return false;
                   DateTime visitDate;
@@ -138,16 +142,17 @@ class _CreatePassPageState extends State<CreatePassPage> {
                     }
                   }
                   final now = DateTime.now();
-                  // Only show if pass_generated_by == 'host'
-                  if (v['pass_generated_by'] != 'host') return false;
-                  return !visitDate.isBefore(DateTime(now.year, now.month, now.day));
+                  // Show if pass_generated_by == 'host' OR pass_generated == true
+                  final isHostGenerated = v['pass_generated_by'] == 'host';
+                  final isPassGenerated = v['pass_generated'] == true;
+                  return (isHostGenerated || isPassGenerated) && !visitDate.isBefore(DateTime(now.year, now.month, now.day));
                 }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: visitors.length,
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
-                    final visitorId = snapshot.data!.docs[idx].id;
+                    final visitorId = v['docId']; // Use the document ID from the data
                     Widget avatar;
                     final photoBase64 = v['photoBase64'] ?? _visitorImageBase64[idx];
                     if (photoBase64 != null && photoBase64 != '') {
@@ -242,7 +247,6 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                 ),
                                 onPressed: isGenerated ? () {} : () async {
                                   // Prepare pass data for preview
-                                  final visitorId = snapshot.data!.docs[idx].id;
                                   dynamic vDate = v['v_date'];
                                   Timestamp passDate;
                                   if (vDate is Timestamp) {
@@ -320,6 +324,12 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     ...passData,
                                     'created_at': FieldValue.serverTimestamp(),
                                   });
+                                  
+                                  // Force UI refresh
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
+                                  
                                   // Show a snackbar for success after generating
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
