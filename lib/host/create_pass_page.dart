@@ -214,7 +214,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF898AC4),
+                                  backgroundColor: Colors.green,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                                 ),
@@ -292,10 +292,15 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'department': departmentName ?? '',
                                     'host_name': hostName ?? '',
                                   });
-                                  await FirebaseFirestore.instance.collection('passes').add({
+                                  final passDoc = await FirebaseFirestore.instance.collection('passes').add({
                                     ...passData,
+                                    'pass_generated_by': 'host',
                                     'created_at': FieldValue.serverTimestamp(),
                                   });
+                                  
+                                  print('Pass saved with ID: ${passDoc.id}');
+                                  print('Pass data: ${passData.toString()}');
+                                  print('Added pass_generated_by: host');
                                   // Show a snackbar for success after generating
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(

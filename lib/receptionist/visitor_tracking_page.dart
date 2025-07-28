@@ -11,8 +11,15 @@ class VisitorTrackingPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
-        title: const Text('Visitor Tracking'),
+        title: Row(
+          children: [
+            Image.asset('assets/images/rdl.png', height: 36),
+            const SizedBox(width: 12),
+            const Text('Visitor Tracking', style: TextStyle(color: Colors.white)),
+          ],
+        ),
         backgroundColor: SystemTheme.accent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
