@@ -469,10 +469,55 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                     'departmentId': _currentDepartmentId,
                     'pass_generated_by': passGeneratedBy,
                   };
+                  
                   if (!isEditing) {
-                    await FirebaseFirestore.instance.collection('visitor').add(visitorData);
+                    // Add to visitors collection
+                    final visitorDocRef = await FirebaseFirestore.instance.collection('visitor').add(visitorData);
+                    
+                    // Also add to manual_registrations collection with visitor ID
+                    final manualRegistrationData = {
+                      'fullName': vNameController.text,
+                      'email': vEmailController.text,
+                      'designation': vDesignationController.text,
+                      'company': vCompanyNameController.text,
+                      'purpose': vPurposeController.text,
+                      'mobile': vContactNoController.text,
+                      'accompanyingCount': vTotalNoController.text,
+                      'appointment': 'Yes',
+                      'accompanying': 'No',
+                      'laptop': 'No',
+                      'laptopDetails': '',
+                      'department': '', // Will be filled by receptionist
+                      'host': '', // Will be filled by receptionist
+                      'timestamp': FieldValue.serverTimestamp(),
+                      'source': 'department',
+                      'visitor_id': visitorDocRef.id, // Store the visitor ID
+                    };
+                    
+                    await FirebaseFirestore.instance.collection('manual_registrations').add(manualRegistrationData);
                   } else {
+                    // Update existing visitor
                     await visitor!.reference.update(visitorData);
+                    
+                    // Also update in manual_registrations if it exists
+                    final manualRegQuery = await FirebaseFirestore.instance
+                        .collection('manual_registrations')
+                        .where('visitor_id', isEqualTo: visitor!.id)
+                        .limit(1)
+                        .get();
+                    
+                    if (manualRegQuery.docs.isNotEmpty) {
+                      final manualRegDoc = manualRegQuery.docs.first;
+                      await manualRegDoc.reference.update({
+                        'fullName': vNameController.text,
+                        'email': vEmailController.text,
+                        'designation': vDesignationController.text,
+                        'company': vCompanyNameController.text,
+                        'purpose': vPurposeController.text,
+                        'mobile': vContactNoController.text,
+                        'accompanyingCount': vTotalNoController.text,
+                      });
+                    }
                   }
                   Navigator.of(context).pop();
                 }

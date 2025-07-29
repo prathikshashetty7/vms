@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/system_theme.dart';
-import 'widgets/visitor_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -19,51 +17,6 @@ class HostPassesPage extends StatefulWidget {
 }
 
 class _HostPassesPageState extends State<HostPassesPage> {
-  String? departmentId;
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchReceptionistDepartment();
-  }
-
-  Future<void> _fetchReceptionistDepartment() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print('No current user found');
-      setState(() { loading = false; });
-      return;
-    }
-    
-    print('Fetching department for user: ${user.email}');
-    
-    final snap = await FirebaseFirestore.instance.collection('receptionist').where('email', isEqualTo: user.email).limit(1).get();
-    print('Found ${snap.docs.length} receptionist documents');
-    
-    if (snap.docs.isNotEmpty) {
-      final data = snap.docs.first.data();
-      print('Receptionist data: $data');
-      
-      // Check if departmentId exists, if not, set a default or handle it
-      String? deptId = data['departmentId'];
-      if (deptId == null || deptId.isEmpty) {
-        print('No departmentId found in receptionist document, using default');
-        // You can set a default department ID here or handle it differently
-        deptId = 'default_dept'; // Change this to your actual default department ID
-      }
-      
-      setState(() {
-        departmentId = deptId;
-        loading = false;
-      });
-      print('Set departmentId to: $departmentId');
-    } else {
-      print('No receptionist document found for email: ${user.email}');
-      setState(() { loading = false; });
-    }
-  }
-
   String _formatDate(dynamic date) {
     if (date == null) return '';
     if (date is Timestamp) {
@@ -78,12 +31,6 @@ class _HostPassesPageState extends State<HostPassesPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFD4E9FF),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
     return Scaffold(
       backgroundColor: Color(0xFFD4E9FF),
       appBar: AppBar(
@@ -91,114 +38,108 @@ class _HostPassesPageState extends State<HostPassesPage> {
           children: [
             Image.asset('assets/images/rdl.png', height: 36),
             const SizedBox(width: 12),
-            const Text('Host-Generated Passes', style: TextStyle(color: Colors.white)),
+            const Text('Host Passes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
         backgroundColor: Color(0xFF6CA4FE),
-        automaticallyImplyLeading: false,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+        automaticallyImplyLeading: false,
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: Padding(
+        padding: const EdgeInsets.all(0.0),
+        child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('passes')
                   .where('pass_generated_by', isEqualTo: 'host')
-                  .where('departmentId', isEqualTo: departmentId)
-                  .orderBy('generated_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                print('Querying passes collection for pass_generated_by: host');
-                print('Department ID: $departmentId');
-                
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
-                // Debug department status
-                if (departmentId == null) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No host-generated passes found.'));
+            }
+            final docs = snapshot.data!.docs;
+            if (docs.isEmpty) {
+              return const Center(child: Text('No host-generated passes found.'));
+            }
+            
+            // Sort the documents in memory by created_at
+            final sortedDocs = docs.toList();
+            sortedDocs.sort((a, b) {
+              final aData = a.data() as Map<String, dynamic>;
+              final bData = b.data() as Map<String, dynamic>;
+              final aCreatedAt = aData['created_at'] as Timestamp?;
+              final bCreatedAt = bData['created_at'] as Timestamp?;
+              
+              if (aCreatedAt == null && bCreatedAt == null) return 0;
+              if (aCreatedAt == null) return 1;
+              if (bCreatedAt == null) return -1;
+              
+              return bCreatedAt.compareTo(aCreatedAt); // descending order
+            });
+            
+            String searchQuery = '';
+            return Column(
                       children: [
-                        const Icon(Icons.warning, size: 64, color: Colors.orange),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Could not determine department.',
-                          style: TextStyle(fontSize: 16, color: Colors.orange),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'User email: ${FirebaseAuth.instance.currentUser?.email ?? 'Unknown'}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, company, or host',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
-                  );
-                }
-                
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No host-generated passes found.', style: TextStyle(color: Colors.orange)));
-                }
-                final passes = snapshot.data!.docs;
-                print('Found ${passes.length} host-generated passes for department: $departmentId');
-                
-                // Filter passes by department (already done in query, but keeping for clarity)
-                final filteredPasses = passes.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return data['departmentId'] == departmentId;
-                }).toList();
-                
-                print('Showing ${filteredPasses.length} passes for department: $departmentId');
-                
-                if (filteredPasses.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.info_outline, size: 64, color: Colors.orange),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No host-generated passes found.',
-                          style: const TextStyle(fontSize: 16, color: Colors.orange),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Department ID: $departmentId',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Total passes in database: ${passes.length}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                
-                return ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: filteredPasses.length,
+                    onChanged: (value) {
+                      searchQuery = value.toLowerCase();
+                      (context as Element).markNeedsBuild();
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: sortedDocs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return (data['v_name']?.toString().toLowerCase().contains(searchQuery) == true ||
+                              data['v_company_name']?.toString().toLowerCase().contains(searchQuery) == true ||
+                              data['host_name']?.toString().toLowerCase().contains(searchQuery) == true);
+                    }).length,
         itemBuilder: (context, index) {
-                    final doc = filteredPasses[index];
-                    final pass = doc.data() as Map<String, dynamic>;
+                      final filteredDocs = sortedDocs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return (data['v_name']?.toString().toLowerCase().contains(searchQuery) == true ||
+                                data['v_company_name']?.toString().toLowerCase().contains(searchQuery) == true ||
+                                data['host_name']?.toString().toLowerCase().contains(searchQuery) == true);
+                      }).toList();
+                      final data = filteredDocs[index].data() as Map<String, dynamic>;
                     Widget avatar;
-                    final photoBase64 = pass['photoBase64'];
-                    if (photoBase64 != null && photoBase64 != '') {
-                      final bytes = base64Decode(photoBase64);
+                      Uint8List? imageBytes;
+                      final photo = data['photoBase64'];
+                      if (photo != null && photo is String && photo.isNotEmpty) {
+                        try {
+                          imageBytes = const Base64Decoder().convert(photo);
+                        } catch (_) {
+                          imageBytes = null;
+                        }
+                      }
+                      if (imageBytes != null) {
                       avatar = CircleAvatar(
                         radius: 28,
                         backgroundColor: Color(0xFF6CA4FE).withOpacity(0.15),
-                        backgroundImage: MemoryImage(bytes),
+                          backgroundImage: MemoryImage(imageBytes),
                       );
                     } else {
                       avatar = const CircleAvatar(
                         radius: 28,
                         backgroundColor: Color(0xFF6CA4FE),
-                        child: Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
+                          child: Icon(Icons.person, size: 32, color: Colors.white),
                       );
                     }
+
                     return Card(
                       color: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -206,10 +147,8 @@ class _HostPassesPageState extends State<HostPassesPage> {
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       child: Padding(
                         padding: const EdgeInsets.all(18.0),
-                        child: Column(
+                          child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
                               children: [
                                 avatar,
                                 const SizedBox(width: 16),
@@ -217,45 +156,52 @@ class _HostPassesPageState extends State<HostPassesPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(pass['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016))),
+                                    Text(data['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
                                       const SizedBox(height: 4),
-                                      Text('Host: ${pass['host_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                                      Text('Company: ${pass['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                                      if (pass['department'] != null && pass['department'].toString().isNotEmpty)
-                                        Text('Department: ${pass['department']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
-                                      
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
+                                    Text('Company: ${data['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+                                    if (data['department'] != null && data['department'].toString().isNotEmpty)
+                                      Text('Department: ${data['department']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
                             Row(
                               children: [
                                 const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
                                 const SizedBox(width: 4),
-                                Text('Date: ${_formatDate(pass['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                                const SizedBox(width: 16),
-                                const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
-                                const SizedBox(width: 4),
-                                Text('Time: ${pass['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-                              ],
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Row(
+                                        Text('Date: ${data['created_at'] != null && data['created_at'] is Timestamp ? _formatDate((data['created_at'] as Timestamp).toDate()) : ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.print, color: Color(0xFF898AC4)),
+                                          icon: const Icon(Icons.print),
                                     tooltip: 'Print',
-                                    onPressed: () {
-                                      showDialog(
+                                          onPressed: () async {
+                                            // Show pass dialog
+                                            showGeneralDialog(
                                         context: context,
-                                        builder: (context) => Dialog(
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                          child: PassDetailDialog(pass: pass),
-                                        ),
+                                              barrierColor: Colors.white,
+                                              barrierDismissible: true,
+                                              barrierLabel: 'Pass',
+                                              pageBuilder: (context, anim1, anim2) {
+                                                return LayoutBuilder(
+                                                  builder: (context, constraints) {
+                                                    final double cardWidth = constraints.maxWidth > 360 ? 340 : (constraints.maxWidth - 20).clamp(200.0, 340.0);
+                                                    return SingleChildScrollView(
+                                                      child: ConstrainedBox(
+                                                        constraints: BoxConstraints(
+                                                          minHeight: constraints.maxHeight,
+                                                        ),
+                                                        child: IntrinsicHeight(
+                                                          child: Align(
+                                                            alignment: Alignment.center,
+                                                            child: _HostPassDetailDialog(pass: data, cardWidth: cardWidth),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+                                              },
                                       );
                                     },
                                   ),
@@ -263,59 +209,11 @@ class _HostPassesPageState extends State<HostPassesPage> {
                                     icon: const Icon(Icons.delete, color: Colors.red),
                                     tooltip: 'Delete',
                                     onPressed: () async {
-                                      // Show confirmation dialog
-                                      final shouldDelete = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: const Text('Confirm Deletion'),
-                                          content: Text('Are you sure you want to delete the pass for ${pass['v_name']}? This action cannot be undone.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(context).pop(false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () => Navigator.of(context).pop(true),
-                                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                              child: const Text('Delete', style: TextStyle(color: Colors.white)),
-                                            ),
-                                          ],
+                                            await FirebaseFirestore.instance.collection('passes').doc(filteredDocs[index].id).delete();
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pass deleted.')));
+                                          },
                                         ),
-                                      );
-                                      
-                                      if (shouldDelete == true) {
-                                        try {
-                                          // Delete from passes collection
-                                          await FirebaseFirestore.instance.collection('passes').doc(doc.id).delete();
-                                          
-                                          // Also update the visitor document to remove pass_generated flag
-                                          if (pass['visitorId'] != null) {
-                                            await FirebaseFirestore.instance.collection('visitor').doc(pass['visitorId']).update({
-                                              'pass_generated': false,
-                                              'pass_generated_by': null,
-                                            });
-                                          }
-                                          
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Pass for ${pass['v_name']} deleted successfully.'),
-                                                backgroundColor: Colors.green,
-                                              ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Error deleting pass: ${e.toString()}'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      }
-                                    },
+                                      ],
                                   ),
                                 ],
                               ),
@@ -325,8 +223,12 @@ class _HostPassesPageState extends State<HostPassesPage> {
                       ),
                     );
                   },
+                  ),
+                ),
+              ],
           );
         },
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -379,10 +281,10 @@ class _HostPassesPageState extends State<HostPassesPage> {
   }
 }
 
-class PassDetailDialog extends StatelessWidget {
+class _HostPassDetailDialog extends StatelessWidget {
   final Map<String, dynamic> pass;
-  final bool showPrint;
-  const PassDetailDialog({required this.pass, this.showPrint = true});
+  final double cardWidth;
+  const _HostPassDetailDialog({required this.pass, required this.cardWidth, Key? key}) : super(key: key);
 
   String _formatDate(dynamic date) {
     if (date == null) return '';
@@ -398,9 +300,8 @@ class PassDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final photo = pass['photoBase64'];
+    final photo = pass['photoBase64'] ?? pass['photo'];
     Uint8List? imageBytes;
-    Widget avatar;
     if (photo != null && photo is String && photo.isNotEmpty) {
       try {
         imageBytes = const Base64Decoder().convert(photo);
@@ -408,6 +309,7 @@ class PassDetailDialog extends StatelessWidget {
         imageBytes = null;
       }
     }
+    Widget avatar;
     if (imageBytes != null) {
       avatar = Container(
         width: 70,
@@ -463,7 +365,7 @@ class PassDetailDialog extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'RDL Technologies Pvt Ltd',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black, decoration: TextDecoration.none),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black, decoration: TextDecoration.none),
                     textAlign: TextAlign.left,
                     softWrap: true,
                     overflow: TextOverflow.visible,
@@ -474,7 +376,7 @@ class PassDetailDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Center(
-              child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18, decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+              child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 20, decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
             ),
             const SizedBox(height: 12),
             Row(
@@ -486,52 +388,139 @@ class PassDetailDialog extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Pass No      : 0', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                      Text('Visitor Name : ${pass['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(text: 'Pass No      : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                            TextSpan(text: '${pass['pass_no'] ?? pass['passNo'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                          ],
+                        ),
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(text: 'Visitor Name  : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                            TextSpan(text: '${pass['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                          ],
+                        ),
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                      ),
+                      if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(text: 'Company      : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                              TextSpan(text: '${pass['v_company_name']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                            ],
+                          ),
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                        ),
                       if (pass['v_designation'] != null && pass['v_designation'].toString().isNotEmpty)
-                        Text('Designation : ${pass['v_designation']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+                        RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(text: 'Designation   : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                              TextSpan(text: '${pass['v_designation']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                            ],
+                          ),
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                        ),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
-              Text('Company : ${pass['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            Text('Host     : ${pass['host_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            Text('Department: ${pass['department'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            Text('Date     : ${_formatDate(pass['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            Text('Time     : ${pass['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016), decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
+            if (pass['v_totalno'] != null && pass['v_totalno'].toString().isNotEmpty)
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Accompanying Count    : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                    TextSpan(text: '${pass['v_totalno']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                  ],
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
+            if (pass['purpose'] != null && pass['purpose'].toString().isNotEmpty)
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Purpose       : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                    TextSpan(text: '${pass['purpose']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                  ],
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
+            if (pass['department'] != null && pass['department'].toString().isNotEmpty)
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Department   : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                    TextSpan(text: '${pass['department']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                  ],
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
+            if (pass['host_name'] != null && pass['host_name'].toString().isNotEmpty)
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Host          : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                    TextSpan(text: '${pass['host_name']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                  ],
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
+            if (pass['created_at'] != null)
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Date     : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
+                    TextSpan(text: '${pass['created_at'] is Timestamp ? _formatDate((pass['created_at'] as Timestamp).toDate()) : pass['created_at']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
+                  ],
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+              ),
             const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (showPrint)
                   ElevatedButton.icon(
                     icon: const Icon(Icons.print),
                     label: const Text('Print'),
                     onPressed: () async {
-                      // Save print time to Firestore
-                      if (pass['visitorId'] != null) {
-                        await FirebaseFirestore.instance.collection('visitor').doc(pass['visitorId']).update({
-                          'printed_at': FieldValue.serverTimestamp(),
-                        });
-                      } else if (pass['id'] != null) {
+                    final now = Timestamp.now();
+                    try {
+                      print('Attempting to update printed_at for pass: ${pass['id']}');
+                      if (pass['id'] != null) {
                         await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
-                          'printed_at': FieldValue.serverTimestamp(),
+                          'printed_at': now,
                         });
+                        print('printed_at updated!');
+                      }
+                    } catch (e) {
+                      print('Error updating printed_at: ${e.toString()}');
                       }
                       
-                      // Save to Checked In/Out collection
+                    // Save to Checked In/Out collection for status page
                       try {
                         await FirebaseFirestore.instance.collection('checked_in_out').add({
-                          'visitor_name': pass['visitorName'] ?? pass['v_name'] ?? '',
+                        'visitor_name': pass['v_name'] ?? '',
                           'visitor_photo': pass['photoBase64'] ?? '',
                           'check_in_time': FieldValue.serverTimestamp(),
-                          'check_in_date': _formatDate(pass['v_date']),
+                        'check_in_date': _formatDateOnly(now.toDate()),
                           'status': 'Checked In',
-                          'pass_id': pass['id'] ?? pass['visitorId'] ?? '',
-                          'visitor_id': pass['visitorId'] ?? '',
+                        'pass_id': pass['id'] ?? '',
                           'created_at': FieldValue.serverTimestamp(),
                         });
                         print('Successfully saved to checked_in_out collection');
@@ -539,7 +528,6 @@ class PassDetailDialog extends StatelessWidget {
                         print('Error saving to checked_in_out collection: ${e.toString()}');
                       }
                       
-                      // Load logo bytes for PDF
                       final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
                       final logoUint8List = logoBytes.buffer.asUint8List();
                       await Printing.layoutPdf(
@@ -605,22 +593,77 @@ class PassDetailDialog extends StatelessWidget {
                                             child: pw.Column(
                                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                                               children: [
-                                                pw.Text('Pass No      : 0', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                                                pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                                              pw.Text('Pass No      : ${pass['pass_no'] ?? pass['passNo'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                              pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                              if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
+                                                pw.RichText(
+                                                  text: pw.TextSpan(
+                                                    children: [
+                                                      pw.TextSpan(text: 'Company      : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                                      pw.TextSpan(text: '${pass['v_company_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                                    ],
+                                                  ),
+                                                ),
                                                 if (pass['v_designation'] != null && pass['v_designation'].toString().isNotEmpty)
-                                                  pw.Text('Designation : ${pass['v_designation']}', style: pw.TextStyle(fontSize: 14)),
+                                                pw.RichText(
+                                                  text: pw.TextSpan(
+                                                    children: [
+                                                      pw.TextSpan(text: 'Designation   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                                      pw.TextSpan(text: '${pass['v_designation']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                                    ],
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
                                         ],
                                       ),
                                       pw.SizedBox(height: 10),
-                                      if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
-                                        pw.Text('Company : ${pass['v_company_name']}', style: pw.TextStyle(fontSize: 13)),
-                                      pw.Text('Host     : ${pass['host_name'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
-                                      pw.Text('Department: ${pass['department'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
-                                      pw.Text('Date     : ${_formatDate(pass['v_date'])}', style: pw.TextStyle(fontSize: 13)),
-                                      pw.Text('Time     : ${pass['v_time'] ?? ''}', style: pw.TextStyle(fontSize: 13)),
+                                    if (pass['v_totalno'] != null && pass['v_totalno'].toString().isNotEmpty)
+                                      pw.RichText(
+                                        text: pw.TextSpan(
+                                          children: [
+                                            pw.TextSpan(text: 'Accompanying Count    : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                            pw.TextSpan(text: '${pass['v_totalno']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                          ],
+                                        ),
+                                      ),
+                                    if (pass['purpose'] != null && pass['purpose'].toString().isNotEmpty)
+                                      pw.RichText(
+                                        text: pw.TextSpan(
+                                          children: [
+                                            pw.TextSpan(text: 'Purpose       : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                            pw.TextSpan(text: '${pass['purpose']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                          ],
+                                        ),
+                                      ),
+                                    if (pass['department'] != null && pass['department'].toString().isNotEmpty)
+                                      pw.RichText(
+                                        text: pw.TextSpan(
+                                          children: [
+                                            pw.TextSpan(text: 'Department   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                            pw.TextSpan(text: '${pass['department']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                          ],
+                                        ),
+                                      ),
+                                    if (pass['host_name'] != null && pass['host_name'].toString().isNotEmpty)
+                                      pw.RichText(
+                                        text: pw.TextSpan(
+                                          children: [
+                                            pw.TextSpan(text: 'Host          : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                            pw.TextSpan(text: '${pass['host_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                          ],
+                                        ),
+                                      ),
+                                    if (pass['created_at'] != null)
+                                      pw.RichText(
+                                        text: pw.TextSpan(
+                                          children: [
+                                            pw.TextSpan(text: 'Date     : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                            pw.TextSpan(text: '${pass['created_at'] is Timestamp ? _formatDate((pass['created_at'] as Timestamp).toDate()) : pass['created_at']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                          ],
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 );
@@ -638,5 +681,22 @@ class PassDetailDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _formatDateOnly(dynamic date) {
+  if (date == null) return '';
+  if (date is Timestamp) {
+    final d = date.toDate();
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+  if (date is DateTime) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+  try {
+    final d = DateTime.parse(date.toString());
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  } catch (_) {
+    return date.toString();
   }
 } 

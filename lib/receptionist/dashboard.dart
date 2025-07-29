@@ -897,7 +897,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     height: 50,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
+                                      color: Colors.black.withOpacity(0.1),
                                     ),
                                     child: photo != null && photo.isNotEmpty
                                         ? ClipOval(
@@ -905,11 +905,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Base64Decoder().convert(photo),
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
                                               },
                                             ),
                                           )
-                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
                                   ),
                                   const SizedBox(width: 16),
                                   // Visitor details
@@ -928,17 +928,17 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             if (dateInfo.isNotEmpty)
-                                                                                          Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
                                                 const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  dateInfo,
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
                                                   style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                ),
-                                              ],
-                                            ),
+                                                  ),
+                                                ],
+                                              ),
                                             if (timeInfo.isNotEmpty) ...[
                                               const SizedBox(height: 4),
                                               Row(
@@ -1252,7 +1252,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     height: 50,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
+                                      color: Colors.black.withOpacity(0.1),
                                     ),
                                     child: photo != null && photo.isNotEmpty
                                         ? ClipOval(
@@ -1260,11 +1260,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Base64Decoder().convert(photo),
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
                                               },
                                             ),
                                           )
-                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
                                   ),
                                   const SizedBox(width: 16),
                                   // Visitor details

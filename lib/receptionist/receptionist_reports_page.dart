@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'manual_registrations.dart';
 import 'dashboard.dart' show VisitorsPage;
 import 'kiosk_qr_page.dart';
+import 'host_passes_page.dart';
 
 class ReceptionistReportsPage extends StatelessWidget {
   const ReceptionistReportsPage({Key? key}) : super(key: key);
@@ -103,15 +104,7 @@ class ReceptionistReportsPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ManualRegistrationsPage(
-                          collection: 'passes',
-                          title: 'Host Passes',
-                          icon: Icons.person_outline,
-                          color: Color(0xFF6CA4FE),
-                          nameField: 'v_name',
-                          mobileField: 'v_contactno',
-                          timeField: 'created_at',
-                        ),
+                        builder: (context) => const HostPassesPage(),
                       ),
                     );
                   },

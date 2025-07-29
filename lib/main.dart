@@ -11,6 +11,7 @@ import 'receptionist/kiosk_qr_page.dart';
 import 'receptionist/visitor_tracking_page.dart';
 import 'splash_screen.dart';
 import 'receptionist/receptionist_reports_page.dart';
+import 'receptionist/qr_code_registrations.dart';
 
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();        
@@ -69,6 +70,7 @@ class _MyAppState extends State<MyApp> {
         '/kiosk_qr': (context) => const KioskRegistrationsPage(),
         '/visitor_tracking': (context) => const VisitorTrackingPage(),
         '/signin': (context) => const SignInPage(),
+        '/qr_registration': (context) => const QRCodeRegistrationsPage(),
       },
     );
   }
