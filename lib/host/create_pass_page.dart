@@ -322,6 +322,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                   });
                                   await FirebaseFirestore.instance.collection('passes').add({
                                     ...passData,
+                                    'pass_generated_by': 'host',
                                     'created_at': FieldValue.serverTimestamp(),
                                   });
                                   
