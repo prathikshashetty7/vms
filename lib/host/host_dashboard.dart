@@ -125,6 +125,12 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
   String? hostDept;
   String? hostDeptId;
   bool loading = true;
+  
+  // Dashboard statistics
+  int visitorsToday = 0;
+  int upcomingVisitors = 0;
+  int totalPasses = 0;
+  int pendingCheckouts = 0;
 
   @override
   void initState() {
@@ -156,8 +162,63 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
         hostDeptId = deptId;
         loading = false;
       });
+      
+      // Fetch dashboard statistics
+      await _fetchDashboardStats(deptId);
     } else {
       setState(() { loading = false; });
+    }
+  }
+
+  Future<void> _fetchDashboardStats(String? deptId) async {
+    if (deptId == null) return;
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    
+    try {
+      // Fetch visitors today
+      final todayVisitors = await FirebaseFirestore.instance
+          .collection('visitor')
+          .where('departmentId', isEqualTo: deptId)
+          .where('v_date', isGreaterThanOrEqualTo: today)
+          .where('v_date', isLessThan: tomorrow)
+          .get();
+      
+      // Fetch upcoming visitors (next 7 days)
+      final upcomingVisitorsQuery = await FirebaseFirestore.instance
+          .collection('visitor')
+          .where('departmentId', isEqualTo: deptId)
+          .where('v_date', isGreaterThanOrEqualTo: tomorrow)
+          .where('v_date', isLessThan: today.add(const Duration(days: 8)))
+          .get();
+      
+      // Fetch total passes generated
+      final totalPassesQuery = await FirebaseFirestore.instance
+          .collection('passes')
+          .where('departmentId', isEqualTo: deptId)
+          .get();
+      
+      // Fetch pending checkouts (passes without checkout_code)
+      final pendingCheckoutsQuery = await FirebaseFirestore.instance
+          .collection('passes')
+          .where('departmentId', isEqualTo: deptId)
+          .get();
+      
+      // Filter for passes without checkout_code in memory
+      final pendingCheckoutsCount = pendingCheckoutsQuery.docs
+          .where((doc) => doc.data()['checkout_code'] == null || doc.data()['checkout_code'].toString().isEmpty)
+          .length;
+      
+      setState(() {
+        visitorsToday = todayVisitors.docs.length;
+        upcomingVisitors = upcomingVisitorsQuery.docs.length;
+        totalPasses = totalPassesQuery.docs.length;
+        pendingCheckouts = pendingCheckoutsCount;
+      });
+    } catch (e) {
+      print('Error fetching dashboard stats: $e');
     }
   }
 
@@ -277,25 +338,25 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                     mainAxisSpacing: 18,
                     crossAxisSpacing: 18,
                     childAspectRatio: 0.85,
-                    children: const [
-                      _StyledStatCard(title: 'Visitors Today', value: '0', icon: Icons.groups),
-                      _StyledStatCard(title: 'Upcoming Visitors', value: '0', icon: Icons.event),
-                      _StyledStatCard(title: 'Total Passes', value: '0', icon: Icons.qr_code),
-                      _StyledStatCard(title: 'Pending Checkouts', value: '0', icon: Icons.logout),
+                    children: [
+                      _StyledStatCard(title: 'Visitors Today', value: visitorsToday.toString(), icon: Icons.groups),
+                      _StyledStatCard(title: 'Upcoming Visitors', value: upcomingVisitors.toString(), icon: Icons.event),
+                      _StyledStatCard(title: 'Total Passes', value: totalPasses.toString(), icon: Icons.qr_code),
+                      _StyledStatCard(title: 'Pending Checkouts', value: pendingCheckouts.toString(), icon: Icons.logout),
                     ],
                   );
                 } else {
                   // Wide: 1 row of 4
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Expanded(child: _StyledStatCard(title: 'Visitors Today', value: '0', icon: Icons.groups)),
-                      SizedBox(width: 18),
-                      Expanded(child: _StyledStatCard(title: 'Upcoming Visitors', value: '0', icon: Icons.event)),
-                      SizedBox(width: 18),
-                      Expanded(child: _StyledStatCard(title: 'Total Passes', value: '0', icon: Icons.qr_code)),
-                      SizedBox(width: 18),
-                      Expanded(child: _StyledStatCard(title: 'Pending Checkouts', value: '0', icon: Icons.logout)),
+                    children: [
+                      Expanded(child: _StyledStatCard(title: 'Visitors Today', value: visitorsToday.toString(), icon: Icons.groups)),
+                      const SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Upcoming Visitors', value: upcomingVisitors.toString(), icon: Icons.event)),
+                      const SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Total Passes', value: totalPasses.toString(), icon: Icons.qr_code)),
+                      const SizedBox(width: 18),
+                      Expanded(child: _StyledStatCard(title: 'Pending Checkouts', value: pendingCheckouts.toString(), icon: Icons.logout)),
                     ],
                   );
                 }
