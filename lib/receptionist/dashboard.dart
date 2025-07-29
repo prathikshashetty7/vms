@@ -7,6 +7,7 @@ import 'manual_entry_page.dart';
 import 'receptionist_reports_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert'; // Added for Base64Decoder
 
 class ReceptionistDashboard extends StatefulWidget {
   const ReceptionistDashboard({Key? key}) : super(key: key);
@@ -478,6 +479,7 @@ class _ActivityListWidget extends StatelessWidget {
     // Fetch more items than needed, then limit in Dart
     final manualStream = FirebaseFirestore.instance
         .collection('manual_registrations')
+        .where('source', isEqualTo: 'manual')  // Filter for manual registrations only
         .orderBy('timestamp', descending: true)
         .limit(30)
         .snapshots();
@@ -702,8 +704,15 @@ class _FrequentVisitorsStatCard extends StatelessWidget {
   }
 }
 
-class VisitorsPage extends StatelessWidget {
+class VisitorsPage extends StatefulWidget {
   const VisitorsPage({Key? key}) : super(key: key);
+
+  @override
+  State<VisitorsPage> createState() => _VisitorsPageState();
+}
+
+class _VisitorsPageState extends State<VisitorsPage> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -711,105 +720,627 @@ class VisitorsPage extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Checked In/Out', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(0xFF6CA4FE),
+          title: Row(
+            children: [
+              Image.asset('assets/images/rdl.png', height: 36),
+              const SizedBox(width: 12),
+              const Text('Checked In/Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins', fontSize: 22)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF6CA4FE),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          titleTextStyle: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+          automaticallyImplyLeading: false,
           bottom: const TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: 'Checked In'),
               Tab(text: 'Checked Out'),
             ],
           ),
         ),
-        backgroundColor: Color(0xFFD4E9FF),
-        body: StreamBuilder(
-          stream: FirebaseFirestore.instance.collection('visitor').orderBy('v_date', descending: true).snapshots(),
-          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No visitors found.'));
-            }
-            final docs = snapshot.data!.docs;
-            final checkedInDocs = docs.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return data['checked_out'] != true && data['printed_at'] != null;
-            }).toList();
-            final checkedOutDocs = docs.where((doc) => (doc.data() as Map<String, dynamic>)['checked_out'] == true).toList();
-            return TabBarView(
-              children: [
-                // Checked In tab
-                ListView.builder(
-                  itemCount: checkedInDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = checkedInDocs[index].data() as Map<String, dynamic>;
-                    final name = data['v_name'] ?? 'Unknown';
-                    final printedAt = data['printed_at'];
-                    String printInfo = '';
-                    if (printedAt != null) {
-                      final dt = printedAt is Timestamp ? printedAt.toDate() : DateTime.tryParse(printedAt.toString());
-                      if (dt != null) {
-                        printInfo = 'Printed: '
-                          '${dt.day.toString().padLeft(2, '0')}/'
-                          '${dt.month.toString().padLeft(2, '0')}/'
-                          '${dt.year} '
-                          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-                      }
+        backgroundColor: const Color(0xFFD4E9FF),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF6CA4FE)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE).withOpacity(0.2)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE).withOpacity(0.2)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Color(0xFF6CA4FE), width: 2),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('checked_in_out').snapshots(),
+                builder: (context, checkedInOutSnapshot) {
+                  if (checkedInOutSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!checkedInOutSnapshot.hasData || checkedInOutSnapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('No visitors found.', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold, fontSize: 18)));
+                  }
+                  
+                  // Process checked_in_out collection data (all visitors)
+                  final checkedInOutDocs = checkedInOutSnapshot.data?.docs ?? [];
+                  final allCheckedIn = <Map<String, dynamic>>[];
+                  final allCheckedOut = <Map<String, dynamic>>[];
+                  for (var doc in checkedInOutDocs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final checkInTime = data['check_in_time'];
+                    final status = data['status'];
+                    if (checkInTime != null && status == 'Checked In') {
+                      allCheckedIn.add({
+                        'name': data['visitor_name'] ?? 'Unknown',
+                        'pass_time': checkInTime,
+                        'type': 'all',
+                        'doc': data,
+                        'photo': data['visitor_photo'],
+                      });
+                    } else if (checkInTime != null && status == 'Checked Out') {
+                      allCheckedOut.add({
+                        'name': data['visitor_name'] ?? 'Unknown',
+                        'pass_time': checkInTime,
+                        'type': 'all',
+                        'doc': data,
+                        'photo': data['visitor_photo'],
+                      });
                     }
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: Icon(Icons.login, color: Colors.green),
-                        title: Row(
-                          children: [
-                            Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  }
+                  
+                  // Use only checked_in_out collection data
+                  final checkedInList = allCheckedIn;
+                  checkedInList.sort((a, b) {
+                    final aTime = a['pass_time'];
+                    final bTime = b['pass_time'];
+                    DateTime? aDt, bDt;
+                    if (aTime is Timestamp) aDt = aTime.toDate();
+                    else if (aTime is DateTime) aDt = aTime;
+                    else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                    if (bTime is Timestamp) bDt = bTime.toDate();
+                    else if (bTime is DateTime) bDt = bTime;
+                    else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                    if (aDt == null && bDt == null) return 0;
+                    if (aDt == null) return 1;
+                    if (bDt == null) return -1;
+                    return bDt.compareTo(aDt);
+                  });
+                  final checkedOutList = allCheckedOut;
+                  checkedOutList.sort((a, b) {
+                    final aTime = a['pass_time'];
+                    final bTime = b['pass_time'];
+                    DateTime? aDt, bDt;
+                    if (aTime is Timestamp) aDt = aTime.toDate();
+                    else if (aTime is DateTime) aDt = aTime;
+                    else if (aTime != null) aDt = DateTime.tryParse(aTime.toString());
+                    if (bTime is Timestamp) bDt = bTime.toDate();
+                    else if (bTime is DateTime) bDt = bTime;
+                    else if (bTime != null) bDt = DateTime.tryParse(bTime.toString());
+                    if (aDt == null && bDt == null) return 0;
+                    if (aDt == null) return 1;
+                    if (bDt == null) return -1;
+                    return bDt.compareTo(aDt);
+                  });
+                  final filteredCheckedInList = _searchQuery.isEmpty
+                    ? checkedInList
+                    : checkedInList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                  final filteredCheckedOutList = _searchQuery.isEmpty
+                    ? checkedOutList
+                    : checkedOutList.where((entry) => (entry['name'] ?? '').toLowerCase().contains(_searchQuery)).toList();
+                  return TabBarView(
+                    children: [
+                      // Checked In tab
+                      ListView.builder(
+                        itemCount: filteredCheckedInList.length,
+                        itemBuilder: (context, index) {
+                          final entry = filteredCheckedInList[index];
+                          final name = entry['visitor_name'] ?? entry['visitorName'] ?? entry['fullName'] ?? entry['v_name'] ?? entry['name'] ?? 'Unknown';
+                          final passTime = entry['pass_time'];
+                          final type = entry['type'] ?? '';
+                          final photo = entry['photo'];
+                          DateTime? dt;
+                          String dateInfo = '';
+                          String timeInfo = '';
+                          if (passTime != null) {
+                            if (passTime is Timestamp) dt = passTime.toDate();
+                            else if (passTime is DateTime) dt = passTime;
+                            else dt = DateTime.tryParse(passTime.toString());
+                            if (dt != null) {
+                              dateInfo = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+                              timeInfo = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                            }
+                          }
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        subtitle: printInfo.isNotEmpty ? Text(printInfo, style: const TextStyle(color: Color(0xFF6CA4FE))) : null,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.1),
+                                    ),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
+                                              },
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                                                    // Status dropdown
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6CA4FE),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: DropdownButton<String>(
+                                      value: 'Checked In',
+                                      underline: Container(),
+                                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      dropdownColor: const Color(0xFF6CA4FE),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Checked In',
+                                          child: Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Checked Out',
+                                          child: Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        ),
+                                      ],
+                                      onChanged: (String? newValue) async {
+                                        if (newValue == 'Checked Out') {
+                                          // Show dialog to enter checkout code
+                                          final checkoutCodeController = TextEditingController();
+                                          final checkoutCode = await showDialog<String>(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return Dialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                elevation: 8,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(24),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    gradient: const LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end: Alignment.bottomRight,
+                                                      colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+
+                                                      // Title with icon
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.logout,
+                                                            color: Colors.white,
+                                                            size: 24,
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          const Text(
+                                                            'Check Out Visitor',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 24,
+                                                              fontWeight: FontWeight.bold,
+                                                              fontFamily: 'Poppins',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 24),
+                                                      // Input field
+                                                      Container(
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.white,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withOpacity(0.1),
+                                                              blurRadius: 8,
+                                                              offset: const Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                                                                                 child: TextField(
+                                                           controller: checkoutCodeController,
+                                                           decoration: const InputDecoration(
+                                                             hintText: 'Enter code',
+                                                             border: InputBorder.none,
+                                                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                                             prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
+                                                           ),
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                          onSubmitted: (value) {
+                                                            Navigator.of(context).pop(value);
+                                                          },
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 24),
+                                                      // Action buttons
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: TextButton(
+                                                              onPressed: () => Navigator.of(context).pop(),
+                                                              style: TextButton.styleFrom(
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                              ),
+                                                              child: const Text(
+                                                                'Cancel',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Expanded(
+                                                            child: ElevatedButton(
+                                                              onPressed: () {
+                                                                Navigator.of(context).pop(checkoutCodeController.text);
+                                                              },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.white,
+                                                                foregroundColor: const Color(0xFF6CA4FE),
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                                elevation: 2,
+                                                              ),
+                                                              child: const Text(
+                                                                'Confirm',
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                          
+                                          if (checkoutCode != null && checkoutCode.isNotEmpty) {
+                                            // Get the visitor's pass data to validate checkout code
+                                            try {
+                                              final docId = checkedInOutSnapshot.data!.docs[index].id;
+                                              final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
+                                              final passId = visitorData['pass_id'];
+                                              
+                                              if (passId != null && passId.isNotEmpty) {
+                                                // Fetch the pass data to get the checkout code
+                                                final passDoc = await FirebaseFirestore.instance
+                                                    .collection('passes')
+                                                    .doc(passId)
+                                                    .get();
+                                                
+                                                if (passDoc.exists) {
+                                                  final passData = passDoc.data() as Map<String, dynamic>;
+                                                  final hostCheckoutCode = passData['checkout_code'];
+                                                  
+                                                  if (hostCheckoutCode != null && hostCheckoutCode.toString() == checkoutCode) {
+                                                    // Checkout code matches, proceed with checkout
+                                                    await FirebaseFirestore.instance
+                                                        .collection('checked_in_out')
+                                                        .doc(docId)
+                                                        .update({
+                                                      'status': 'Checked Out',
+                                                      'check_out_time': FieldValue.serverTimestamp(),
+                                                      'check_out_code': checkoutCode,
+                                                    });
+                                                    
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Visitor checked out successfully'),
+                                                          backgroundColor: Colors.green,
+                                                        ),
+                                                      );
+                                                    }
+                                                  } else {
+                                                    // Checkout code doesn't match
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Invalid checkout code. Please try again.'),
+                                                          backgroundColor: Colors.red,
+                                                        ),
+                                                      );
+                                                    }
+                                                  }
+                                                } else {
+                                                  // Pass document not found
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Pass data not found. Cannot validate checkout.'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              } else {
+                                                // No pass_id found
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('No pass associated with this visitor.'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error checking out visitor: $e'),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-                // Checked Out tab
-                ListView.builder(
-                  itemCount: checkedOutDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = checkedOutDocs[index].data() as Map<String, dynamic>;
-                    final name = data['v_name'] ?? 'Unknown';
-                    final status = 'Checked Out';
-                    final date = data['v_date'] is Timestamp ? (data['v_date'] as Timestamp).toDate() : null;
-                    return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(date != null ? '${date.day}/${date.month}/${date.year}' : ''),
-                        trailing: Text(status, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      // Checked Out tab
+                      ListView.builder(
+                        itemCount: filteredCheckedOutList.length,
+                        itemBuilder: (context, index) {
+                          final entry = filteredCheckedOutList[index];
+                          final name = entry['visitor_name'] ?? entry['visitorName'] ?? entry['fullName'] ?? entry['v_name'] ?? entry['name'] ?? 'Unknown';
+                          final passTime = entry['pass_time'];
+                          final type = entry['type'] ?? '';
+                          final photo = entry['photo'];
+                          DateTime? dt;
+                          String dateInfo = '';
+                          String timeInfo = '';
+                          if (passTime != null) {
+                            if (passTime is Timestamp) dt = passTime.toDate();
+                            else if (passTime is DateTime) dt = passTime;
+                            else dt = DateTime.tryParse(passTime.toString());
+                            if (dt != null) {
+                              dateInfo = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+                              timeInfo = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                            }
+                          }
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.1),
+                                    ),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
+                                              },
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFFEF4444)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Status badge
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8, right: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFF6CA4FE),
-          unselectedItemColor: Color(0xFF091016),
+          selectedItemColor: const Color(0xFF6CA4FE),
+          unselectedItemColor: const Color(0xFF091016),
           currentIndex: 2,
           onTap: (index) {
             if (index == 4) {

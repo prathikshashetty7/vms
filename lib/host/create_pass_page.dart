@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:vms/receptionist/host_passes_page.dart' show PassDetailDialog;
+import 'dart:math';
 
 class CreatePassPage extends StatefulWidget {
   const CreatePassPage({Key? key}) : super(key: key);
@@ -77,13 +78,27 @@ class _CreatePassPageState extends State<CreatePassPage> {
           await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({'photoBase64': base64Str});
         } catch (e) {
           print('Firestore update error: $e');
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save image: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save image: $e'), backgroundColor: Colors.red));
         }
       }
     } catch (e) {
       print('Image pick error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image selection failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image selection failed: $e'), backgroundColor: Colors.red));
     }
+  }
+
+  // Add this function to generate a unique 4-digit pass number
+  Future<int> _generateUniquePassNo() async {
+    final random = Random();
+    int passNo;
+    bool exists = true;
+    final passesRef = FirebaseFirestore.instance.collection('passes');
+    do {
+      passNo = 1000 + random.nextInt(9000); // 4-digit number
+      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+      exists = query.docs.isNotEmpty;
+    } while (exists);
+    return passNo;
   }
 
   @override
@@ -107,7 +122,11 @@ class _CreatePassPageState extends State<CreatePassPage> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No visitors found.'));
                 }
-                final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) {
+                final visitors = snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  data['docId'] = doc.id; // Add document ID to the data
+                  return data;
+                }).where((v) {
                   final date = v['v_date'];
                   if (date == null) return false;
                   DateTime visitDate;
@@ -123,16 +142,17 @@ class _CreatePassPageState extends State<CreatePassPage> {
                     }
                   }
                   final now = DateTime.now();
-                  // Only show if pass_generated_by == 'host'
-                  if (v['pass_generated_by'] != 'host') return false;
-                  return !visitDate.isBefore(DateTime(now.year, now.month, now.day));
+                  // Show if pass_generated_by == 'host' OR pass_generated == true
+                  final isHostGenerated = v['pass_generated_by'] == 'host';
+                  final isPassGenerated = v['pass_generated'] == true;
+                  return (isHostGenerated || isPassGenerated) && !visitDate.isBefore(DateTime(now.year, now.month, now.day));
                 }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: visitors.length,
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
-                    final visitorId = snapshot.data!.docs[idx].id;
+                    final visitorId = v['docId']; // Use the document ID from the data
                     Widget avatar;
                     final photoBase64 = v['photoBase64'] ?? _visitorImageBase64[idx];
                     if (photoBase64 != null && photoBase64 != '') {
@@ -149,6 +169,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                         child: Icon(Icons.person, size: 32, color: Color(0xFF6CA4FE)),
                       );
                     }
+                    final bool isGenerated = v['pass_generated'] == true;
                     return Card(
                       color: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -214,15 +235,18 @@ class _CreatePassPageState extends State<CreatePassPage> {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF898AC4),
+                                  backgroundColor: isGenerated ? Colors.green : Color(0xFF898AC4),
+                                  foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                                 ),
                                 icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
-                                label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                                onPressed: () async {
+                                label: Text(
+                                  isGenerated ? 'Generated' : 'Generate Pass',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                onPressed: isGenerated ? () {} : () async {
                                   // Prepare pass data for preview
-                                  final visitorId = snapshot.data!.docs[idx].id;
                                   dynamic vDate = v['v_date'];
                                   Timestamp passDate;
                                   if (vDate is Timestamp) {
@@ -236,6 +260,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       passDate = Timestamp.now();
                                     }
                                   }
+                                  final passNo = await _generateUniquePassNo();
                                   final passData = {
                                     'visitorId': visitorId,
                                     'v_name': v['v_name'] ?? '',
@@ -247,6 +272,9 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'v_time': v['v_time'],
                                     'photoBase64': v['photoBase64'] ?? _visitorImageBase64[idx],
                                     'v_designation': v['v_designation'] ?? '',
+                                    'pass_no': passNo,
+                                    'v_totalno': v['v_totalno'] ?? '',
+                                    'purpose': v['purpose'] ?? '',
                                   };
                                   final confirm = await showDialog<bool>(
                                     context: context,
@@ -261,19 +289,19 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                             _VisitorPassCard(
                                               visitor: passData,
                                               hostName: hostName ?? '',
-                                              passNo: 0, // You can update this if you have a pass number
+                                              passNo: passNo,
                                               imageBytes: passData['photoBase64'] != null && passData['photoBase64'] != '' ? base64Decode(passData['photoBase64']) : null,
                                               departmentName: departmentName ?? '',
                                             ),
                                             const SizedBox(height: 18),
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 TextButton(
                                                   onPressed: () => Navigator.of(context).pop(false),
                                                   child: const Text('Cancel'),
                                                 ),
-                                                const SizedBox(width: 8),
+                                                const SizedBox(width: 16),
                                                 ElevatedButton(
                                                   onPressed: () => Navigator.of(context).pop(true),
                                                   child: const Text('Generate'),
@@ -294,12 +322,17 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                   });
                                   await FirebaseFirestore.instance.collection('passes').add({
                                     ...passData,
+                                    'pass_generated_by': 'host',
                                     'created_at': FieldValue.serverTimestamp(),
                                   });
+                                  // Force UI refresh
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
                                   // Show a snackbar for success after generating
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Pass generated successfully!')),
+                                      const SnackBar(content: Text('Pass generated successfully!'), backgroundColor: Colors.green),
                                     );
                                   }
                                 },
@@ -350,7 +383,7 @@ class _VisitorPassCard extends StatelessWidget {
       );
     }
     return Container(
-      width: 340,
+      width: 300,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -361,6 +394,7 @@ class _VisitorPassCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Company name at the top
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -379,6 +413,7 @@ class _VisitorPassCard extends StatelessWidget {
             child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           const SizedBox(height: 12),
+          // Image on left with details beside it
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -388,22 +423,104 @@ class _VisitorPassCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pass No      : $passNo', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
-                    Text('Visitor Name : ${visitor['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF091016))),
-                    if (visitor['v_designation'] != null && visitor['v_designation'].toString().isNotEmpty)
-                      Text('Designation : ${visitor['v_designation']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016))),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          const TextSpan(text: 'Pass No      : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                          TextSpan(text: '$passNo', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          const TextSpan(text: 'Visitor Name : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                          TextSpan(text: '${visitor['v_name'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (visitor['v_designation'] != null && visitor['v_designation'].toString().isNotEmpty) ...[
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(text: 'Designation : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                            TextSpan(text: '${visitor['v_designation']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (visitor['v_company_name'] != null && visitor['v_company_name'].toString().isNotEmpty)
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(text: 'Company : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                            TextSpan(text: '${visitor['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          if (visitor['v_company_name'] != null && visitor['v_company_name'].toString().isNotEmpty)
-            Text('Company : ${visitor['v_company_name']}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Host     : $hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Department: $departmentName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Date     : ${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
-          Text('Time     : ${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+          // Details below the image
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Accompanying Count: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['v_totalno'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Purpose: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['purpose'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Department: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '$departmentName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Host     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '$hostName', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Date     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${_formatDate(visitor['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(text: 'Time     : ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF091016))),
+                TextSpan(text: '${visitor['v_time'] ?? ''}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016))),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -420,4 +537,4 @@ String _formatDate(dynamic date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
   return date.toString();
-} 
+}
