@@ -66,7 +66,7 @@ class _MyAppState extends State<MyApp> {
         '/host_passes': (context) => const HostPassesPage(),
         '/manual_entry': (context) => const ManualEntryPage(),
         '/receptionist_reports': (context) => ReceptionistReportsPage(),
-        '/kiosk_qr': (context) => const KioskQRPage(),
+        '/kiosk_qr': (context) => const KioskRegistrationsPage(),
         '/visitor_tracking': (context) => const VisitorTrackingPage(),
         '/signin': (context) => const SignInPage(),
       },

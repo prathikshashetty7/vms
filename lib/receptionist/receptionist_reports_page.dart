@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'themed_visitor_list_page.dart';
+import 'manual_registrations.dart';
 import 'dashboard.dart' show VisitorsPage;
+import 'kiosk_qr_page.dart';
 
 class ReceptionistReportsPage extends StatelessWidget {
   const ReceptionistReportsPage({Key? key}) : super(key: key);
@@ -34,16 +35,16 @@ class ReceptionistReportsPage extends StatelessWidget {
               _SectionCard(
                 title: 'Manual Registrations',
                 icon: Icons.edit_document,
-                color: Colors.deepPurpleAccent,
+                color: Color(0xFF6CA4FE),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThemedVisitorListPage(
+                      builder: (context) => ManualRegistrationsPage(
                         collection: 'manual_registrations',
                         title: 'Manual Registrations',
                         icon: Icons.edit_document,
-                        color: Colors.deepPurpleAccent,
+                        color: Color(0xFF6CA4FE),
                         nameField: 'fullName',
                         mobileField: 'mobile',
                         timeField: 'timestamp',
@@ -56,33 +57,17 @@ class ReceptionistReportsPage extends StatelessWidget {
               _SectionCard(
                 title: 'Kiosk Registrations',
                 icon: Icons.qr_code,
-                color: Colors.teal,
+                color: Color(0xFF6CA4FE),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThemedVisitorListPage(
-                        collection: 'kiosk_registrations',
-                        title: 'Kiosk Registrations',
-                        icon: Icons.qr_code,
-                        color: Colors.teal,
-                        nameField: 'fullName',
-                        mobileField: 'mobile',
-                        timeField: 'timestamp',
-                      ),
+                      builder: (context) => const KioskRegistrationsPage(),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 24),
-              _SectionCard(
-                title: 'Host Passes',
-                icon: Icons.vpn_key,
-                color: Colors.orangeAccent,
-                onTap: () {
-                  Navigator.pushNamed(context, '/host_passes');
-                },
-              ),
+              
               const SizedBox(height: 24),
               _SectionCard(
                 title: 'QR Code Registrations',
@@ -93,7 +78,7 @@ class ReceptionistReportsPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThemedVisitorListPage(
+                      builder: (context) => ManualRegistrationsPage(
                         collection: 'qr_code_registrations',
                         title: 'QR Code Registrations',
                         icon: Icons.qr_code_2,
@@ -107,29 +92,31 @@ class ReceptionistReportsPage extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 24),
-              _SectionCard(
-                title: 'Appointed Visitors',
-                icon: Icons.event_available,
-                color: Color(0xFF6CA4FE),
-                subtitle: 'Details entered by the department',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ThemedVisitorListPage(
-                        collection: 'visitor',
-                        title: 'Appointed Visitors',
-                        icon: Icons.event_available,
-                        color: Color(0xFF60A5FA),
-                        nameField: 'v_name',
-                        mobileField: 'v_contactno',
-                        timeField: 'v_date',
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: _SectionCard(
+                  title: 'Host Passes',
+                  icon: Icons.person_outline,
+                  color: Color(0xFF6CA4FE),
+                  subtitle: 'Invited by host',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ManualRegistrationsPage(
+                          collection: 'passes',
+                          title: 'Host Passes',
+                          icon: Icons.person_outline,
+                          color: Color(0xFF6CA4FE),
+                          nameField: 'v_name',
+                          mobileField: 'v_contactno',
+                          timeField: 'created_at',
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -195,7 +182,6 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const themeColor = Color(0xFF6CA4FE); // Receptionist theme color
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
@@ -207,10 +193,10 @@ class _SectionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white, // solid white background
             borderRadius: BorderRadius.circular(36),
-            border: Border.all(color: themeColor.withOpacity(0.13), width: 1.5),
+            border: Border.all(color: color.withOpacity(0.13), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: themeColor.withOpacity(0.18),
+                color: color.withOpacity(0.18),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
@@ -223,13 +209,13 @@ class _SectionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [themeColor, themeColor.withOpacity(0.7)],
+                    colors: [color, color.withOpacity(0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: themeColor.withOpacity(0.25),
+                      color: color.withOpacity(0.25),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -258,7 +244,7 @@ class _SectionCard extends StatelessWidget {
                     Text(
                       subtitle ?? _subtitleForTitle(title),
                       style: TextStyle(
-                        color: themeColor.withOpacity(0.7),
+                        color: color.withOpacity(0.7),
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.2,
@@ -267,7 +253,7 @@ class _SectionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, color: Color(0xFF005FFE), size: 24),
+              Icon(Icons.arrow_forward_ios, color: color, size: 24),
               const SizedBox(width: 18),
             ],
           ),
