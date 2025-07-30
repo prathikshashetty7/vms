@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
@@ -14,13 +15,16 @@ import 'receptionist/receptionist_reports_page.dart';
 import 'receptionist/qr_code_registrations.dart';
 
 void main() async{          
-  WidgetsFlutterBinding.ensureInitialized();        
+  WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy(); // Enable path-based URLs for web
   await Firebase.initializeApp(                     
     options: const FirebaseOptions(                 
       apiKey: 'AIzaSyByxS4j4y-tOx1AbTqxm7kv8zTOj-P1wNc',
       appId: '1:262645349308:android:473868969c622d4ac089b9',
       messagingSenderId: '262645349308',
       projectId: 'visitor-management-d97ea',
+      authDomain: 'visitor-management-d97ea.firebaseapp.com',
+      storageBucket: 'visitor-management-d97ea.appspot.com',
     ),
   );
   // Print the Firebase project ID for debugging
@@ -60,17 +64,34 @@ class _MyAppState extends State<MyApp> {
         brightness: Brightness.dark,
       ),
       themeMode: _themeMode,
-      home: SplashScreen(),
-      routes: {
-        '/dashboard': (context) => const ReceptionistDashboard(),
-        '/receptionist_dashboard': (context) => const ReceptionistDashboard(),
-        '/host_passes': (context) => const HostPassesPage(),
-        '/manual_entry': (context) => const ManualEntryPage(),
-        '/receptionist_reports': (context) => ReceptionistReportsPage(),
-        '/kiosk_qr': (context) => const KioskRegistrationsPage(),
-        '/visitor_tracking': (context) => const VisitorTrackingPage(),
-        '/signin': (context) => const SignInPage(),
-        '/qr_registration': (context) => const QRCodeRegistrationsPage(),
+      initialRoute: '/',
+      onGenerateRoute: (RouteSettings settings) {
+        // Handle direct URL navigation for web
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (context) => SplashScreen());
+          case '/dashboard':
+            return MaterialPageRoute(builder: (context) => const ReceptionistDashboard());
+          case '/receptionist_dashboard':
+            return MaterialPageRoute(builder: (context) => const ReceptionistDashboard());
+          case '/host_passes':
+            return MaterialPageRoute(builder: (context) => const HostPassesPage());
+          case '/manual_entry':
+            return MaterialPageRoute(builder: (context) => const ManualEntryPage());
+          case '/receptionist_reports':
+            return MaterialPageRoute(builder: (context) => ReceptionistReportsPage());
+          case '/kiosk_qr':
+            return MaterialPageRoute(builder: (context) => const KioskRegistrationsPage());
+          case '/visitor_tracking':
+            return MaterialPageRoute(builder: (context) => const VisitorTrackingPage());
+          case '/signin':
+            return MaterialPageRoute(builder: (context) => const SignInPage());
+          case '/qr_registration':
+            return MaterialPageRoute(builder: (context) => const QRCodeRegistrationsPage());
+          default:
+            // For any unknown route, go to splash screen
+            return MaterialPageRoute(builder: (context) => SplashScreen());
+        }
       },
     );
   }
