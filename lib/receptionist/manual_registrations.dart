@@ -1092,15 +1092,15 @@ class _ManualPassDetailDialog extends StatelessWidget {
                                             ),
                                           )
                                         else
-                                          pw.Container(
-                                            width: 70,
-                                            height: 70,
-                                            decoration: pw.BoxDecoration(
-                                              color: PdfColor.fromInt(0xFF6CA4FE),
-                                              borderRadius: pw.BorderRadius.circular(4),
-                                            ),
-                                            child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                                        pw.Container(
+                                          width: 70,
+                                          height: 70,
+                                          decoration: pw.BoxDecoration(
+                                            color: PdfColor.fromInt(0xFF6CA4FE),
+                                            borderRadius: pw.BorderRadius.circular(4),
                                           ),
+                                          child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                                        ),
                                         pw.SizedBox(width: 16),
                                         pw.Expanded(
                                           child: pw.Column(
@@ -1213,7 +1213,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
       ),
     );
   }
-}
+} 
 
 String _formatDateOnly(dynamic date) {
   if (date == null) return '';

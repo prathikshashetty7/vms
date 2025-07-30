@@ -33,6 +33,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
   late Animation<double> _buttonScale;
   String designation = '';
   String? selectedVisitorId; // Add variable to store selected visitor ID
+  String? departmentId;
   // Add focus nodes for each field
   final _fullNameFocus = FocusNode();
   final _mobileFocus = FocusNode();
@@ -202,15 +203,15 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
       ),
       backgroundColor: Color(0xFFD4E9FF),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('department').snapshots(),
+        stream: FirebaseFirestore.instance.collection('department').limit(50).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final departments = snapshot.data!.docs
-            .map((doc) => doc['d_name'] as String)
-            .where((name) => name.isNotEmpty)
-            .toList();
+              .map((doc) => {'id': doc.id, 'name': doc['d_name'] as String})
+              .where((dept) => dept['name']!.isNotEmpty)
+              .toList();
           return Stack(
             children: [
               // Gradient wavy header
@@ -381,99 +382,62 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                             const SizedBox(height: 16),
                             _buildDropdown('Do you have an appointment', yesNo, appointment, (v) => setState(() => appointment = v!)),
                             const SizedBox(height: 16),
-                            StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance.collection('department').snapshots(),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return Center(child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: CircularProgressIndicator(),
-      ));
-    }
-    final departments = snapshot.data!.docs
-      .map((doc) => doc['d_name'] as String)
-      .where((name) => name.isNotEmpty)
-      .toSet() // Remove duplicates
-      .toList();
-    
-    // Create unique dropdown items
-    final dropdownItems = <String>['Select Dept'];
-    dropdownItems.addAll(departments);
-    
-    // Ensure the current department is in the list if it's not empty
-    if (department.isNotEmpty && 
-        department != 'Select Dept' && 
-        !dropdownItems.contains(department)) {
-      dropdownItems.add(department);
-    }
-    
-    // Validate the selected value
-    final validValue = dropdownItems.contains(department) ? department : 'Select Dept';
-    
-    return _buildDropdown(
-      'Department',
-      dropdownItems,
-      validValue,
-      (v) {
-        if (v != null && v != 'Select Dept') {
-          setState(() => department = v);
-        } else {
-          setState(() => department = '');
-        }
-      },
-    );
+                            // Department dropdown
+                            _buildDropdown(
+  'Department',
+  [
+    'Select Dept',
+    ...departments.map((dept) => dept['name'] as String),
+  ],
+  department,
+  (value) {
+    setState(() {
+      department = value!;
+      final selected = departments.firstWhere(
+        (d) => d['name'] == value,
+        orElse: () => {'id': '', 'name': 'Select Dept'},
+      );
+      departmentId = selected['id'];
+      host = '';
+    });
   },
 ),
-                            const SizedBox(height: 16),
-                            StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('host')
-                                  .snapshots(),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return Center(child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 12),
-                                    child: CircularProgressIndicator(),
-                                  ));
-                                }
-                                
-                                // Extract host names from host collection
-                                final hosts = snapshot.data!.docs;
-                                final allHostNames = hosts
-                                    .map((doc) => doc.data() as Map<String, dynamic>)
-                                    .where((data) => data['emp_name'] != null && data['emp_name'].toString().isNotEmpty)
-                                    .map((data) => data['emp_name'].toString())
-                                    .toSet()
-                                    .toList();
-                                
-                                // Add "Select Host" option at the beginning
-                                final hostNames = <String>['Select Host'];
-                                hostNames.addAll(allHostNames);
-                                
-                                // Sort all hosts alphabetically (except "Select Host")
-                                if (hostNames.length > 1) {
-                                  final selectHost = hostNames[0];
-                                  final remainingHosts = hostNames.sublist(1)..sort();
-                                  hostNames.clear();
-                                  hostNames.add(selectHost);
-                                  hostNames.addAll(remainingHosts);
-                                }
-                                
-                                return _buildDropdown(
-                                  'Host Name',
-                                  hostNames,
-                                  host.isEmpty ? 'Select Host' : host,
-                                  (v) {
-                                    if (v != null && v != 'Select Host') {
-                                      setState(() => host = v);
-                                    } else {
-                                      setState(() => host = '');
-                                    }
-                                  },
-                                  hintText: 'Select Host',
-                                );
-                              },
-                            ),
+const SizedBox(height: 16),
+// Only show host dropdown if a department is selected
+if (departmentId != null && departmentId!.isNotEmpty)
+  StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('host')
+        .where('departmentId', isEqualTo: departmentId)
+        .limit(50)
+        .snapshots(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError) {
+        return Text('Error: ${snapshot.error}');
+      }
+      final hosts = snapshot.data!.docs;
+      final hostNames = <String>['Select Host'];
+      hostNames.addAll(
+        hosts
+          .map((doc) => (doc.data() as Map<String, dynamic>)['emp_name'] as String)
+          .where((name) => name.isNotEmpty)
+          .toList()
+      );
+      return _buildDropdown(
+        'Host Name',
+        hostNames,
+        host.isEmpty ? 'Select Host' : host,
+        (value) {
+          setState(() {
+            host = value == 'Select Host' ? '' : value!;
+          });
+        },
+      );
+    },
+  ),
                             const SizedBox(height: 16),
                             // Conditional accompanying visitors section
                             if (_showDeptTotalVisitors) ...[

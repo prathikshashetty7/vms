@@ -169,7 +169,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
           children: [
             Image.asset('assets/images/rdl.png', height: 36),
             const SizedBox(width: 12),
-            const Text('QR Code Registration', style: TextStyle(color: Colors.white)),
+            const Text('Visitor Registration', style: TextStyle(color: Colors.white)),
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -241,7 +241,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                           children: [
                             Center(
                               child: Text(
-                                'QR Code Registration',
+                                'Please fill the form',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontSize: 32,
