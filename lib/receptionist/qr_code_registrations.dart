@@ -22,13 +22,22 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
   String? purposeOther;
   Uint8List? visitorPhoto;
   bool _isSaving = false;
+  bool _isPhotoLoading = false; // Add this variable to your state
   final List<String> yesNo = ['Yes', 'No'];
   List<String> departments = [];
   bool _departmentsLoading = true;
   late AnimationController _buttonController;
   late Animation<double> _buttonScale;
   String designation = '';
-  
+  String? departmentId = ''; // Add this line
+  // ...existing state variables...
+
+Map<String, List<String>> _hostsCache = {};
+bool _hostsLoading = false;
+List<String> _currentHosts = ['Select Host'];
+
+// ...focus nodes and other variables...
+
   // Add focus nodes for each field
   final _fullNameFocus = FocusNode();
   final _mobileFocus = FocusNode();
@@ -78,14 +87,12 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
   }
 
   Future<void> _pickPhoto() async {
+    setState(() => _isPhotoLoading = true); // Show loading indicator
+
     final ImagePicker picker = ImagePicker();
-    
     XFile? image;
     try {
-      // Directly open camera without showing dialog
       image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
-      
-      // If camera didn't work, show a helpful message
       if (image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -94,6 +101,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
             duration: Duration(seconds: 3),
           ),
         );
+        setState(() => _isPhotoLoading = false);
         return;
       }
     } catch (e) {
@@ -103,26 +111,28 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
           backgroundColor: Colors.red,
         ),
       );
+      setState(() => _isPhotoLoading = false);
       return;
     }
-    
+
     if (image != null) {
       final bytes = await image.readAsBytes();
-      // Decode the image
       img.Image? original = img.decodeImage(bytes);
       if (original != null) {
-        // Resize to a max width of 400px
         img.Image resized = img.copyResize(original, width: 400);
-        // Encode as JPEG with quality 60
         final compressedBytes = img.encodeJpg(resized, quality: 60);
         setState(() {
           visitorPhoto = Uint8List.fromList(compressedBytes);
+          _isPhotoLoading = false;
         });
       } else {
         setState(() {
           visitorPhoto = bytes;
+          _isPhotoLoading = false;
         });
       }
+    } else {
+      setState(() => _isPhotoLoading = false);
     }
   }
 
@@ -183,9 +193,12 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
             return const Center(child: CircularProgressIndicator());
           }
           final departments = snapshot.data!.docs
-            .map((doc) => doc['d_name'] as String)
-            .where((name) => name.isNotEmpty)
-            .toList();
+  .map((doc) => {
+    'id': doc.id,
+    'name': doc['d_name'] as String,
+  })
+  .where((dept) => dept['name'] != null && dept['name']!.isNotEmpty)
+  .toList();
           return Stack(
             children: [
               // Gradient wavy header
@@ -267,14 +280,20 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                       ],
                                       border: Border.all(color: Colors.blueAccent, width: 3),
                                     ),
-                                    child: CircleAvatar(
-                                      radius: 48,
-                                      backgroundColor: Colors.transparent,
-                                      backgroundImage: visitorPhoto != null ? MemoryImage(visitorPhoto!) : null,
-                                      child: visitorPhoto == null
-                                          ? Icon(Icons.person, color: Colors.black, size: 54, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)])
-                                          : null,
-                                    ),
+                                    child: _isPhotoLoading
+                                        ? const SizedBox(
+                                            height: 96,
+                                            width: 96,
+                                            child: Center(child: CircularProgressIndicator()),
+                                          )
+                                        : CircleAvatar(
+                                            radius: 48,
+                                            backgroundColor: Colors.transparent,
+                                            backgroundImage: visitorPhoto != null ? MemoryImage(visitorPhoto!) : null,
+                                            child: visitorPhoto == null
+                                                ? Icon(Icons.person, color: Colors.black, size: 54, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)])
+                                                : null,
+                                          ),
                                   ),
                                   const SizedBox(height: 8),
                                   ElevatedButton.icon(
@@ -356,99 +375,71 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                             const SizedBox(height: 16),
                             _buildDropdown('Do you have an appointment', yesNo, appointment, (v) => setState(() => appointment = v!)),
                             const SizedBox(height: 16),
-                            StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance.collection('department').snapshots(),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return Center(child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: CircularProgressIndicator(),
-      ));
-    }
-    final departments = snapshot.data!.docs
-      .map((doc) => doc['d_name'] as String)
-      .where((name) => name.isNotEmpty)
-      .toSet() // Remove duplicates
-      .toList();
-    
-    // Create unique dropdown items
-    final dropdownItems = <String>['Select Dept'];
-    dropdownItems.addAll(departments);
-    
-    // Ensure the current department is in the list if it's not empty
-    if (department.isNotEmpty && 
-        department != 'Select Dept' && 
-        !dropdownItems.contains(department)) {
-      dropdownItems.add(department);
-    }
-    
-    // Validate the selected value
-    final validValue = dropdownItems.contains(department) ? department : 'Select Dept';
-    
-    return _buildDropdown(
-      'Department',
-      dropdownItems,
-      validValue,
-      (v) {
-        if (v != null && v != 'Select Dept') {
-          setState(() => department = v);
-        } else {
-          setState(() => department = '');
-        }
-      },
-    );
-  },
-),
-                            const SizedBox(height: 16),
-                            StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('host')
-                                  .snapshots(),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return Center(child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 12),
-                                    child: CircularProgressIndicator(),
-                                  ));
+                            // Department dropdown
+                            _buildDropdown(
+                              'Department',
+                              [
+                                'Select Dept',
+                                ...departments.map((dept) => dept['name'] as String),
+                              ],
+                              department,
+                              (value) async {
+                                setState(() {
+                                  department = value!;
+                                  final selected = departments.firstWhere(
+                                    (d) => d['name'] == value,
+                                    orElse: () => {'id': '', 'name': 'Select Dept'},
+                                  );
+                                  departmentId = selected['id'];
+                                  host = '';
+                                  _hostsLoading = true;
+                                  _currentHosts = ['Select Host'];
+                                });
+
+                                // Fetch hosts only if not cached
+                                if (departmentId != null && departmentId!.isNotEmpty) {
+                                  if (_hostsCache.containsKey(departmentId)) {
+                                    setState(() {
+                                      _currentHosts = _hostsCache[departmentId]!;
+                                      _hostsLoading = false;
+                                    });
+                                  } else {
+                                    final hostSnapshot = await FirebaseFirestore.instance
+                                        .collection('host')
+                                        .where('departmentId', isEqualTo: departmentId)
+                                        .limit(50)
+                                        .get();
+                                    final hostNames = <String>['Select Host'];
+                                    hostNames.addAll(
+                                      hostSnapshot.docs
+                                          .map((doc) => (doc.data() as Map<String, dynamic>)['emp_name'] as String)
+                                          .where((name) => name.isNotEmpty)
+                                          .toList(),
+                                    );
+                                    setState(() {
+                                      _hostsCache[departmentId!] = hostNames;
+                                      _currentHosts = hostNames;
+                                      _hostsLoading = false;
+                                    });
+                                  }
                                 }
-                                
-                                // Extract host names from host collection
-                                final hosts = snapshot.data!.docs;
-                                final allHostNames = hosts
-                                    .map((doc) => doc.data() as Map<String, dynamic>)
-                                    .where((data) => data['emp_name'] != null && data['emp_name'].toString().isNotEmpty)
-                                    .map((data) => data['emp_name'].toString())
-                                    .toSet()
-                                    .toList();
-                                
-                                // Add "Select Host" option at the beginning
-                                final hostNames = <String>['Select Host'];
-                                hostNames.addAll(allHostNames);
-                                
-                                // Sort all hosts alphabetically (except "Select Host")
-                                if (hostNames.length > 1) {
-                                  final selectHost = hostNames[0];
-                                  final remainingHosts = hostNames.sublist(1)..sort();
-                                  hostNames.clear();
-                                  hostNames.add(selectHost);
-                                  hostNames.addAll(remainingHosts);
-                                }
-                                
-                                return _buildDropdown(
-                                  'Host Name',
-                                  hostNames,
-                                  host.isEmpty ? 'Select Host' : host,
-                                  (v) {
-                                    if (v != null && v != 'Select Host') {
-                                      setState(() => host = v);
-                                    } else {
-                                      setState(() => host = '');
-                                    }
-                                  },
-                                  hintText: 'Select Host',
-                                );
                               },
                             ),
+                            const SizedBox(height: 16),
+                            // Host dropdown (show loading or dropdown)
+                            if (departmentId != null && departmentId!.isNotEmpty)
+                              _hostsLoading
+                                  ? Center(child: CircularProgressIndicator())
+                                  : _buildDropdown(
+                                      'Host Name',
+                                      _currentHosts,
+                                      host.isEmpty ? 'Select Host' : host,
+                                      (value) {
+                                        setState(() {
+                                          host = value == 'Select Host' ? '' : value!;
+                                        });
+                                      },
+                                    ),
                             const SizedBox(height: 16),
                             _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
                             const SizedBox(height: 16),
@@ -491,31 +482,24 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                   label: const Text('Register Visitor', style: TextStyle(fontSize: 18)),
                                   onPressed: () async {
                                     if (_isSaving) return;
-                                    
-                                    // Validate form first before setting loading state
+
                                     if (!_formKey.currentState!.validate()) {
-                                      // Show error message for incomplete form
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please fill all required fields'),
-                                          backgroundColor: Colors.red,
-                                          duration: Duration(seconds: 2),
-                                        ),
+                                        const SnackBar(content: Text('Please fill all required fields'), backgroundColor: Colors.red),
                                       );
                                       return;
                                     }
-                                    
-                                    // Only set loading state if validation passes
+
                                     setState(() => _isSaving = true);
-                                    
+
                                     try {
                                       _formKey.currentState!.save();
-                                      
+
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
-                                      
-                                      // Store in qr_code_registrations collection
-                                      final qrRegistrationRef = await FirebaseFirestore.instance.collection('qr_code_registrations').add({
+
+                                      // Save to manual_registrations collection
+                                      await FirebaseFirestore.instance.collection('manual_registrations').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
                                         'email': email,
@@ -523,6 +507,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                         'company': company,
                                         'host': host,
                                         'purpose': purpose,
+                                        'purposeOther': purposeOther ?? '',
                                         'appointment': appointment,
                                         'department': department == 'Select Dept' ? '' : department,
                                         'accompanying': accompanying,
@@ -530,51 +515,22 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                         'laptop': laptop,
                                         'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
                                         'timestamp': FieldValue.serverTimestamp(),
-                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
+                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
                                         'pass_no': passNo,
                                         'source': 'qr_code',
                                       });
-                                      
-                                      // Also store in passes collection for consistency
-                                      await FirebaseFirestore.instance.collection('passes').add({
-                                        'visitorId': qrRegistrationRef.id,
-                                        'v_name': fullName,
-                                        'v_company_name': company,
-                                        'department': department == 'Select Dept' ? '' : department,
-                                        'host_name': host,
-                                        'v_date': FieldValue.serverTimestamp(),
-                                        'v_time': FieldValue.serverTimestamp(),
-                                        'photoBase64': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
-                                        'v_designation': designation,
-                                        'pass_no': passNo,
-                                        'v_totalno': accompanying == 'Yes' ? accompanyingCount : '',
-                                        'purpose': purpose,
-                                        'created_at': FieldValue.serverTimestamp(),
-                                        'pass_generated_by': 'qr_code',
-                                        'source': 'qr_code',
-                                      });
-                                      
+
                                       setState(() => _isSaving = false);
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Visitor registered successfully!'),
-                                          backgroundColor: Colors.green,
-                                          duration: Duration(seconds: 2),
-                                        ),
+                                        const SnackBar(content: Text('Visitor registered successfully!'), backgroundColor: Colors.green),
                                       );
-                                      
-                                      // Reset form after successful registration
                                       _resetForm();
-                                      
+
                                     } catch (e) {
-                                      // Handle any errors during registration
                                       setState(() => _isSaving = false);
+                                      print('Firestore error: $e');
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error registering visitor: ${e.toString()}'),
-                                          backgroundColor: Colors.red,
-                                          duration: Duration(seconds: 3),
-                                        ),
+                                        SnackBar(content: Text('Error registering visitor: ${e.toString()}'), backgroundColor: Colors.red),
                                       );
                                     }
                                   },
@@ -714,4 +670,4 @@ class _WavyHeaderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-} 
+}
