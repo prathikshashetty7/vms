@@ -1,4 +1,4 @@
-  import 'dart:typed_data';
+import 'dart:typed_data';
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:math';
@@ -7,32 +7,28 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/system_theme.dart';
-import 'receptionist_reports_page.dart';
-import 'dashboard.dart' show VisitorsPage;
 import 'package:image/image.dart' as img;
 
-class ManualEntryPage extends StatefulWidget {
-  const ManualEntryPage({Key? key}) : super(key: key);
+class QRCodeRegistrationsPage extends StatefulWidget {
+  const QRCodeRegistrationsPage({Key? key}) : super(key: key);
 
   @override
-  State<ManualEntryPage> createState() => _ManualEntryPageState();
+  State<QRCodeRegistrationsPage> createState() => _QRCodeRegistrationsPageState();
 }
 
-class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProviderStateMixin {
+class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   String fullName = '', mobile = '', email = '', company = '', host = '', purpose = '', appointment = 'Yes', accompanying = 'No', accompanyingCount = '', laptop = 'No', laptopDetails = '', department = 'Select Dept';
   String? purposeOther;
   Uint8List? visitorPhoto;
   bool _isSaving = false;
-  bool _showDeptTotalVisitors = false; // New variable to track if we should show dept's total visitors
-  int _deptTotalVisitors = 1; // New variable to store dept's total visitors count
   final List<String> yesNo = ['Yes', 'No'];
   List<String> departments = [];
   bool _departmentsLoading = true;
   late AnimationController _buttonController;
   late Animation<double> _buttonScale;
   String designation = '';
-  String? selectedVisitorId; // Add variable to store selected visitor ID
+  
   // Add focus nodes for each field
   final _fullNameFocus = FocusNode();
   final _mobileFocus = FocusNode();
@@ -70,9 +66,6 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
       designation = '';
       purposeOther = null;
       visitorPhoto = null;
-      selectedVisitorId = null; // Reset selected visitor ID
-      _showDeptTotalVisitors = false;
-      _deptTotalVisitors = 1;
     });
     
     // Clear controllers
@@ -138,25 +131,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
     super.initState();
     _buttonController = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
     _buttonScale = Tween<double>(begin: 1.0, end: 1.08).animate(_buttonController);
-    // _fetchDepartments(); // This function is no longer needed
   }
-
-  // Future<void> _fetchDepartments() async { // This function is no longer needed
-  //   final snapshot = await FirebaseFirestore.instance.collection('department').get();
-  //   // Debug print to see what is fetched
-  //   print('Fetched departments:');
-  //   for (var doc in snapshot.docs) {
-  //     print(doc.data());
-  //   }
-  //   setState(() {
-  //     departments = snapshot.docs
-  //       .map((doc) => doc.data())
-  //       .where((data) => data.containsKey('d_name') && data['d_name'] is String)
-  //       .map((data) => data['d_name'] as String)
-  //       .toList();
-  //     _departmentsLoading = false;
-  //   });
-  // }
 
   // Add this function to generate a unique 4-digit pass number
   Future<int> _generateUniquePassNo() async {
@@ -194,7 +169,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
           children: [
             Image.asset('assets/images/rdl.png', height: 36),
             const SizedBox(width: 12),
-            const Text('Visitor Form', style: TextStyle(color: Colors.white)),
+            const Text('QR Code Registration', style: TextStyle(color: Colors.white)),
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -266,7 +241,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                           children: [
                             Center(
                               child: Text(
-                                'Visitor Registration',
+                                'QR Code Registration',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontSize: 32,
@@ -475,34 +450,19 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                               },
                             ),
                             const SizedBox(height: 16),
-                            // Conditional accompanying visitors section
-                            if (_showDeptTotalVisitors) ...[
-                              // Show department's total visitors count
-                              _buildTextField('Accompanying Visitors',
-                                onSaved: (v) => accompanyingCount = v!,
-                                validator: _required,
-                                icon: Icons.group,
-                                keyboardType: TextInputType.number,
-                                controller: TextEditingController(text: _deptTotalVisitors.toString()),
-                                textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                              ),
-                            ] else ...[
-                              // Show original Yes/No dropdown + number field
-                              _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
-                              const SizedBox(height: 16),
-                              if (accompanying == 'Yes')
-                                  _buildTextField('Number of Accompanying Visitors',
-                                    onSaved: (v) => accompanyingCount = v!,
-                                    validator: _required,
-                                    icon: Icons.group,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _accompanyingCountFocus,
-                                    textInputAction: TextInputAction.next,
-                                    onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                                  ),
-                            ],
-                            if (_showDeptTotalVisitors || (accompanying == 'Yes' && !_showDeptTotalVisitors)) const SizedBox(height: 16),
+                            _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
+                            const SizedBox(height: 16),
+                            if (accompanying == 'Yes')
+                                _buildTextField('Number of Accompanying Visitors',
+                                  onSaved: (v) => accompanyingCount = v!,
+                                  validator: _required,
+                                  icon: Icons.group,
+                                  keyboardType: TextInputType.number,
+                                  focusNode: _accompanyingCountFocus,
+                                  textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+                                ),
+                            if (accompanying == 'Yes') const SizedBox(height: 16),
                             _buildDropdown('Do you carrying a laptop?', yesNo, laptop, (v) => setState(() => laptop = v!)),
                             const SizedBox(height: 16),
                             if (laptop == 'Yes')
@@ -549,17 +509,13 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                     setState(() => _isSaving = true);
                                     
                                     try {
-                                      print('DEBUG: Form submission - selectedVisitorId = $selectedVisitorId');
                                       _formKey.currentState!.save();
                                       
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
                                       
-                                      // Debug: Print selectedVisitorId
-                                      print('DEBUG: selectedVisitorId = $selectedVisitorId');
-                                      
-                                      // Store in manual_registrations collection
-                                      final manualRegistrationRef = await FirebaseFirestore.instance.collection('manual_registrations').add({
+                                      // Store in qr_code_registrations collection
+                                      final qrRegistrationRef = await FirebaseFirestore.instance.collection('qr_code_registrations').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
                                         'email': email,
@@ -569,20 +525,19 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                         'purpose': purpose,
                                         'appointment': appointment,
                                         'department': department == 'Select Dept' ? '' : department,
-                                        'accompanying': _showDeptTotalVisitors ? 'Yes' : accompanying,
-                                        'accompanyingCount': _showDeptTotalVisitors ? _deptTotalVisitors.toString() : (accompanying == 'Yes' ? accompanyingCount : ''),
+                                        'accompanying': accompanying,
+                                        'accompanyingCount': accompanying == 'Yes' ? accompanyingCount : '',
                                         'laptop': laptop,
                                         'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
                                         'timestamp': FieldValue.serverTimestamp(),
                                         'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
                                         'pass_no': passNo,
-                                        'source': 'manual',
-                                        'visitor_id': selectedVisitorId, // Add selectedVisitorId
+                                        'source': 'qr_code',
                                       });
                                       
                                       // Also store in passes collection for consistency
                                       await FirebaseFirestore.instance.collection('passes').add({
-                                        'visitorId': manualRegistrationRef.id,
+                                        'visitorId': qrRegistrationRef.id,
                                         'v_name': fullName,
                                         'v_company_name': company,
                                         'department': department == 'Select Dept' ? '' : department,
@@ -592,11 +547,11 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                         'photoBase64': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
                                         'v_designation': designation,
                                         'pass_no': passNo,
-                                        'v_totalno': _showDeptTotalVisitors ? _deptTotalVisitors.toString() : (accompanying == 'Yes' ? accompanyingCount : ''),
+                                        'v_totalno': accompanying == 'Yes' ? accompanyingCount : '',
                                         'purpose': purpose,
                                         'created_at': FieldValue.serverTimestamp(),
-                                        'pass_generated_by': 'receptionist',
-                                        'source': 'manual',
+                                        'pass_generated_by': 'qr_code',
+                                        'source': 'qr_code',
                                       });
                                       
                                       setState(() => _isSaving = false);
@@ -608,8 +563,8 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
                                         ),
                                       );
                                       
-                                      await Future.delayed(const Duration(milliseconds: 600));
-                                      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+                                      // Reset form after successful registration
+                                      _resetForm();
                                       
                                     } catch (e) {
                                       // Handle any errors during registration
@@ -643,62 +598,6 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
             ],
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showReceptionistVisitorsDialog();
-        },
-        backgroundColor: Color(0xFF6CA4FE),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-        elevation: 8,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6CA4FE),
-        unselectedItemColor: Color(0xFF091016),
-        currentIndex: 3,
-        onTap: (index) {
-          if (index == 4) {
-            Navigator.pushReplacementNamed(context, '/signin');
-            return;
-          }
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/dashboard');
-          } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/receptionist_reports');
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const VisitorsPage()),
-            );
-          } else if (index == 3) {
-            // Already here (Add Visitor)
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_rounded),
-            label: 'Visitors',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_rounded),
-            label: 'Status',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_add_alt_1_rounded),
-            label: 'Add Visitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.logout_rounded),
-            label: 'Logout',
-          ),
-        ],
       ),
     );
   }
@@ -770,284 +669,6 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
               .toList(),
           onChanged: onChanged,
         ),
-      ),
-    );
-  }
-
-  void _showReceptionistVisitorsDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.people, color: Color(0xFF6CA4FE)),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Department Visitors',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xFF091016),
-                        fontFamily: 'Poppins'
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('visitor')
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.error, color: Colors.red, size: 48),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Error loading visitors: ${snapshot.error}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child: Text(
-                            'No data available.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        );
-                      }
-                      
-                      // Filter visitors with receptionist-generated passes
-                      final allVisitors = snapshot.data!.docs;
-                      final visitors = allVisitors.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return data['pass_generated_by'] == 'receptionist';
-                      }).toList();
-                      
-                      // Sort by date descending
-                      visitors.sort((a, b) {
-                        final aData = a.data() as Map<String, dynamic>;
-                        final bData = b.data() as Map<String, dynamic>;
-                        final aDate = aData['v_date'];
-                        final bDate = bData['v_date'];
-                        
-                        if (aDate == null && bDate == null) return 0;
-                        if (aDate == null) return 1;
-                        if (bDate == null) return -1;
-                        
-                        DateTime aDateTime, bDateTime;
-                        if (aDate is Timestamp) {
-                          aDateTime = aDate.toDate();
-                        } else if (aDate is DateTime) {
-                          aDateTime = aDate;
-                        } else {
-                          aDateTime = DateTime.tryParse(aDate.toString()) ?? DateTime.now();
-                        }
-                        
-                        if (bDate is Timestamp) {
-                          bDateTime = bDate.toDate();
-                        } else if (bDate is DateTime) {
-                          bDateTime = bDate;
-                        } else {
-                          bDateTime = DateTime.tryParse(bDate.toString()) ?? DateTime.now();
-                        }
-                        
-                        return bDateTime.compareTo(aDateTime);
-                      });
-                      
-                      if (visitors.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.people_outline, color: Color(0xFF6CA4FE), size: 48),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No visitors found.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Contact Department Manager',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      
-                      return ListView.separated(
-                        controller: scrollController,
-                        itemCount: visitors.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
-                        itemBuilder: (context, index) {
-                          final visitor = visitors[index].data() as Map<String, dynamic>;
-                          final visitorId = visitors[index].id;
-                          
-                          String name = visitor['v_name'] ?? 'Unknown';
-                          String company = visitor['v_company_name'] ?? '';
-                          String email = visitor['v_email'] ?? '';
-                          String time = visitor['v_time'] ?? '';
-                          DateTime? date;
-                          String dateInfo = '';
-                          
-                          if (visitor['v_date'] != null) {
-                            final vDate = visitor['v_date'];
-                            if (vDate is Timestamp) {
-                              date = vDate.toDate();
-                              dateInfo = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-                            }
-                          }
-                          
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(
-                              backgroundColor: Color(0xFF6CA4FE),
-                              child: Text(
-                                name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (company.isNotEmpty)
-                                  Text('Company: $company', style: const TextStyle(fontSize: 12, color: Color(0xFF6CA4FE))),
-                                if (email.isNotEmpty)
-                                  Text('Email: $email', style: const TextStyle(fontSize: 12, color: Color(0xFF6CA4FE))),
-                                if (time.isNotEmpty || dateInfo.isNotEmpty)
-                                  Text(
-                                    '${dateInfo.isNotEmpty ? dateInfo : ''}${dateInfo.isNotEmpty && time.isNotEmpty ? ' at ' : ''}${time.isNotEmpty ? time : ''}',
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF6CA4FE))
-                                  ),
-                              ],
-                            ),
-                            trailing: ElevatedButton(
-                              onPressed: () {
-                                // Check if department has total visitors count
-                                final deptTotalVisitors = visitor['v_totalno'];
-                                final hasDeptTotalVisitors = deptTotalVisitors != null && deptTotalVisitors >= 1;
-                                
-                                // Fill the form with this visitor's data from department
-                                setState(() {
-                                  fullName = visitor['v_name'] ?? '';
-                                  mobile = visitor['v_contactno'] ?? '';
-                                  email = visitor['v_email'] ?? '';
-                                  company = visitor['v_company_name'] ?? '';
-                                  host = visitor['emp_name'] ?? visitor['host_name'] ?? '';
-                                  purpose = visitor['purpose'] ?? '';
-                                  appointment = 'Yes';
-                                  
-                                  // Handle accompanying visitors based on dept data
-                                  if (hasDeptTotalVisitors) {
-                                    _showDeptTotalVisitors = true;
-                                    _deptTotalVisitors = deptTotalVisitors;
-                                    accompanying = 'Yes';
-                                    accompanyingCount = deptTotalVisitors.toString();
-                                  } else {
-                                    _showDeptTotalVisitors = false;
-                                    _deptTotalVisitors = 1;
-                                    accompanying = 'No';
-                                    accompanyingCount = '';
-                                  }
-                                  
-                                  laptop = 'No';
-                                  laptopDetails = '';
-                                  department = visitor['department'] ?? 'Select Dept';
-                                  designation = visitor['v_designation'] ?? '';
-                                  purposeOther = null;
-                                  visitorPhoto = null;
-                                  selectedVisitorId = visitorId; // Store the selected visitor ID
-                                  print('DEBUG: Fill Form clicked for visitorId = $visitorId');
-                                });
-                                
-                                // Update controllers to display the filled data
-                                _fullNameController.text = fullName;
-                                _mobileController.text = mobile;
-                                _emailController.text = email;
-                                _companyController.text = company;
-                                _designationController.text = designation;
-                                _purposeController.text = purpose;
-                                
-                                // Force rebuild to ensure form updates
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  setState(() {});
-                                });
-                                
-                                Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Form filled with ${visitor['v_name']}\'s data. Please add remaining details manually.'),
-                                    backgroundColor: Colors.green,
-                                    duration: Duration(seconds: 3),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                              child: const Text('Fill Form', style: TextStyle(fontSize: 12)),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
       ),
     );
   }

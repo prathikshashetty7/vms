@@ -479,6 +479,7 @@ class _ActivityListWidget extends StatelessWidget {
     // Fetch more items than needed, then limit in Dart
     final manualStream = FirebaseFirestore.instance
         .collection('manual_registrations')
+        .where('source', isEqualTo: 'manual')  // Filter for manual registrations only
         .orderBy('timestamp', descending: true)
         .limit(30)
         .snapshots();
@@ -896,7 +897,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     height: 50,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
+                                      color: Colors.black.withOpacity(0.1),
                                     ),
                                     child: photo != null && photo.isNotEmpty
                                         ? ClipOval(
@@ -904,11 +905,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Base64Decoder().convert(photo),
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
                                               },
                                             ),
                                           )
-                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
                                   ),
                                   const SizedBox(width: 16),
                                   // Visitor details
@@ -918,7 +919,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                       children: [
                                         Text(
                                           name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 1,
                                         ),
@@ -930,11 +931,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF10B981)),
+                                                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     dateInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
                                                   ),
                                                 ],
                                               ),
@@ -943,11 +944,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF10B981)),
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     timeInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
                                                   ),
                                                 ],
                                               ),
@@ -957,15 +958,249 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                       ],
                                     ),
                                   ),
-                                  // Status badge
+                                                                    // Status dropdown
                                   Container(
                                     margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981),
+                                      color: const Color(0xFF6CA4FE),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    child: DropdownButton<String>(
+                                      value: 'Checked In',
+                                      underline: Container(),
+                                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      dropdownColor: const Color(0xFF6CA4FE),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Checked In',
+                                          child: Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Checked Out',
+                                          child: Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        ),
+                                      ],
+                                      onChanged: (String? newValue) async {
+                                        if (newValue == 'Checked Out') {
+                                          // Show dialog to enter checkout code
+                                          final checkoutCodeController = TextEditingController();
+                                          final checkoutCode = await showDialog<String>(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return Dialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                elevation: 8,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(24),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    gradient: const LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end: Alignment.bottomRight,
+                                                      colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+
+                                                      // Title with icon
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.logout,
+                                                            color: Colors.white,
+                                                            size: 24,
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          const Text(
+                                                            'Check Out Visitor',
+                                                            style: TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 24,
+                                                              fontWeight: FontWeight.bold,
+                                                              fontFamily: 'Poppins',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 24),
+                                                      // Input field
+                                                      Container(
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.white,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withOpacity(0.1),
+                                                              blurRadius: 8,
+                                                              offset: const Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                                                                                 child: TextField(
+                                                           controller: checkoutCodeController,
+                                                           decoration: const InputDecoration(
+                                                             hintText: 'Enter code',
+                                                             border: InputBorder.none,
+                                                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                                             prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
+                                                           ),
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                          onSubmitted: (value) {
+                                                            Navigator.of(context).pop(value);
+                                                          },
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 24),
+                                                      // Action buttons
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: TextButton(
+                                                              onPressed: () => Navigator.of(context).pop(),
+                                                              style: TextButton.styleFrom(
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                              ),
+                                                              child: const Text(
+                                                                'Cancel',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Expanded(
+                                                            child: ElevatedButton(
+                                                              onPressed: () {
+                                                                Navigator.of(context).pop(checkoutCodeController.text);
+                                                              },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.white,
+                                                                foregroundColor: const Color(0xFF6CA4FE),
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                                elevation: 2,
+                                                              ),
+                                                              child: const Text(
+                                                                'Confirm',
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                          
+                                          if (checkoutCode != null && checkoutCode.isNotEmpty) {
+                                            // Get the visitor's pass data to validate checkout code
+                                            try {
+                                              final docId = checkedInOutSnapshot.data!.docs[index].id;
+                                              final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
+                                              final passId = visitorData['pass_id'];
+                                              
+                                              if (passId != null && passId.isNotEmpty) {
+                                                // Fetch the pass data to get the checkout code
+                                                final passDoc = await FirebaseFirestore.instance
+                                                    .collection('passes')
+                                                    .doc(passId)
+                                                    .get();
+                                                
+                                                if (passDoc.exists) {
+                                                  final passData = passDoc.data() as Map<String, dynamic>;
+                                                  final hostCheckoutCode = passData['checkout_code'];
+                                                  
+                                                  if (hostCheckoutCode != null && hostCheckoutCode.toString() == checkoutCode) {
+                                                    // Checkout code matches, proceed with checkout
+                                                    await FirebaseFirestore.instance
+                                                        .collection('checked_in_out')
+                                                        .doc(docId)
+                                                        .update({
+                                                      'status': 'Checked Out',
+                                                      'check_out_time': FieldValue.serverTimestamp(),
+                                                      'check_out_code': checkoutCode,
+                                                    });
+                                                    
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Visitor checked out successfully'),
+                                                          backgroundColor: Colors.green,
+                                                        ),
+                                                      );
+                                                    }
+                                                  } else {
+                                                    // Checkout code doesn't match
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Invalid checkout code. Please try again.'),
+                                                          backgroundColor: Colors.red,
+                                                        ),
+                                                      );
+                                                    }
+                                                  }
+                                                } else {
+                                                  // Pass document not found
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Pass data not found. Cannot validate checkout.'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              } else {
+                                                // No pass_id found
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('No pass associated with this visitor.'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error checking out visitor: $e'),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1017,7 +1252,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     height: 50,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF6CA4FE).withOpacity(0.1),
+                                      color: Colors.black.withOpacity(0.1),
                                     ),
                                     child: photo != null && photo.isNotEmpty
                                         ? ClipOval(
@@ -1025,11 +1260,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Base64Decoder().convert(photo),
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE));
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
                                               },
                                             ),
                                           )
-                                        : const Icon(Icons.person, size: 30, color: Color(0xFF6CA4FE)),
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
                                   ),
                                   const SizedBox(width: 16),
                                   // Visitor details
@@ -1039,7 +1274,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                       children: [
                                         Text(
                                           name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 1,
                                         ),

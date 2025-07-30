@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:typed_data'; // Added for Uint8List
+import 'dart:math';
 import 'dashboard.dart' show VisitorsPage;
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-class ThemedVisitorListPage extends StatelessWidget {
+class ManualRegistrationsPage extends StatelessWidget {
   final String collection;
   final String title;
   final IconData icon;
@@ -15,7 +16,7 @@ class ThemedVisitorListPage extends StatelessWidget {
   final String nameField;
   final String mobileField;
   final String timeField;
-  const ThemedVisitorListPage({
+  const ManualRegistrationsPage({
     required this.collection,
     required this.title,
     required this.icon,
@@ -60,7 +61,7 @@ class ThemedVisitorListPage extends StatelessWidget {
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white70,
                   tabs: [
-                    Tab(text: 'Manual Registrations'),
+                    Tab(text: 'Visitors'),
                     Tab(text: 'Generated Passes'),
                   ],
                 ),
@@ -76,42 +77,7 @@ class ThemedVisitorListPage extends StatelessWidget {
               ),
             ),
           );
-        } else if (collection == 'visitor' || collection == 'visitors') {
-          // For appointed visitors, show as tabs like manual registrations
-          return DefaultTabController(
-            length: 2,
-            child: Scaffold(
-              appBar: AppBar(
-                title: Row(
-                  children: [
-                    Image.asset('assets/images/rdl.png', height: 36),
-                    const SizedBox(width: 12),
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF6CA4FE),
-                elevation: 0,
-                iconTheme: const IconThemeData(color: Colors.white),
-                titleTextStyle: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
-                automaticallyImplyLeading: false,
-                bottom: TabBar(
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  tabs: [
-                    Tab(text: 'Visitors'),
-                    Tab(text: 'Generated Passes'),
-                  ],
-                ),
-              ),
-              backgroundColor: const Color(0xFFD4E9FF),
-              body: TabBarView(
-                children: [
-                  _buildVisitorList(context, passGeneratedByFilter: 'receptionist'),
-                  _buildGeneratedPassesList(context, appointed: true, departmentMap: departmentMap),
-                ],
-              ),
-            ),
-          );
+
         } else {
           // For other collections, show only a single list, no tabs, no pass generation
           return Scaffold(
@@ -144,8 +110,54 @@ class ThemedVisitorListPage extends StatelessWidget {
     };
   }
 
+  // Add this function to generate a unique 4-digit pass number
+  Future<int> _generateUniquePassNo() async {
+    final random = Random();
+    int passNo;
+    bool exists = true;
+    final passesRef = FirebaseFirestore.instance.collection('passes');
+    do {
+      passNo = 1000 + random.nextInt(9000); // 4-digit number
+      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+      exists = query.docs.isNotEmpty;
+    } while (exists);
+    return passNo;
+  }
+
+  // Function to update existing records with source field
+  Future<void> _updateExistingRecords() async {
+    try {
+      // Update records that don't have source field
+      final snapshot = await FirebaseFirestore.instance
+          .collection(collection)
+          .where('source', isNull: true)
+          .limit(20)
+          .get();
+      
+      for (var doc in snapshot.docs) {
+        await doc.reference.update({'source': 'manual'});
+      }
+      
+      // Also update records that have empty source field
+      final snapshot2 = await FirebaseFirestore.instance
+          .collection(collection)
+          .where('source', isEqualTo: '')
+          .limit(20)
+          .get();
+      
+      for (var doc in snapshot2.docs) {
+        await doc.reference.update({'source': 'manual'});
+      }
+    } catch (e) {
+      // Silently handle errors to avoid disrupting the UI
+      print('Error updating existing records: $e');
+    }
+  }
+
   // Helper to build the visitor list (for manual registrations and other types)
   Widget _buildVisitorList(BuildContext context, {bool showPassButton = true, String? passGeneratedByFilter}) {
+    // Update existing records to have source field if missing
+    _updateExistingRecords();
     return Padding(
       padding: const EdgeInsets.all(18.0),
       child: StreamBuilder<QuerySnapshot>(
@@ -162,12 +174,21 @@ class ThemedVisitorListPage extends StatelessWidget {
           }
           final docs = snapshot.data!.docs;
           // Filter docs based on pass_generated_by if filter is provided
-          final filteredDocs = passGeneratedByFilter != null 
+          var filteredDocs = passGeneratedByFilter != null 
               ? docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   return data['pass_generated_by'] == passGeneratedByFilter;
                 }).toList()
               : docs;
+          
+          // For manual_registrations collection, filter for manual source only
+          if (collection == 'manual_registrations') {
+            filteredDocs = filteredDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              // Show only records that have source: 'manual'
+              return data['source'] == 'manual';
+            }).toList();
+          }
           return ListView.separated(
             itemCount: filteredDocs.length,
             separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
@@ -311,13 +332,13 @@ class ThemedVisitorListPage extends StatelessWidget {
   }
 
   // Helper to build the generated passes list (only for manual registrations)
-  Widget _buildGeneratedPassesList(BuildContext context, {bool appointed = false, required Map<String, String> departmentMap}) {
+  Widget _buildGeneratedPassesList(BuildContext context, {required Map<String, String> departmentMap}) {
     return Padding(
       padding: const EdgeInsets.all(0.0),
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('passes') // Always use 'passes' collection
-            .orderBy('generated_at', descending: true)
+            .where('group', isEqualTo: 'manual')  // Filter for manual passes only
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -330,6 +351,22 @@ class ThemedVisitorListPage extends StatelessWidget {
           if (docs.isEmpty) {
             return const Center(child: Text('No generated passes found.'));
           }
+          
+          // Sort the documents in memory by generated_at
+          final sortedDocs = docs.toList();
+          sortedDocs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aGeneratedAt = aData['generated_at'] as Timestamp?;
+            final bGeneratedAt = bData['generated_at'] as Timestamp?;
+            
+            if (aGeneratedAt == null && bGeneratedAt == null) return 0;
+            if (aGeneratedAt == null) return 1;
+            if (bGeneratedAt == null) return -1;
+            
+            return bGeneratedAt.compareTo(aGeneratedAt); // descending order
+          });
+          
           String searchQuery = '';
           return Column(
             children: [
@@ -351,34 +388,18 @@ class ThemedVisitorListPage extends StatelessWidget {
               ),
               Expanded(
                 child: ListView.builder(
-                  itemCount: docs.where((doc) {
+                  itemCount: sortedDocs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    if (!appointed) {
-                      // Manual registrations: keep old logic
+                    return (data['fullName']?.toString().toLowerCase().contains(searchQuery) == true ||
+                            data['company']?.toString().toLowerCase().contains(searchQuery) == true ||
+                            data['host']?.toString().toLowerCase().contains(searchQuery) == true);
+                  }).length,
+                  itemBuilder: (context, index) {
+                    final filteredDocs = sortedDocs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
                       return (data['fullName']?.toString().toLowerCase().contains(searchQuery) == true ||
                               data['company']?.toString().toLowerCase().contains(searchQuery) == true ||
                               data['host']?.toString().toLowerCase().contains(searchQuery) == true);
-                    } else {
-                      // Appointed visitors: use correct fields
-                      return searchQuery.isEmpty ||
-                        (data['v_name']?.toString().toLowerCase().contains(searchQuery) == true ||
-                         data['host_name']?.toString().toLowerCase().contains(searchQuery) == true ||
-                         data['v_company_name']?.toString().toLowerCase().contains(searchQuery) == true);
-                    }
-                  }).length,
-                  itemBuilder: (context, index) {
-                    final filteredDocs = docs.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      if (!appointed) {
-                        return (data['fullName']?.toString().toLowerCase().contains(searchQuery) == true ||
-                                data['company']?.toString().toLowerCase().contains(searchQuery) == true ||
-                                data['host']?.toString().toLowerCase().contains(searchQuery) == true);
-                      } else {
-                        return searchQuery.isEmpty ||
-                          (data['v_name']?.toString().toLowerCase().contains(searchQuery) == true ||
-                           data['host_name']?.toString().toLowerCase().contains(searchQuery) == true ||
-                           data['v_company_name']?.toString().toLowerCase().contains(searchQuery) == true);
-                      }
                     }).toList();
                     final data = filteredDocs[index].data() as Map<String, dynamic>;
                     Widget avatar;
@@ -404,8 +425,7 @@ class ThemedVisitorListPage extends StatelessWidget {
                         child: Icon(Icons.person, size: 32, color: Colors.white),
                       );
                     }
-                    if (!appointed) {
-                      // ... existing manual registrations card ...
+
                       return Card(
                         color: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -488,85 +508,7 @@ class ThemedVisitorListPage extends StatelessWidget {
                           ),
                         ),
                       );
-                    } else {
-                      // Appointed visitor card (match manual style)
-                      return Card(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        elevation: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              avatar,
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(data['v_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                                    const SizedBox(height: 4),
-                                    if (data['host_name'] != null && data['host_name'].toString().isNotEmpty)
-                                      Text('Host: ${data['host_name']}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                                    Text('Company: ${data['v_company_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                                    if (data['departmentId'] != null && departmentMap[data['departmentId']] != null)
-                                      Text('Department: ${departmentMap[data['departmentId']]}', style: const TextStyle(fontSize: 14, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
-                                        const SizedBox(width: 4),
-                                        Text('Date: ${data['v_date'] is Timestamp ? _formatDateOnly((data['v_date'] as Timestamp).toDate()) : _formatDateOnly(data['v_date'])}', style: const TextStyle(fontSize: 13, color: Color(0xFF091016)), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.print),
-                                          tooltip: 'Print',
-                                          onPressed: () async {
-                                            String departmentName = departmentMap[data['departmentId']] ?? data['departmentId'].toString();
-                                            showGeneralDialog(
-                                              context: context,
-                                              barrierColor: Colors.white,
-                                              barrierDismissible: true,
-                                              barrierLabel: 'Pass',
-                                              pageBuilder: (context, anim1, anim2) {
-                                                return LayoutBuilder(
-                                                  builder: (context, constraints) {
-                                                    final double cardWidth = constraints.maxWidth > 360 ? 340 : (constraints.maxWidth - 20).clamp(200.0, 340.0);
-                                                    return Center(
-                                                      child: SingleChildScrollView(
-                                                        child: _AppointedPassDetailDialog(pass: data, cardWidth: cardWidth, departmentName: departmentName),
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-                                              },
-                                            );
-                                          },
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          tooltip: 'Delete',
-                                          onPressed: () async {
-                                            await FirebaseFirestore.instance.collection('passes').doc(filteredDocs[index].id).delete();
-                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pass deleted.')));
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
+
                   },
                 ),
               ),
@@ -578,21 +520,12 @@ class ThemedVisitorListPage extends StatelessWidget {
   }
 
   void _showEditVisitorSheet(BuildContext context, Map<String, dynamic> data, String docId) {
-    if (collection == 'visitor' || collection == 'visitors') {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => AppointedVisitorEditForm(data: data, docId: docId, collection: collection),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => _EditVisitorForm(data: data, docId: docId, collection: collection),
-      );
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _EditVisitorForm(data: data, docId: docId, collection: collection),
+    );
   }
 
   void _confirmDeleteVisitor(BuildContext context, String docId) {
@@ -627,6 +560,20 @@ class _VisitorDetailsDialog extends StatelessWidget {
   final IconData icon;
   final String name;
   const _VisitorDetailsDialog({required this.data, required this.color, required this.icon, required this.name, Key? key}) : super(key: key);
+
+  // Add this function to generate a unique 4-digit pass number
+  Future<int> _generateUniquePassNo() async {
+    final random = Random();
+    int passNo;
+    bool exists = true;
+    final passesRef = FirebaseFirestore.instance.collection('passes');
+    do {
+      passNo = 1000 + random.nextInt(9000); // 4-digit number
+      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+      exists = query.docs.isNotEmpty;
+    } while (exists);
+    return passNo;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -763,8 +710,10 @@ class _VisitorDetailsDialog extends StatelessWidget {
                     onPressed: () async {
                       // Only allow for manual_registrations
                       if (data.containsKey('fullName')) {
+                        // Generate unique pass number
+                        final passNo = await _generateUniquePassNo();
                         final passData = {
-                          'passNo': 0, // Pass number (can be updated later)
+                          'passNo': passNo,
                           'visitorName': data['fullName'] ?? '',
                           'company': data['company'] ?? '',
                           'department': data['department'] ?? '',
@@ -776,6 +725,7 @@ class _VisitorDetailsDialog extends StatelessWidget {
                           'date': _formatDateOnly(DateTime.now()),
                           'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                           'generated_at': FieldValue.serverTimestamp(),
+                          'group': 'manual',
                         };
                         await FirebaseFirestore.instance.collection('passes').add(passData);
                         // Show success message
@@ -788,16 +738,16 @@ class _VisitorDetailsDialog extends StatelessWidget {
                             ),
                           );
                         }
-                      } else {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Pass generation is only available for manual registrations.')),
-                          );
+                                              } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Pass generation is only available for manual registrations.')),
+                            );
+                          }
                         }
-                      }
                     },
                   ),
-                  ),
+                ),
               ],
             ),
           ),
@@ -933,7 +883,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
                         text: TextSpan(
                           children: [
                             TextSpan(text: 'Pass No      : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                            TextSpan(text: '0', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                            TextSpan(text: '${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 18, color: Color(0xFF091016), decoration: TextDecoration.none)),
                           ],
                         ),
                         softWrap: true,
@@ -1156,7 +1106,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
                                           child: pw.Column(
                                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                                             children: [
-                                              pw.Text('Pass No      : 0', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                              pw.Text('Pass No      : ${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                                               pw.Text('Visitor Name : ${pass['visitorName'] ?? pass['fullName'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                                               if (pass['company'] != null && pass['company'].toString().isNotEmpty)
                                                 pw.RichText(
@@ -1315,15 +1265,10 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
   late TextEditingController laptopController;
   late TextEditingController laptopDetailsController;
 
-  String selectedPurpose = 'Select Purpose';
   String selectedAppointment = 'Yes';
   String selectedDepartment = 'Select Dept';
   String selectedAccompanying = 'No';
   String selectedLaptop = 'No';
-
-  final List<String> purposes = [
-    'Select Purpose', 'Business Meeting', 'Interview', 'Delivery', 'Maintenance', 'Other',
-  ];
   final List<String> yesNo = ['Yes', 'No'];
   final List<String> departments = [
     'Select Dept', 'HR', 'Admin', 'IT', 'Security', 'Stock', 'Finance', 'Marketing', 
@@ -1352,7 +1297,6 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
     laptopDetailsController = TextEditingController(text: widget.data['laptopDetails'] ?? '');
 
     // Set initial dropdown values
-    selectedPurpose = purposeController.text.isNotEmpty ? purposeController.text : 'Select Purpose';
     selectedAppointment = appointmentController.text.isNotEmpty ? appointmentController.text : 'Yes';
     selectedDepartment = departmentController.text.isNotEmpty ? departmentController.text : 'Select Dept';
     selectedAccompanying = accompanyingController.text.isNotEmpty ? accompanyingController.text : 'No';
@@ -1436,48 +1380,81 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
                   const SizedBox(height: 14),
                   _buildEditField(designationController, 'Designation', Icons.badge, TextInputType.text, false),
                   const SizedBox(height: 14),
-                  _buildEditField(hostController, 'Host', Icons.person_outline, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  // Purpose dropdown
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Purpose of the Visit',
-                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.85),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedPurpose,
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                        items: purposes.map((e) => DropdownMenuItem(
-                          value: e,
-                          enabled: e != 'Select Purpose',
-                          child: Text(e, style: TextStyle(color: e == 'Select Purpose' ? Color(0xFF888888) : Colors.black)),
-                        )).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() {
-                              selectedPurpose = v;
-                              purposeController.text = v;
-                            });
-                          }
-                        },
-                      ),
-                    ),
+                  // Host dropdown
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('host').snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return Center(child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: CircularProgressIndicator(),
+                        ));
+                      }
+                      final hosts = snapshot.data!.docs
+                        .map((doc) => doc['emp_name'] as String)
+                        .where((name) => name.isNotEmpty)
+                        .toSet() // Remove duplicates
+                        .toList();
+                      
+                      // Create unique dropdown items
+                      final dropdownItems = <String>['Select Host'];
+                      dropdownItems.addAll(hosts);
+                      
+                      // Ensure the visitor's current host is in the list if it's not empty
+                      final currentHost = hostController.text;
+                      if (currentHost.isNotEmpty && 
+                          currentHost != 'Select Host' && 
+                          !dropdownItems.contains(currentHost)) {
+                        dropdownItems.add(currentHost);
+                      }
+                      
+                      // Validate the selected value
+                      final validValue = dropdownItems.contains(currentHost) ? currentHost : 'Select Host';
+                      
+                      return InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Host',
+                          labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.85),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: validValue,
+                            isExpanded: true,
+                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                            items: dropdownItems.map((e) => DropdownMenuItem(
+                              value: e,
+                              enabled: e != 'Select Host',
+                              child: Text(e, style: TextStyle(color: e == 'Select Host' ? Color(0xFF888888) : Colors.black)),
+                            )).toList(),
+                            onChanged: (v) {
+                              if (v != null && v != 'Select Host') {
+                                setState(() {
+                                  hostController.text = v;
+                                });
+                              } else {
+                                setState(() {
+                                  hostController.text = '';
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 14),
-                  if (selectedPurpose == 'Other')
-                    _buildEditField(purposeOtherController, 'Other Purpose', Icons.edit, TextInputType.text, false),
+                  // Purpose text field
+                  _buildEditField(purposeController, 'Purpose of the Visit', Icons.info_outline, TextInputType.text, false),
                   const SizedBox(height: 14),
                   // Appointment dropdown
                   InputDecorator(
@@ -1529,53 +1506,65 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
                       final departments = snapshot.data!.docs
                         .map((doc) => doc['d_name'] as String)
                         .where((name) => name.isNotEmpty)
+                        .toSet() // Remove duplicates
                         .toList();
-                      // Ensure the visitor's current department is in the list
-                      if (selectedDepartment.isNotEmpty && !departments.contains(selectedDepartment)) {
-                        departments.add(selectedDepartment);
+                      
+                      // Create unique dropdown items
+                      final dropdownItems = <String>['Select Dept'];
+                      dropdownItems.addAll(departments);
+                      
+                      // Ensure the visitor's current department is in the list if it's not empty
+                      if (selectedDepartment.isNotEmpty && 
+                          selectedDepartment != 'Select Dept' && 
+                          !dropdownItems.contains(selectedDepartment)) {
+                        dropdownItems.add(selectedDepartment);
                       }
+                      
+                      // Validate the selected value
+                      final validValue = dropdownItems.contains(selectedDepartment) ? selectedDepartment : 'Select Dept';
+                      
                       return InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Department',
-                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.85),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                            value: departments.contains(selectedDepartment) ? selectedDepartment : (departments.isNotEmpty ? departments.first : 'Select Dept'),
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                            items: ['Select Dept', ...departments].map((e) => DropdownMenuItem(
-                          value: e,
-                          enabled: e != 'Select Dept',
-                          child: Text(e, style: TextStyle(color: e == 'Select Dept' ? Color(0xFF888888) : Colors.black)),
-                        )).toList(),
-                        onChanged: (v) {
+                        decoration: InputDecoration(
+                          labelText: 'Department',
+                          labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.85),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: validValue,
+                            isExpanded: true,
+                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+                            items: dropdownItems.map((e) => DropdownMenuItem(
+                              value: e,
+                              enabled: e != 'Select Dept',
+                              child: Text(e, style: TextStyle(color: e == 'Select Dept' ? Color(0xFF888888) : Colors.black)),
+                            )).toList(),
+                            onChanged: (v) {
                               if (v != null && v != 'Select Dept') {
                                 setState(() => selectedDepartment = v);
                               } else {
                                 setState(() => selectedDepartment = 'Select Dept');
-                          }
-                        },
-                      ),
-                    ),
+                              }
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 14),
-                  // Accompanying dropdown
+                  // Accompanying visitors dropdown
                   InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Accompanying Visitors (if any)',
+                      labelText: 'Are you accompanied by other visitors?',
                       labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.85),
@@ -1610,8 +1599,46 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
                   ),
                   const SizedBox(height: 14),
                   if (selectedAccompanying == 'Yes')
-                    _buildEditField(accompanyingCountController, 'Number of Accompanying Visitors', Icons.group, TextInputType.number, false),
+                    _buildEditField(accompanyingCountController, 'Number of accompanying visitors', Icons.group, TextInputType.number, false),
                   const SizedBox(height: 14),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                   // Laptop dropdown
                   InputDecorator(
                     decoration: InputDecoration(
@@ -1725,249 +1752,7 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
   }
 } 
 
-class AppointedVisitorEditForm extends StatefulWidget {
-  final Map<String, dynamic> data;
-  final String docId;
-  final String collection;
-  const AppointedVisitorEditForm({required this.data, required this.docId, required this.collection, Key? key}) : super(key: key);
-
-  @override
-  State<AppointedVisitorEditForm> createState() => _AppointedVisitorEditFormState();
-}
-
-class _AppointedVisitorEditFormState extends State<AppointedVisitorEditForm> {
-  final formKey = GlobalKey<FormState>();
-  late TextEditingController nameController;
-  late TextEditingController emailController;
-  late TextEditingController designationController;
-  late TextEditingController companyController;
-  late TextEditingController contactController;
-  late TextEditingController totalNoController;
-  DateTime? selectedDate;
-  TimeOfDay? selectedTime;
-
-  @override
-  void initState() {
-    super.initState();
-    nameController = TextEditingController(text: widget.data['v_name'] ?? '');
-    emailController = TextEditingController(text: widget.data['v_email'] ?? '');
-    designationController = TextEditingController(text: widget.data['v_designation'] ?? '');
-    companyController = TextEditingController(text: widget.data['v_company_name'] ?? '');
-    contactController = TextEditingController(text: widget.data['v_contactno'] ?? '');
-    totalNoController = TextEditingController(text: widget.data['v_totalno']?.toString() ?? '1');
-    selectedDate = (widget.data['v_date'] is Timestamp)
-        ? (widget.data['v_date'] as Timestamp).toDate()
-        : DateTime.now();
-    selectedTime = widget.data['v_time'] != null ? _parseTime(widget.data['v_time']) : TimeOfDay.now();
-  }
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    emailController.dispose();
-    designationController.dispose();
-    companyController.dispose();
-    contactController.dispose();
-    totalNoController.dispose();
-    super.dispose();
-  }
-
-  TimeOfDay _parseTime(String? timeStr) {
-    if (timeStr == null) return TimeOfDay.now();
-    final parts = timeStr.split(":");
-    if (parts.length < 2) return TimeOfDay.now();
-    return TimeOfDay(hour: int.tryParse(parts[0]) ?? 0, minute: int.tryParse(parts[1]) ?? 0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Text(
-                      'Edit Appointed Visitor',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                        color: Color(0xFF091016),
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _buildEditField(nameController, 'Name', Icons.person, TextInputType.text, true),
-                  const SizedBox(height: 14),
-                  _buildEditField(emailController, 'Email', Icons.email, TextInputType.emailAddress, false),
-                  const SizedBox(height: 14),
-                  _buildEditField(designationController, 'Designation', Icons.badge, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  _buildEditField(companyController, 'Company', Icons.business, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  _buildEditField(contactController, 'Contact No', Icons.phone, TextInputType.phone, true),
-                  const SizedBox(height: 14),
-                  _buildEditField(totalNoController, 'Total Visitors', Icons.group, TextInputType.number, false),
-                  const SizedBox(height: 14),
-                  // Date Picker
-                  GestureDetector(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          selectedDate = picked;
-                        });
-                      }
-                    },
-                    child: AbsorbPointer(
-                      child: TextFormField(
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Date',
-                          prefixIcon: Icon(Icons.calendar_today),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.black12),
-                          ),
-                        ),
-                        controller: TextEditingController(
-                          text: selectedDate != null ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}' : '',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  // Time Picker
-                  GestureDetector(
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: selectedTime ?? TimeOfDay.now(),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          selectedTime = picked;
-                        });
-                      }
-                    },
-                    child: AbsorbPointer(
-                      child: TextFormField(
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Time',
-                          prefixIcon: Icon(Icons.access_time),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.black12),
-                          ),
-                        ),
-                        controller: TextEditingController(
-                          text: selectedTime != null ? selectedTime!.format(context) : '',
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        if (formKey.currentState!.validate()) {
-                          final updatedData = {
-                            'v_name': nameController.text,
-                            'v_email': emailController.text,
-                            'v_designation': designationController.text,
-                            'v_company_name': companyController.text,
-                            'v_contactno': contactController.text,
-                            'v_totalno': int.tryParse(totalNoController.text) ?? 1,
-                            'v_date': selectedDate != null ? Timestamp.fromDate(selectedDate!) : null,
-                            'v_time': selectedTime != null ? selectedTime!.format(context) : null,
-                          };
-                          await FirebaseFirestore.instance.collection(widget.collection).doc(widget.docId).update(updatedData);
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.save),
-                      label: const Text('Save Changes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF6CA4FE),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        elevation: 6,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditField(TextEditingController controller, String label, IconData icon, TextInputType type, bool required) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: type,
-      validator: required ? (v) => v == null || v.isEmpty ? 'Required' : null : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.black12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.black12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Color(0xFF6CA4FE), width: 2),
-        ),
-      ),
-    );
-  }
-} 
+ 
 
 class _AppointedVisitorDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -1978,6 +1763,20 @@ class _AppointedVisitorDetailsDialog extends StatelessWidget {
   final String collection;
   final String hostName;
   const _AppointedVisitorDetailsDialog({required this.data, required this.color, required this.icon, required this.name, required this.docId, required this.collection, required this.hostName, Key? key}) : super(key: key);
+
+  // Add this function to generate a unique 4-digit pass number
+  Future<int> _generateUniquePassNo() async {
+    final random = Random();
+    int passNo;
+    bool exists = true;
+    final passesRef = FirebaseFirestore.instance.collection('passes');
+    do {
+      passNo = 1000 + random.nextInt(9000); // 4-digit number
+      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+      exists = query.docs.isNotEmpty;
+    } while (exists);
+    return passNo;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2071,8 +1870,10 @@ class _AppointedVisitorDetailsDialog extends StatelessWidget {
                     icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
                     label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     onPressed: () async {
+                      // Generate unique pass number
+                      final passNo = await _generateUniquePassNo();
                       final passData = {
-                        'passNo': 0, // Pass number (can be updated later)
+                        'passNo': passNo,
                         'visitorName': data['v_name'] ?? '',
                         'company': data['v_company_name'] ?? '',
                         'department': data['departmentId'] ?? '',
@@ -2084,6 +1885,8 @@ class _AppointedVisitorDetailsDialog extends StatelessWidget {
                         'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                         'generated_at': FieldValue.serverTimestamp(),
                         'visitor_doc_id': docId,
+                        'pass_generated_by': 'receptionist', // Distinguish from host-generated passes
+                        'departmentId': data['departmentId'] ?? '', // Add departmentId for filtering
                       };
                       await FirebaseFirestore.instance.collection('passes').add(passData); // Use 'passes' collection
                       if (context.mounted) {
@@ -2237,7 +2040,7 @@ class _AppointedPassDetailDialog extends StatelessWidget {
                         text: TextSpan(
                           children: [
                             TextSpan(text: 'Pass No      : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                            TextSpan(text: '0', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
+                            TextSpan(text: '${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
                           ],
                         ),
                         softWrap: true,
@@ -2438,7 +2241,7 @@ class _AppointedPassDetailDialog extends StatelessWidget {
                                           child: pw.Column(
                                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                                             children: [
-                                              pw.Text('Pass No      : 0', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                              pw.Text('Pass No      : ${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                                               pw.Text('Visitor Name : ${pass['visitorName'] ?? pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                                               if (pass['company'] != null && pass['company'].toString().isNotEmpty)
                                                 pw.RichText(
