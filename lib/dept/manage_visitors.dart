@@ -1,495 +1,939 @@
 import 'package:flutter/material.dart';
+import '../theme/system_theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/admin_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'settings_page.dart';
-import 'admin_dashboard.dart';
+import 'package:flutter/services.dart';
 
-class ManageDepartments extends StatefulWidget {
-  const ManageDepartments({Key? key}) : super(key: key);
+class ManageVisitors extends StatefulWidget {
+  final String? currentDepartmentId;
+  const ManageVisitors({Key? key, this.currentDepartmentId}) : super(key: key);
 
   @override
-  State<ManageDepartments> createState() => _ManageDepartmentsState();
+  _ManageVisitorsState createState() => _ManageVisitorsState();
 }
 
-class _ManageDepartmentsState extends State<ManageDepartments> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final TextEditingController _searchController = TextEditingController();
-  bool _obscurePassword = true;
-  final FocusNode _nameFocusNode = FocusNode();
-  final FocusNode _emailFocusNode = FocusNode();
-  final FocusNode _passwordFocusNode = FocusNode();
-  String _searchQuery = '';
-  String? _editingId;
+class _ManageVisitorsState extends State<ManageVisitors> {
+  String? get _currentDepartmentId => widget.currentDepartmentId;
 
-  String? _validateName(String? value) =>
-      (value == null || value.trim().isEmpty) ? 'Department name is required.' : null;
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Email is required.';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+').hasMatch(value.trim())) return 'Please enter a valid email address.';
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Password is required.';
-    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#\$&*~^%()_+=\[\]{}|;:,.<>/?-]).{6,}').hasMatch(value.trim())) {
-      return 'Password must contain a letter, a number, and a special character.';
-    }
-    return null;
-  }
+  // FocusNodes for form fields
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _designationFocus = FocusNode();
+  final FocusNode _companyFocus = FocusNode();
+  final FocusNode _contactFocus = FocusNode();
+  final FocusNode _totalNoFocus = FocusNode();
+  final FocusNode _purposeFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    // Request focus for the name field when the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _nameFocusNode.requestFocus();
-    });
+    // No need to fetch departmentId here
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _searchController.dispose();
-    _nameFocusNode.dispose();
-    _emailFocusNode.dispose();
-    _passwordFocusNode.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _designationFocus.dispose();
+    _companyFocus.dispose();
+    _contactFocus.dispose();
+    _totalNoFocus.dispose();
+    _purposeFocus.dispose();
     super.dispose();
   }
 
-  // TODO: Replace with your actual admin credentials
-  static const String adminEmail = 'ADMIN_EMAIL';
-  static const String adminPassword = 'ADMIN_PASSWORD';
-
-  Future<void> _addOrUpdateDepartment() async {
-    if (!_formKey.currentState!.validate()) return;
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (_editingId == null) {
-      try {
-        await FirebaseAuth.instance.signOut();
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        await FirebaseFirestore.instance.collection('department').add({
-          'd_name': name,
-          'd_email': email,
-          'd_password': password,
-        });
-        await FirebaseAuth.instance.signOut();
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: adminEmail,
-          password: adminPassword,
-        );
-        setState(() {
-          _nameController.clear();
-          _emailController.clear();
-          _passwordController.clear();
-          _obscurePassword = true;
-        });
-        _formKey.currentState!.reset();
-        Future.delayed(const Duration(milliseconds: 100), () {
-          _nameFocusNode.requestFocus();
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Department added successfully!'), backgroundColor: Colors.green),
-          );
-        });
-      } on FirebaseAuthException catch (e) {
-        String msg = 'Error: ';
-        if (e.code == 'email-already-in-use') {
-          msg += 'Email already in use.';
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
-        } else if (e.code == 'weak-password') {
-          msg += 'Password is too weak.';
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
-        } else if (e.code == 'invalid-email') {
-          // Do not show snackbar for badly formatted email
-        } else {
-          msg += e.message ?? 'Unknown error';
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
-        }
-        try {
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: adminEmail,
-            password: adminPassword,
-          );
-        } catch (_) {}
-        return;
-      }
-    } else {
-      await FirebaseFirestore.instance.collection('department').doc(_editingId).update({
-        'd_name': name,
-        'd_email': email,
-        'd_password': password,
-      });
-      _editingId = null;
-      setState(() {
-        _nameController.clear();
-        _emailController.clear();
-        _passwordController.clear();
-        _obscurePassword = true;
-      });
-      _formKey.currentState!.reset();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _nameFocusNode.requestFocus();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Successfully updated!'), backgroundColor: Colors.green),
-      );
+  // Validation methods
+  String? _validateVisitorName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Visitor name is required';
     }
-  }
-
-  Future<void> _deleteDepartment(String id) async {
-    // Fetch department email and password before deleting
-    final docSnap = await FirebaseFirestore.instance.collection('department').doc(id).get();
-    final data = docSnap.data() as Map<String, dynamic>? ?? {};
-    final email = data['d_email']?.toString() ?? '';
-    final password = data['d_password']?.toString() ?? '';
-
-    // 1. Delete from Firestore
-    await FirebaseFirestore.instance.collection('department').doc(id).delete();
-
-    // 2. Sign in as the department user to delete from Auth
-    if (email.isNotEmpty && password.isNotEmpty) {
-      try {
-        await FirebaseAuth.instance.signOut();
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        await userCredential.user?.delete();
-      } catch (e) {
-        // Handle error (user may already be deleted, wrong password, etc.)
-      }
+    if (value.trim().length < 2) {
+      return 'Visitor name must be at least 2 characters';
     }
-
-    // 3. Sign admin back in (if needed)
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: adminEmail,
-        password: adminPassword,
-      );
-    } catch (_) {}
-
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Deleted successfully!'), backgroundColor: Colors.green),
-    );
+    if (value.trim().length > 50) {
+      return 'Visitor name must be less than 50 characters';
+    }
+    if (!RegExp(r'^[A-Za-z\s]+$').hasMatch(value.trim())) {
+      return 'Visitor name can only contain letters and spaces';
+    }
+    return null;
   }
 
-  void _startEdit(String id, String name, String email, String password) {
-    _editingId = id;
-    _nameController.text = name;
-    _emailController.text = email;
-    _passwordController.text = password;
-    setState(() {});
+  String? _validateVisitorEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
+    }
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value.trim())) {
+      return 'Please enter a valid email address';
+    }
+    return null;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Color(0xFF081735)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: Row(
-          children: [
-            Image.asset('assets/images/rdl.png', height: 40),
-            const SizedBox(width: 10),
-            const Text('Manage Departments', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
+  String? _validateDesignation(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Designation is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Designation must be at least 2 characters';
+    }
+    if (value.trim().length > 50) {
+      return 'Designation must be less than 50 characters';
+    }
+    return null;
+  }
+
+  String? _validateCompanyName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Company name is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Company name must be at least 2 characters';
+    }
+    if (value.trim().length > 100) {
+      return 'Company name must be less than 100 characters';
+    }
+    return null;
+  }
+
+  String? _validateContactNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Contact number is required';
+    }
+    // Remove all non-digit characters for validation
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.length != 10) {
+      return 'Contact number must be exactly 10 digits';
+    }
+    return null;
+  }
+
+  String? _validateTotalNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Accompanying count is required';
+    }
+    final number = int.tryParse(value.trim());
+    if (number == null) {
+      return 'Please enter a valid number';
+    }
+    if (number < 0) {
+      return 'Accompanying count cannot be negative';
+    }
+    if (number > 20) {
+      return 'Accompanying count cannot exceed 20';
+    }
+    return null;
+  }
+
+  String? _validatePurpose(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Purpose is required';
+    }
+    if (value.trim().length > 200) {
+      return 'Purpose must be less than 200 characters';
+    }
+    return null;
+  }
+
+  void _showVisitorForm([DocumentSnapshot? visitor]) {
+    final isEditing = visitor != null;
+    final _formKey = GlobalKey<FormState>();
+    final vNameController = TextEditingController(text: visitor?['v_name']);
+    final vEmailController = TextEditingController(text: visitor?['v_email']);
+    final vDesignationController = TextEditingController(text: visitor?['v_designation']);
+    final vCompanyNameController = TextEditingController(text: visitor?['v_company_name']);
+    final vContactNoController = TextEditingController(text: visitor?['v_contactno']);
+    final vTotalNoController = TextEditingController(text: visitor?['v_totalno']?.toString() ?? (isEditing ? '' : ''));
+    final vPurposeController = TextEditingController(text: visitor?['purpose']);
+    String? selectedHostId = visitor?['emp_id'];
+    DateTime selectedDate = (visitor?['v_date'] as Timestamp?)?.toDate() ?? DateTime.now();
+    TimeOfDay selectedTime = visitor != null && visitor['v_time'] != null
+      ? _parseTime(visitor['v_time'])
+      : TimeOfDay.now();
+    String passGeneratedBy = (visitor?.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'host';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: AdminTheme.adminBackgroundGradient,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  hintText: 'Search departments...',
-                  hintStyle: const TextStyle(color: Colors.black54),
-                  prefixIcon: const Icon(Icons.search, color: Colors.black54),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value.trim().toLowerCase();
-                  });
-                },
-              ),
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isLargeScreen = screenWidth > 600;
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: isLargeScreen ? 32 : 16,
+              right: isLargeScreen ? 32 : 16,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 0.0),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 1.0),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        focusNode: _nameFocusNode,
-                        autofocus: true,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Department Name',
-                          labelStyle: TextStyle(color: Colors.white),
-                        ),
-                        validator: _validateName,
-                        onFieldSubmitted: (_) {
-                          _emailFocusNode.requestFocus();
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _emailController,
-                        focusNode: _emailFocusNode,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: TextStyle(color: Colors.white),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: _validateEmail,
-                        onFieldSubmitted: (_) {
-                          _passwordFocusNode.requestFocus();
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      StatefulBuilder(
-                        builder: (context, setLocalState) {
-                          return TextFormField(
-                            controller: _passwordController,
-                            focusNode: _passwordFocusNode,
-                            style: const TextStyle(color: Colors.white),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: SystemTheme.primary.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+                child: FutureBuilder<List<DropdownMenuItem<String>>>(
+                  future: _getHostDropdownItems(),
+                  builder: (context, snapshot) {
+                    final items = snapshot.data ?? [];
+                    return Form(
+              key: _formKey,
+              child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                          Text(
+                            isEditing ? 'Edit Visitor' : 'Add Visitor',
+                            style: SystemTheme.heading.copyWith(fontSize: 20, color: SystemTheme.text),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: vNameController,
+                            focusNode: _nameFocus,
+                            autofocus: true,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_emailFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
                             decoration: InputDecoration(
-                              labelText: 'Password',
-                              labelStyle: const TextStyle(color: Colors.white),
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white),
-                                onPressed: () {
-                                  setLocalState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
+                              hintText: 'Name',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
-                            obscureText: _obscurePassword,
-                            validator: _validatePassword,
+                            validator: (val) => _validateVisitorName(val),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vEmailController,
+                            focusNode: _emailFocus,
+                            textInputAction: TextInputAction.next,
                             onFieldSubmitted: (_) {
-                              _addOrUpdateDepartment();
+                              FocusScope.of(context).requestFocus(_designationFocus);
                             },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton(
-                          onPressed: _addOrUpdateDepartment,
-                          child: Text(_editingId == null ? 'Add' : 'Update'),
-                        ),
-                      ),
-                    ],
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Email',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => _validateVisitorEmail(val),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vDesignationController,
+                            focusNode: _designationFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_companyFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Designation',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => _validateDesignation(val),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vCompanyNameController,
+                            focusNode: _companyFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_purposeFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Company Name',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => _validateCompanyName(val),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vPurposeController,
+                            focusNode: _purposeFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_contactFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Purpose',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => _validatePurpose(val),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: vContactNoController,
+                            focusNode: _contactFocus,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_totalNoFocus);
+                            },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Contact No',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            validator: (val) => _validateContactNumber(val),
+                          ),
+                          const SizedBox(height: 10),
+                  TextFormField(
+                    controller: vTotalNoController,
+                    focusNode: _totalNoFocus,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).unfocus();
+                    },
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              hintText: 'Accompanying Count',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
+                              ),
+                            ),
+                    keyboardType: TextInputType.number,
+                    validator: (val) => _validateTotalNumber(val),
                   ),
-                ),
+                          const SizedBox(height: 10),
+                          // Date Picker
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                selectedDate = picked;
+                                (context as Element).markNeedsBuild();
+                              }
+                            },
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Select Date',
+                                  hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  labelStyle: const TextStyle(color: Colors.black),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 2),
+                                  ),
+                                ),
+                                controller: TextEditingController(
+                                  text: '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Time Picker
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: selectedTime,
+                              );
+                              if (picked != null) {
+                                selectedTime = picked;
+                                (context as Element).markNeedsBuild();
+                              }
+                            },
+                            child: AbsorbPointer(
+                              child: TextFormField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Select Time',
+                                  hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                                  labelStyle: const TextStyle(color: Colors.black),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 1),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.black, width: 2),
+                                  ),
+                                ),
+                                controller: TextEditingController(
+                                  text: selectedTime.format(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                        value: selectedHostId,
+                            items: items,
+                        onChanged: (val) => selectedHostId = val,
+                            decoration: InputDecoration(
+                              hintText: 'Host',
+                              hintStyle: SystemTheme.body.copyWith(color: Colors.black.withOpacity(0.6)),
+                              labelStyle: const TextStyle(color: Colors.black),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 1),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.black, width: 2),
               ),
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('department').snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return const Center(child: Text('No departments found.', style: TextStyle(color: AdminTheme.textLight)));
-                    }
-                    final docs = snapshot.data!.docs;
-                    final filteredDocs = _searchQuery.isEmpty
-                        ? docs
-                        : docs.where((doc) {
-                            final data = doc.data() as Map<String, dynamic>? ?? {};
-                            final name = (data['d_name'] ?? '').toString().toLowerCase();
-                            return name.contains(_searchQuery);
-                          }).toList();
-                    return ListView.builder(
-                      itemCount: filteredDocs.length,
-                      itemBuilder: (context, index) {
-                        final doc = filteredDocs[index];
-                        final id = doc.id;
-                        final data = doc.data() as Map<String, dynamic>? ?? {};
-                        final name = data['d_name'] ?? '';
-                        final email = data['d_email'] ?? '';
-                        final password = data['d_password'] ?? '';
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select a host';
+              }
+              return null;
+            },
+          ),
+                          const SizedBox(height: 10),
+                          // Pass Generation Radio Buttons
+                          Text(
+                            'Pass Generated By:',
+                            style: SystemTheme.body.copyWith(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          StatefulBuilder(
+                            builder: (context, setState) {
+                              return Column(
+                                children: [
+                                  RadioListTile<String>(
+                                    title: Text(
+                                      'Host',
+                                      style: SystemTheme.body.copyWith(color: Colors.black),
+                                    ),
+                                    value: 'host',
+                                    groupValue: passGeneratedBy,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        passGeneratedBy = value!;
+                                      });
+                                    },
+                                    activeColor: SystemTheme.primary,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  RadioListTile<String>(
+                                    title: Text(
+                                      'Receptionist',
+                                      style: SystemTheme.body.copyWith(color: Colors.black),
+              ),
+                                    value: 'receptionist',
+                                    groupValue: passGeneratedBy,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        passGeneratedBy = value!;
+                                      });
+                                    },
+                                    activeColor: SystemTheme.primary,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ],
+                              );
+                            },
+          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Cancel', style: SystemTheme.body.copyWith(color: Colors.grey[600])),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    try {
+                                      final visitorData = {
+                                        'v_name': vNameController.text.trim(),
+                                        'v_email': vEmailController.text.trim(),
+                                        'v_designation': vDesignationController.text.trim(),
+                                        'v_company_name': vCompanyNameController.text.trim(),
+                                        'purpose': vPurposeController.text.trim(),
+                                        'v_contactno': vContactNoController.text.trim(),
+                                        'v_totalno': int.tryParse(vTotalNoController.text.trim()) ?? 1,
+                                        'v_date': Timestamp.fromDate(selectedDate),
+                                        'v_time': selectedTime.format(context),
+                                        'emp_id': selectedHostId,
+                                        'departmentId': _currentDepartmentId,
+                                        'pass_generated_by': passGeneratedBy,
+                                      };
+                                      
+                                      if (!isEditing) {
+                                        await FirebaseFirestore.instance.collection('visitor').add(visitorData);
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Visitor added successfully!'), backgroundColor: Colors.green),
+                                        );
+                                      } else {
+                                        await visitor!.reference.update(visitorData);
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Visitor updated successfully!'), backgroundColor: Colors.green),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+                                      );
+                                      // Don't close dialog on error
+                                    }
+                                  }
+                                },
+                                icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
+                                label: Text(isEditing ? 'Update' : 'Add', style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SystemTheme.text,
+                                  padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 30 : 20, vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
                               ),
                             ],
                           ),
-                          child: ListTile(
-                            title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Email: $email', style: const TextStyle(color: Colors.black)),
-                                Text('Password: $password', style: const TextStyle(color: Colors.black)),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => _startEdit(id, name, email, password),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _deleteDepartment(id),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                        ],
+                      ),
                     );
                   },
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4B006E), Color(0xFF0F2027), Color(0xFF2C5364)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 12,
-                    offset: Offset(0, 6),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-              width: double.infinity,
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 38,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.admin_panel_settings, color: Colors.deepPurple, size: 40),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text('Admin', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('admin@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildDrawerItem(
-              icon: Icons.settings,
-              text: 'Settings',
-              selected: false,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.dashboard,
-              text: 'Admin Dashboard',
-              selected: false,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AdminDashboard()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String text,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(text),
-      selected: selected,
-      onTap: onTap,
+  void _showVisitorDetailsDialog(DocumentSnapshot visitor) {
+    showGeneralDialog(
+    context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Visitor Details',
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return Transform.scale(
+          scale: anim1.value,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Dialog(
+        shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+        ),
+                  elevation: 12,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: Colors.blue.shade100,
+                                  child: const Icon(Icons.person, color: Colors.black, size: 36, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Visitor Details',
+                                  style: SystemTheme.heading.copyWith(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  detailRow('Name', visitor['v_name']),
+                                  detailRow('Email', visitor['v_email'], onCopy: () {
+                                    Clipboard.setData(ClipboardData(text: visitor['v_email']));
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email copied!'), backgroundColor: Colors.green));
+                                  }),
+                                  detailRow('Designation', visitor['v_designation']),
+                                  detailRow('Contact No', visitor['v_contactno'], onCopy: () {
+                                    Clipboard.setData(ClipboardData(text: visitor['v_contactno']));
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact copied!'), backgroundColor: Colors.green));
+                                  }),
+                                  detailRow('Company', visitor['v_company_name']),
+                                  SizedBox(height: 6),
+                                  detailRow('Purpose', visitor['purpose']),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Divider(),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  detailRow('Total Visitors', visitor['v_totalno'].toString()),
+                                  FutureBuilder<String>(
+                                    future: _getHostName(visitor['emp_id']),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                        return detailRow('Host', 'Loading...');
+                                      }
+                                      return detailRow('Host', snapshot.data ?? 'N/A');
+                                    },
+                                  ),
+                                  detailRow('Date', _formatDate((visitor['v_date'] as Timestamp).toDate())),
+                                  detailRow('Time', visitor['v_time']),
+                                  detailRow('Pass Generated By', (visitor.data() as Map<String, dynamic>?)?['pass_generated_by'] ?? 'Host'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              child: Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+                          ),
+        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      );
+    },
+  );
+}
+
+  Widget detailRow(String label, String value, {VoidCallback? onCopy}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+        Expanded(child: Text(value, style: TextStyle(color: Colors.black87))),
+        if (onCopy != null)
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16),
+            tooltip: 'Copy $label',
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
+            onPressed: onCopy,
+          ),
+      ],
     );
   }
-} 
+
+  Future<List<DropdownMenuItem<String>>> _getHostDropdownItems() async {
+    print('DEBUG: _currentDepartmentId =  [32m [1m [4m [7m' + (_currentDepartmentId ?? 'null') + '\u001b[0m');
+    if (_currentDepartmentId == null) return [
+      const DropdownMenuItem<String>(
+        value: null,
+        child: Text('No department ID found'),
+      ),
+    ];
+    final snapshot = await FirebaseFirestore.instance
+        .collection('host')
+        .where('departmentId', isEqualTo: _currentDepartmentId)
+        .get();
+    print('DEBUG: Hosts fetched for departmentId $_currentDepartmentId:');
+    for (var doc in snapshot.docs) {
+      print('  Host: ' + (doc.data()['emp_name'] ?? 'NO NAME'));
+    }
+    if (snapshot.docs.isEmpty) {
+      return [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('No hosts found'),
+        ),
+      ];
+    }
+    return snapshot.docs.map((doc) => DropdownMenuItem<String>(
+      value: doc.id,
+      child: Text(doc['emp_name']),
+    )).toList();
+  }
+
+  Future<String> _getHostName(String hostId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('host').doc(hostId).get();
+      if (doc.exists) {
+        return doc.data()?['emp_name'] ?? 'Unknown Host';
+      }
+    } catch (e) {
+      // It's good practice to handle potential errors
+    }
+    return 'Unknown Host';
+  }
+
+  TimeOfDay _parseTime(String? timeStr) {
+    if (timeStr == null) return TimeOfDay.now();
+    final parts = timeStr.split(":");
+    if (parts.length < 2) return TimeOfDay.now();
+    return TimeOfDay(hour: int.tryParse(parts[0]) ?? 0, minute: int.tryParse(parts[1]) ?? 0);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth > 600;
+    return Scaffold(
+      backgroundColor: const Color(0xFFD4E9FF),
+      body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+          children: [
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _currentDepartmentId == null
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('visitor')
+                        .where('departmentId', isEqualTo: _currentDepartmentId)
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = snapshot.data!.docs[index];
+                      final totalVisitors = doc['v_totalno'] ?? 1;
+                      final hostId = doc['emp_id'];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                           leading: const Icon(Icons.person, color: Colors.black, size: 36, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
+                           title: Row(
+                             children: [
+                               Text('Name: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                               Text(doc['v_name'], style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                             ],
+                           ),
+                           subtitle: Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             children: [
+                               Row(
+                                 children: [
+                                   Text('Designation: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_designation'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                               const SizedBox(height: 2),
+                               Row(
+                                 children: [
+                                   Text('Company: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_company_name'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                               const SizedBox(height: 2),
+                               Row(
+                                 children: [
+                                   Text('Contact: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_contactno'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                             ],
+                           ),
+                          trailing: PopupMenuButton<String>(
+  icon: const Icon(Icons.more_vert, color: Colors.black),
+  onSelected: (value) {
+    if (value == 'view') {
+      _showVisitorDetailsDialog(doc);
+    } else if (value == 'edit') {
+      _showVisitorForm(doc);
+    } else if (value == 'delete') {
+      doc.reference.delete();
+    }
+  },
+  itemBuilder: (context) => [
+    PopupMenuItem(
+      value: 'view',
+      child: Row(
+        children: const [Icon(Icons.visibility, size: 18), SizedBox(width: 8), Text('View')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'edit',
+      child: Row(
+        children: const [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')],
+      ),
+    ),
+    PopupMenuItem(
+      value: 'delete',
+      child: Row(
+        children: const [Icon(Icons.delete, size: 18), SizedBox(width: 8), Text('Delete')],
+      ),
+    ),
+  ],
+),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: SystemTheme.primary,
+        onPressed: () => _showVisitorForm(),
+        child: const Icon(Icons.add, color: Colors.black),
+        tooltip: 'Add Visitor',
+      ),
+    );
+  }
+}
