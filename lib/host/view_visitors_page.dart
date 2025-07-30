@@ -356,14 +356,12 @@ class _VisitorCard extends StatelessWidget {
                       // Update existing pass
                       await FirebaseFirestore.instance.collection('passes').doc(passesQuery.docs.first.id).update({
                         'checkout_code': code,
-                        'checkout_code_time': now,
                       });
                     } else {
                       // Create new pass entry with minimal info
                       await FirebaseFirestore.instance.collection('passes').add({
                         'visitorId': docId,
                         'checkout_code': code,
-                        'checkout_code_time': now,
                       });
                     }
                     showDialog(

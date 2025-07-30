@@ -45,18 +45,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                         final hostName = doc['host_name'] ?? '';
                         final vDate = doc['v_date'];
                         final checkin = doc['v_time'] ?? 'N/A';
-                        final checkoutRaw = doc['checkout_code_time'];
                         String checkout = 'N/A';
-                        if (checkoutRaw != null) {
-                          if (checkoutRaw is Timestamp) {
-                            final dt = checkoutRaw.toDate();
-                            checkout = DateFormat('hh:mm a').format(dt);
-                          } else if (checkoutRaw is DateTime) {
-                            checkout = DateFormat('hh:mm a').format(checkoutRaw);
-                          } else {
-                            checkout = checkoutRaw.toString();
-                          }
-                        }
                         String dateStr = 'N/A';
                         if (vDate != null) {
                           if (vDate is Timestamp) {

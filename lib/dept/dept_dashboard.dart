@@ -116,17 +116,17 @@ class _DeptDashboardState extends State<DeptDashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFD4E9FF),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(kToolbarHeight + MediaQuery.of(context).padding.top),
+        preferredSize: Size.fromHeight(kToolbarHeight + MediaQuery.of(context).padding.top + 20),
         child: Container(
           color: const Color(0xFF6CA4FE),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Image.asset('assets/images/rdl.png', height: 36),
+                  Image.asset('assets/images/rdl.png', height: 42),
                   const SizedBox(width: 12),
-                  const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text('Department', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
                 ],
               ),
             ),
@@ -182,7 +182,7 @@ class _DeptHomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 52),
+          SizedBox(height: 88),
           // Dashboard Card
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),

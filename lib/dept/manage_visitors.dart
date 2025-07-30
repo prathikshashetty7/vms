@@ -42,6 +42,98 @@ class _ManageVisitorsState extends State<ManageVisitors> {
     super.dispose();
   }
 
+  // Validation methods
+  String? _validateVisitorName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Visitor name is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Visitor name must be at least 2 characters';
+    }
+    if (value.trim().length > 50) {
+      return 'Visitor name must be less than 50 characters';
+    }
+    if (!RegExp(r'^[A-Za-z\s]+$').hasMatch(value.trim())) {
+      return 'Visitor name can only contain letters and spaces';
+    }
+    return null;
+  }
+
+  String? _validateVisitorEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
+    }
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value.trim())) {
+      return 'Please enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validateDesignation(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Designation is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Designation must be at least 2 characters';
+    }
+    if (value.trim().length > 50) {
+      return 'Designation must be less than 50 characters';
+    }
+    return null;
+  }
+
+  String? _validateCompanyName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Company name is required';
+    }
+    if (value.trim().length < 2) {
+      return 'Company name must be at least 2 characters';
+    }
+    if (value.trim().length > 100) {
+      return 'Company name must be less than 100 characters';
+    }
+    return null;
+  }
+
+  String? _validateContactNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Contact number is required';
+    }
+    // Remove all non-digit characters for validation
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.length != 10) {
+      return 'Contact number must be exactly 10 digits';
+    }
+    return null;
+  }
+
+  String? _validateTotalNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Accompanying count is required';
+    }
+    final number = int.tryParse(value.trim());
+    if (number == null) {
+      return 'Please enter a valid number';
+    }
+    if (number < 0) {
+      return 'Accompanying count cannot be negative';
+    }
+    if (number > 20) {
+      return 'Accompanying count cannot exceed 20';
+    }
+    return null;
+  }
+
+  String? _validatePurpose(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Purpose is required';
+    }
+    if (value.trim().length > 200) {
+      return 'Purpose must be less than 200 characters';
+    }
+    return null;
+  }
+
   void _showVisitorForm([DocumentSnapshot? visitor]) {
     final isEditing = visitor != null;
     final _formKey = GlobalKey<FormState>();
@@ -129,7 +221,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
-                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                            validator: (val) => _validateVisitorName(val),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -157,7 +249,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
-                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                            validator: (val) => _validateVisitorEmail(val),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -185,6 +277,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
+                            validator: (val) => _validateDesignation(val),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -212,7 +305,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
-                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                            validator: (val) => _validateCompanyName(val),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -240,7 +333,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
-                            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                            validator: (val) => _validatePurpose(val),
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -268,6 +361,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
                               ),
                             ),
+                            validator: (val) => _validateContactNumber(val),
                           ),
                           const SizedBox(height: 10),
                   TextFormField(
@@ -296,6 +390,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                               ),
                             ),
                     keyboardType: TextInputType.number,
+                    validator: (val) => _validateTotalNumber(val),
                   ),
                           const SizedBox(height: 10),
                           // Date Picker
@@ -399,6 +494,12 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 borderSide: BorderSide(color: Colors.black, width: 2),
               ),
             ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select a host';
+              }
+              return null;
+            },
           ),
                           const SizedBox(height: 10),
                           // Pass Generation Radio Buttons
@@ -450,33 +551,54 @@ class _ManageVisitorsState extends State<ManageVisitors> {
           ),
                           const SizedBox(height: 18),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text('Cancel', style: SystemTheme.body.copyWith(color: Colors.grey[600])),
+                              ),
                               ElevatedButton.icon(
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  final visitorData = {
-                    'v_name': vNameController.text,
-                    'v_email': vEmailController.text,
-                    'v_designation': vDesignationController.text,
-                    'v_company_name': vCompanyNameController.text,
-                    'purpose': vPurposeController.text,
-                    'v_contactno': vContactNoController.text,
-                    'v_totalno': int.tryParse(vTotalNoController.text) ?? 1,
-                    'v_date': Timestamp.fromDate(selectedDate),
-                    'v_time': selectedTime.format(context),
-                    'emp_id': selectedHostId,
-                    'departmentId': _currentDepartmentId,
-                    'pass_generated_by': passGeneratedBy,
-                  };
-                  if (!isEditing) {
-                    await FirebaseFirestore.instance.collection('visitor').add(visitorData);
-                  } else {
-                    await visitor!.reference.update(visitorData);
-                  }
-                  Navigator.of(context).pop();
-                }
-              },
+                                onPressed: () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    try {
+                                      final visitorData = {
+                                        'v_name': vNameController.text.trim(),
+                                        'v_email': vEmailController.text.trim(),
+                                        'v_designation': vDesignationController.text.trim(),
+                                        'v_company_name': vCompanyNameController.text.trim(),
+                                        'purpose': vPurposeController.text.trim(),
+                                        'v_contactno': vContactNoController.text.trim(),
+                                        'v_totalno': int.tryParse(vTotalNoController.text.trim()) ?? 1,
+                                        'v_date': Timestamp.fromDate(selectedDate),
+                                        'v_time': selectedTime.format(context),
+                                        'emp_id': selectedHostId,
+                                        'departmentId': _currentDepartmentId,
+                                        'pass_generated_by': passGeneratedBy,
+                                      };
+                                      
+                                      if (!isEditing) {
+                                        await FirebaseFirestore.instance.collection('visitor').add(visitorData);
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Visitor added successfully!'), backgroundColor: Colors.green),
+                                        );
+                                      } else {
+                                        await visitor!.reference.update(visitorData);
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Visitor updated successfully!'), backgroundColor: Colors.green),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+                                      );
+                                      // Don't close dialog on error
+                                    }
+                                  }
+                                },
                                 icon: Icon(isEditing ? Icons.update : Icons.add, color: Colors.white),
                                 label: Text(isEditing ? 'Update' : 'Add', style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
@@ -536,7 +658,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                 CircleAvatar(
                                   radius: 32,
                                   backgroundColor: Colors.blue.shade100,
-                                  child: const Icon(Icons.person, size: 38, color: Colors.blue),
+                                  child: const Icon(Icons.person, color: Colors.black, size: 36, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
@@ -666,7 +788,7 @@ class _ManageVisitorsState extends State<ManageVisitors> {
       return [
         const DropdownMenuItem<String>(
           value: null,
-          child: Text('No hosts found for this department'),
+          child: Text('No hosts found'),
         ),
       ];
     }
@@ -732,32 +854,38 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
-                          leading: const Icon(Icons.person, color: Colors.black),
-                          title: Text(doc['v_name'], style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
-                          subtitle: FutureBuilder<String>(
-                            future: hostId != null ? _getHostName(hostId) : Future.value('N/A'),
-                            builder: (context, hostSnapshot) {
-                              if (hostSnapshot.connectionState == ConnectionState.waiting) {
-                                return const Text("Loading host...");
-                              }
-                              final email = doc['v_email'] ?? '';
-                              final company = doc['v_company_name'] ?? '';
-                              final contact = doc['v_contactno'] ?? '';
-                              final host = hostSnapshot.hasError || !hostSnapshot.hasData || hostSnapshot.data == null
-                                  ? 'N/A'
-                                  : hostSnapshot.data;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Email: $email', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Company: $company', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Purpose: ${doc['purpose'] ?? 'N/A'}', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Contact: $contact', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                  Text('Host: $host', style: SystemTheme.body.copyWith(color: Colors.black54)),
-                                ],
-                              );
-                            }
-                          ),
+                           leading: const Icon(Icons.person, color: Colors.black, size: 36, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
+                           title: Row(
+                             children: [
+                               Text('Name: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                               Text(doc['v_name'], style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                             ],
+                           ),
+                           subtitle: Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             children: [
+                               Row(
+                                 children: [
+                                   Text('Designation: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_designation'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                               const SizedBox(height: 2),
+                               Row(
+                                 children: [
+                                   Text('Company: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_company_name'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                               const SizedBox(height: 2),
+                               Row(
+                                 children: [
+                                   Text('Contact: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
+                                   Text(doc['v_contactno'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                 ],
+                               ),
+                             ],
+                           ),
                           trailing: PopupMenuButton<String>(
   icon: const Icon(Icons.more_vert, color: Colors.black),
   onSelected: (value) {
