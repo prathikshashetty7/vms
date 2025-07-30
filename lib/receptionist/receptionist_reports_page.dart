@@ -4,6 +4,7 @@ import 'manual_registrations.dart';
 import 'dashboard.dart' show VisitorsPage;
 import 'kiosk_qr_page.dart';
 import 'host_passes_page.dart';
+import 'qr_code_visitors_page.dart'; // <-- Import your new page
 
 class ReceptionistReportsPage extends StatelessWidget {
   const ReceptionistReportsPage({Key? key}) : super(key: key);
@@ -79,15 +80,7 @@ class ReceptionistReportsPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ManualRegistrationsPage(
-                        collection: 'qr_code_registrations',
-                        title: 'QR Code Registrations',
-                        icon: Icons.qr_code_2,
-                        color: Color(0xFF6CA4FE),
-                        nameField: 'fullName',
-                        mobileField: 'mobile',
-                        timeField: 'timestamp',
-                      ),
+                      builder: (context) => const QRCodeVisitorsPage(), // <-- Use your new page here
                     ),
                   );
                 },
@@ -267,4 +260,4 @@ class _SectionCard extends StatelessWidget {
         return '';
     }
   }
-} 
+}
