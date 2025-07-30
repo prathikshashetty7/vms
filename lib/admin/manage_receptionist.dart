@@ -11,6 +11,7 @@ class ManageReceptionistPage extends StatefulWidget {
 }
 
 class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -18,10 +19,19 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _obscurePassword = true;
+  String? _emailError;
+  String? _passwordError;
+  String? _phoneError;
   // Removed department fields
   // String? _selectedDepartment = null;
   // List<Map<String, String>> _departments = [];
   // String? _selectedDepartmentId;
+  
+  // Focus nodes for form fields
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _phoneFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -38,7 +48,34 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _searchController.dispose();
+    _nameFocusNode.dispose();
+    _emailFocusNode.dispose();
+    _phoneFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  String? _validateName(String? value) =>
+      (value == null || value.trim().isEmpty) ? 'Full name is required.' : null;
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Email is required.';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+').hasMatch(value.trim())) return 'Please enter a valid email address.';
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Phone number is required.';
+    if (!RegExp(r'^\d{10}').hasMatch(value.trim())) return 'Enter a valid 10-digit phone number.';
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Password is required.';
+    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#\$&*~^%()_+=\[\]{}|;:,.<>/?-]).{6,}').hasMatch(value.trim())) {
+      return 'Password must contain a letter, a number, and a special character.';
+    }
+    return null;
   }
 
   void _showAddReceptionistDialog() {
@@ -47,8 +84,6 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.clear();
     _passwordController.clear();
     _obscurePassword = true;
-    // Removed department reset
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -57,53 +92,80 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
           content: SingleChildScrollView(
             child: StatefulBuilder(
               builder: (context, setStateSB) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Full Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone Number',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () {
-                            setStateSB(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                return Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        focusNode: _nameFocusNode,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name',
+                          border: OutlineInputBorder(),
                         ),
+                        validator: _validateName,
+                        onFieldSubmitted: (_) {
+                          _emailFocusNode.requestFocus();
+                        },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        focusNode: _emailFocusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validateEmail,
+                        onFieldSubmitted: (_) {
+                          _phoneFocusNode.requestFocus();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        focusNode: _phoneFocusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: _validatePhone,
+                        onFieldSubmitted: (_) {
+                          _passwordFocusNode.requestFocus();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      StatefulBuilder(
+                        builder: (context, setLocalState) {
+                          return TextFormField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocusNode,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () {
+                                  setLocalState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            validator: _validatePassword,
+                            onFieldSubmitted: (_) {
+                              _addReceptionist(showDialogSetState: setStateSB);
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -115,8 +177,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
             ),
             ElevatedButton(
               onPressed: () {
-                _addReceptionist();
-                Navigator.of(context).pop();
+                _addReceptionist(showDialogSetState: (fn) => setState(() { fn(); }));
               },
               child: const Text('Add'),
             ),
@@ -126,62 +187,57 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     );
   }
 
-  void _addReceptionist() async {
-    if (_nameController.text.isEmpty || 
-        _emailController.text.isEmpty || 
-        _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty) { // Removed department check
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')), // Updated message
-      );
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
-      );
-      return;
-    }
-
+  void _addReceptionist({void Function(void Function())? showDialogSetState}) async {
+    if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final phone = _phoneController.text.trim();
+    final name = _nameController.text.trim();
     try {
-      // Create user in Firebase Auth
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      } catch (e) {
-        if (e is FirebaseAuthException && e.code == 'email-already-in-use') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email already in use.')),
-          );
-          return;
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating user: $e')),
-          );
-          return;
-        }
-      }
-      // Add to Firestore
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       await FirebaseFirestore.instance.collection('receptionist').add({
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-        'password': _passwordController.text,
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'password': password,
         'role': 'receptionist',
-        // Removed department fields
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receptionist added successfully')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding receptionist: $e')),
-      );
+      setState(() {
+        _nameController.clear();
+        _emailController.clear();
+        _phoneController.clear();
+        _passwordController.clear();
+        _obscurePassword = true;
+      });
+      _formKey.currentState!.reset();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receptionist added successfully!'), backgroundColor: Colors.green),
+        );
+      });
+      Navigator.of(context).pop();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email already in use.'), backgroundColor: Colors.red),
+        );
+      } else if (e.code == 'weak-password') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password is too weak.'), backgroundColor: Colors.red),
+        );
+      } else if (e.code == 'invalid-email') {
+        if (showDialogSetState != null) {
+          showDialogSetState(() {});
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating user: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -231,8 +287,6 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     _phoneController.text = data['phone'] ?? '';
     _passwordController.text = data['password'] ?? '';
     _obscurePassword = true;
-    // Removed department fields
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -241,53 +295,80 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
           content: SingleChildScrollView(
             child: StatefulBuilder(
               builder: (context, setStateSB) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Full Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone Number',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () {
-                            setStateSB(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                return Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        focusNode: _nameFocusNode,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name',
+                          border: OutlineInputBorder(),
                         ),
+                        validator: _validateName,
+                        onFieldSubmitted: (_) {
+                          _emailFocusNode.requestFocus();
+                        },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        focusNode: _emailFocusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validateEmail,
+                        onFieldSubmitted: (_) {
+                          _phoneFocusNode.requestFocus();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        focusNode: _phoneFocusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: _validatePhone,
+                        onFieldSubmitted: (_) {
+                          _passwordFocusNode.requestFocus();
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      StatefulBuilder(
+                        builder: (context, setLocalState) {
+                          return TextFormField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocusNode,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () {
+                                  setLocalState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            validator: _validatePassword,
+                            onFieldSubmitted: (_) {
+                              _updateReceptionist(docId, setStateSB);
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -299,8 +380,7 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
             ),
             ElevatedButton(
               onPressed: () {
-                _updateReceptionist(docId);
-                Navigator.of(context).pop();
+                _updateReceptionist(docId, (fn) => setState(() { fn(); }));
               },
               child: const Text('Update'),
             ),
@@ -310,36 +390,36 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
     );
   }
 
-  void _updateReceptionist(String docId) async {
-    if (_nameController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _phoneController.text.isEmpty ||
-        _passwordController.text.isEmpty) { // Removed department check
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')), // Updated message
-      );
-      return;
-    }
-    if (_passwordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
-      );
-      return;
-    }
+  void _updateReceptionist(String docId, void Function(void Function()) showDialogSetState) async {
+    if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final phone = _phoneController.text.trim();
+    final name = _nameController.text.trim();
     try {
       await FirebaseFirestore.instance.collection('receptionist').doc(docId).update({
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-        'password': _passwordController.text,
-        // Removed department fields
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'password': password,
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receptionist updated successfully')),
-      );
+      setState(() {
+        _nameController.clear();
+        _emailController.clear();
+        _phoneController.clear();
+        _passwordController.clear();
+        _obscurePassword = true;
+      });
+      _formKey.currentState!.reset();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receptionist updated successfully!'), backgroundColor: Colors.green),
+        );
+      });
+      Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating receptionist: $e')),
+        SnackBar(content: Text('Error updating receptionist: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -494,22 +574,9 @@ class _ManageReceptionistPageState extends State<ManageReceptionistPage> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(Icons.email, size: 16, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(email)),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Text(phone),
-                                ],
-                              ),
+                              Text('Email: ${data['email']}', style: const TextStyle(color: Colors.black)),
+                              Text('Phone: ${data['phone']}', style: const TextStyle(color: Colors.black)),
+                              Text('Password: ${data['password']}', style: const TextStyle(color: Colors.black)), // <-- Add this line
                             ],
                           ),
                           trailing: Row(

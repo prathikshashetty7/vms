@@ -209,18 +209,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         dateStr = vDate.toString();
                       }
                     }
-                    final checkoutRaw = v['checkout_code_time'];
                     String checkout = 'N/A';
-                    if (checkoutRaw != null) {
-                      if (checkoutRaw is Timestamp) {
-                        final dt = checkoutRaw.toDate();
-                        checkout = DateFormat('hh:mm a').format(dt);
-                      } else if (checkoutRaw is DateTime) {
-                        checkout = DateFormat('hh:mm a').format(checkoutRaw);
-                      } else {
-                        checkout = checkoutRaw.toString();
-                      }
-                    }
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(

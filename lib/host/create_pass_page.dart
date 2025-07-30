@@ -267,6 +267,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'v_company_name': v['v_company_name'] ?? '',
                                     'department': departmentName ?? '',
                                     'departmentId': departmentId ?? '',
+                                    'emp_id': hostDocId ?? '', // Add host's document ID
                                     'host_name': hostName ?? '',
                                     'v_date': passDate,
                                     'v_time': v['v_time'],

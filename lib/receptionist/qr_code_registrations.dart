@@ -7,8 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/system_theme.dart';
-import 'receptionist_reports_page.dart';
-import 'dashboard.dart' show VisitorsPage;
 import 'package:image/image.dart' as img;
 
 class QRCodeRegistrationsPage extends StatefulWidget {
@@ -24,15 +22,12 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
   String? purposeOther;
   Uint8List? visitorPhoto;
   bool _isSaving = false;
-  bool _showDeptTotalVisitors = false;
-  int _deptTotalVisitors = 1;
   final List<String> yesNo = ['Yes', 'No'];
   List<String> departments = [];
   bool _departmentsLoading = true;
   late AnimationController _buttonController;
   late Animation<double> _buttonScale;
   String designation = '';
-  String? selectedVisitorId;
   
   // Add focus nodes for each field
   final _fullNameFocus = FocusNode();
@@ -71,9 +66,6 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
       designation = '';
       purposeOther = null;
       visitorPhoto = null;
-      selectedVisitorId = null;
-      _showDeptTotalVisitors = false;
-      _deptTotalVisitors = 1;
     });
     
     // Clear controllers
@@ -177,7 +169,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
           children: [
             Image.asset('assets/images/rdl.png', height: 36),
             const SizedBox(width: 12),
-            const Text('Visitor Form', style: TextStyle(color: Colors.white)),
+            const Text('QR Code Registration', style: TextStyle(color: Colors.white)),
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -249,7 +241,7 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                           children: [
                             Center(
                               child: Text(
-                                'Visitor Registration',
+                                'QR Code Registration',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   fontSize: 32,
@@ -458,34 +450,19 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                               },
                             ),
                             const SizedBox(height: 16),
-                            // Conditional accompanying visitors section
-                            if (_showDeptTotalVisitors) ...[
-                              // Show department's total visitors count
-                              _buildTextField('Accompanying Visitors',
-                                onSaved: (v) => accompanyingCount = v!,
-                                validator: _required,
-                                icon: Icons.group,
-                                keyboardType: TextInputType.number,
-                                controller: TextEditingController(text: _deptTotalVisitors.toString()),
-                                textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                              ),
-                            ] else ...[
-                              // Show original Yes/No dropdown + number field
-                              _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
-                              const SizedBox(height: 16),
-                              if (accompanying == 'Yes')
-                                  _buildTextField('Number of Accompanying Visitors',
-                                    onSaved: (v) => accompanyingCount = v!,
-                                    validator: _required,
-                                    icon: Icons.group,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _accompanyingCountFocus,
-                                    textInputAction: TextInputAction.next,
-                                    onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                                  ),
-                            ],
-                            if (_showDeptTotalVisitors || (accompanying == 'Yes' && !_showDeptTotalVisitors)) const SizedBox(height: 16),
+                            _buildDropdown('Accompanying Visitors (if any)', yesNo, accompanying, (v) => setState(() => accompanying = v!)),
+                            const SizedBox(height: 16),
+                            if (accompanying == 'Yes')
+                                _buildTextField('Number of Accompanying Visitors',
+                                  onSaved: (v) => accompanyingCount = v!,
+                                  validator: _required,
+                                  icon: Icons.group,
+                                  keyboardType: TextInputType.number,
+                                  focusNode: _accompanyingCountFocus,
+                                  textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
+                                ),
+                            if (accompanying == 'Yes') const SizedBox(height: 16),
                             _buildDropdown('Do you carrying a laptop?', yesNo, laptop, (v) => setState(() => laptop = v!)),
                             const SizedBox(height: 16),
                             if (laptop == 'Yes')
@@ -532,14 +509,10 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                     setState(() => _isSaving = true);
                                     
                                     try {
-                                      print('DEBUG: Form submission - selectedVisitorId = $selectedVisitorId');
                                       _formKey.currentState!.save();
                                       
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
-                                      
-                                      // Debug: Print selectedVisitorId
-                                      print('DEBUG: selectedVisitorId = $selectedVisitorId');
                                       
                                       // Store in qr_code_registrations collection
                                       final qrRegistrationRef = await FirebaseFirestore.instance.collection('qr_code_registrations').add({
@@ -552,15 +525,14 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                         'purpose': purpose,
                                         'appointment': appointment,
                                         'department': department == 'Select Dept' ? '' : department,
-                                        'accompanying': _showDeptTotalVisitors ? 'Yes' : accompanying,
-                                        'accompanyingCount': _showDeptTotalVisitors ? _deptTotalVisitors.toString() : (accompanying == 'Yes' ? accompanyingCount : ''),
+                                        'accompanying': accompanying,
+                                        'accompanyingCount': accompanying == 'Yes' ? accompanyingCount : '',
                                         'laptop': laptop,
                                         'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
                                         'timestamp': FieldValue.serverTimestamp(),
                                         'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
                                         'pass_no': passNo,
                                         'source': 'qr_code',
-                                        'visitor_id': selectedVisitorId,
                                       });
                                       
                                       // Also store in passes collection for consistency
@@ -575,10 +547,10 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                         'photoBase64': visitorPhoto != null ? base64Encode(visitorPhoto!) : null,
                                         'v_designation': designation,
                                         'pass_no': passNo,
-                                        'v_totalno': _showDeptTotalVisitors ? _deptTotalVisitors.toString() : (accompanying == 'Yes' ? accompanyingCount : ''),
+                                        'v_totalno': accompanying == 'Yes' ? accompanyingCount : '',
                                         'purpose': purpose,
                                         'created_at': FieldValue.serverTimestamp(),
-                                        'pass_generated_by': 'receptionist',
+                                        'pass_generated_by': 'qr_code',
                                         'source': 'qr_code',
                                       });
                                       
@@ -591,8 +563,8 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
                                         ),
                                       );
                                       
-                                      await Future.delayed(const Duration(milliseconds: 600));
-                                      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+                                      // Reset form after successful registration
+                                      _resetForm();
                                       
                                     } catch (e) {
                                       // Handle any errors during registration
@@ -626,53 +598,6 @@ class _QRCodeRegistrationsPageState extends State<QRCodeRegistrationsPage> with 
             ],
           );
         },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6CA4FE),
-        unselectedItemColor: Color(0xFF091016),
-        currentIndex: 3,
-        onTap: (index) {
-          if (index == 4) {
-            Navigator.pushReplacementNamed(context, '/signin');
-            return;
-          }
-          if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/dashboard');
-          } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/receptionist_reports');
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const VisitorsPage()),
-            );
-          } else if (index == 3) {
-            // Already here (QR Code Registration)
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_rounded),
-            label: 'Visitors',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.check_circle_rounded),
-            label: 'Status',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code_rounded),
-            label: 'QR Registration',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.logout_rounded),
-            label: 'Logout',
-          ),
-        ],
       ),
     );
   }
