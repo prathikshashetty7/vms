@@ -515,12 +515,12 @@ class _HostPassDetailDialog extends StatelessWidget {
                     // Save to Checked In/Out collection for status page
                       try {
                         await FirebaseFirestore.instance.collection('checked_in_out').add({
-                        'visitor_name': pass['v_name'] ?? '',
-                          'visitor_photo': pass['photoBase64'] ?? '',
+                          'visitor_id': pass['visitorId'] ?? '',
+                          'visitor_name': pass['v_name'] ?? '',
                           'check_in_time': FieldValue.serverTimestamp(),
-                        'check_in_date': _formatDateOnly(now.toDate()),
+                          'check_in_date': _formatDateOnly(now.toDate()),
                           'status': 'Checked In',
-                        'pass_id': pass['id'] ?? '',
+                          'pass_id': pass['id'] ?? '',
                           'created_at': FieldValue.serverTimestamp(),
                         });
                         print('Successfully saved to checked_in_out collection');

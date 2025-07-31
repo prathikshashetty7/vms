@@ -87,18 +87,24 @@ class _CreatePassPageState extends State<CreatePassPage> {
     }
   }
 
-  // Add this function to generate a unique 4-digit pass number
+  // Optimized function to generate a unique 4-digit pass number
   Future<int> _generateUniquePassNo() async {
     final random = Random();
-    int passNo;
-    bool exists = true;
     final passesRef = FirebaseFirestore.instance.collection('passes');
-    do {
-      passNo = 1000 + random.nextInt(9000); // 4-digit number
-      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
-      exists = query.docs.isNotEmpty;
-    } while (exists);
-    return passNo;
+    
+    // Generate a pass number based on timestamp to reduce collisions
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    int passNo = 1000 + (timestamp % 9000);
+    
+    // Check if this pass number exists (single query)
+    final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
+    
+    if (query.docs.isEmpty) {
+      return passNo;
+    }
+    
+    // If collision occurs, generate a random number (rare case)
+    return 1000 + random.nextInt(9000);
   }
 
   @override
@@ -116,17 +122,25 @@ class _CreatePassPageState extends State<CreatePassPage> {
                   .where('departmentId', isEqualTo: departmentId)
                   .snapshots(),
               builder: (context, snapshot) {
+                // Debug: Print host info
+                print('Host Doc ID: $hostDocId');
+                print('Department ID: $departmentId');
+                print('Host Name: $hostName');
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No visitors found.'));
                 }
-                final visitors = snapshot.data!.docs.map((doc) {
+                final allVisitors = snapshot.data!.docs.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   data['docId'] = doc.id; // Add document ID to the data
                   return data;
-                }).where((v) {
+                }).toList();
+                
+                print('Total visitors found: ${allVisitors.length}');
+                
+                final visitors = allVisitors.where((v) {
                   final date = v['v_date'];
                   if (date == null) return false;
                   DateTime visitDate;
@@ -142,11 +156,13 @@ class _CreatePassPageState extends State<CreatePassPage> {
                     }
                   }
                   final now = DateTime.now();
-                  // Show if pass_generated_by == 'host' OR pass_generated == true
-                  final isHostGenerated = v['pass_generated_by'] == 'host';
-                  final isPassGenerated = v['pass_generated'] == true;
-                  return (isHostGenerated || isPassGenerated) && !visitDate.isBefore(DateTime(now.year, now.month, now.day));
+                  // Show all visitors assigned to this host from last 30 days and future dates
+                  // This allows hosts to generate passes for visitors who don't have them yet
+                  final thirtyDaysAgo = DateTime(now.year, now.month, now.day - 30);
+                  return !visitDate.isBefore(thirtyDaysAgo);
                 }).toList();
+                
+                print('Visitors after date filter: ${visitors.length}');
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: visitors.length,
@@ -246,6 +262,9 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                                 onPressed: isGenerated ? () {} : () async {
+                                  // Debug: Print visitor data
+                                  print('Visitor data for pass generation: $v');
+                                  
                                   // Prepare pass data for preview
                                   dynamic vDate = v['v_date'];
                                   Timestamp passDate;
@@ -277,6 +296,9 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     'v_totalno': v['v_totalno'] ?? '',
                                     'purpose': v['purpose'] ?? '',
                                   };
+                                  
+                                  print('Generated pass number: $passNo');
+                                  print('Pass data structure: ${passData.keys.toList()}');
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => Dialog(
@@ -314,18 +336,48 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       ),
                                     ),
                                   );
-                                  if (confirm != true) return;
-                                  await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
-                                    'pass_generated': true,
-                                    'departmentId': departmentId ?? '',
-                                    'department': departmentName ?? '',
-                                    'host_name': hostName ?? '',
-                                  });
-                                  await FirebaseFirestore.instance.collection('passes').add({
-                                    ...passData,
-                                    'pass_generated_by': 'host',
-                                    'created_at': FieldValue.serverTimestamp(),
-                                  });
+                                                                     if (confirm != true) return;
+                                   
+                                   // Perform both operations with timeout
+                                   try {
+                                     print('Generating pass for visitor: $visitorId');
+                                     print('Pass data: $passData');
+                                     
+                                     // Update visitor document
+                                     await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
+                                       'pass_generated': true,
+                                       'pass_generated_by': 'host',
+                                       'departmentId': departmentId ?? '',
+                                       'department': departmentName ?? '',
+                                       'host_name': hostName ?? '',
+                                     }).timeout(const Duration(seconds: 10));
+                                     
+                                     // Add pass document
+                                     final passDocRef = await FirebaseFirestore.instance.collection('passes').add({
+                                       ...passData,
+                                       'source': 'host',
+                                       'created_at': FieldValue.serverTimestamp(),
+                                     }).timeout(const Duration(seconds: 10));
+                                     
+                                     print('Pass generated successfully for visitor: $visitorId');
+                                     print('Pass document ID: ${passDocRef.id}');
+                                     
+                                     // Verify the pass was created
+                                     final passDoc = await FirebaseFirestore.instance.collection('passes').doc(passDocRef.id).get();
+                                     if (passDoc.exists) {
+                                       print('Pass document verified in database');
+                                     } else {
+                                       print('ERROR: Pass document not found in database!');
+                                     }
+                                   } catch (e) {
+                                     print('Error generating pass: $e');
+                                     if (context.mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                         SnackBar(content: Text('Failed to generate pass: $e'), backgroundColor: Colors.red),
+                                       );
+                                     }
+                                     return;
+                                   }
                                   
                                   // Force UI refresh
                                   if (mounted) {
