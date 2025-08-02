@@ -115,7 +115,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                                   children: [
                                     Text('Host Name: $hostName'),
                                     Text('Date: $dateStr'),
-                                    Text('Check-in Time: $checkin'),
+                                    if (checkin != 'N/A')
+                                      Text('Check-in Time: $checkin'),
                                     if (status.toLowerCase() == 'checked out')
                                       Text('Check-out Time: $checkout'),
                                     Container(
@@ -182,12 +183,21 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       final checkInOutQuery = await FirebaseFirestore.instance
           .collection('checked_in_out')
           .where('visitor_id', isEqualTo: visitorId)
-          .orderBy('created_at', descending: true)
-          .limit(1)
           .get();
       
       if (checkInOutQuery.docs.isNotEmpty) {
-        final checkInOutData = checkInOutQuery.docs.first.data();
+        // Sort by created_at to get the most recent record
+        final sortedDocs = checkInOutQuery.docs.toList()
+          ..sort((a, b) {
+            final aCreated = a.data()['created_at'] as Timestamp?;
+            final bCreated = b.data()['created_at'] as Timestamp?;
+            if (aCreated == null && bCreated == null) return 0;
+            if (aCreated == null) return 1;
+            if (bCreated == null) return -1;
+            return bCreated.compareTo(aCreated); // Most recent first
+          });
+        
+        final checkInOutData = sortedDocs.first.data();
         return {
           'check_in_time': _formatTimestamp(checkInOutData['check_in_time']),
           'check_out_time': _formatTimestamp(checkInOutData['check_out_time']),
