@@ -54,9 +54,30 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
     }
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
     if (index == 4) {
-      Navigator.pushReplacementNamed(context, '/signin');
+      // Show logout confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
@@ -100,9 +121,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
         selectedItemColor: Color(0xFF6CA4FE),
         unselectedItemColor: Color(0xFF091016),
         currentIndex: 1,
-        onTap: (index) {
-          // Handle navigation here
-        },
+        onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_rounded),
@@ -1305,38 +1324,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
             ),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF6CA4FE),
-          unselectedItemColor: const Color(0xFF091016),
-          currentIndex: 1,
-          onTap: (index) {
-            // Handle navigation here
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_alt_rounded),
-              label: 'Visitors',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.check_circle_rounded),
-              label: 'Status',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_add_alt_1_rounded),
-              label: 'Add Visitor',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.logout_rounded),
-              label: 'Logout',
-            ),
-          ],
-        ),
+
       ),
     );
   }
