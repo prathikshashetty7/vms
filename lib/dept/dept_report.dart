@@ -116,7 +116,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                                     Text('Host Name: $hostName'),
                                     Text('Date: $dateStr'),
                                     Text('Check-in Time: $checkin'),
-                                    Text('Check-out Time: $checkout'),
+                                    if (status.toLowerCase() == 'checked out')
+                                      Text('Check-out Time: $checkout'),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(

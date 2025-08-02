@@ -172,9 +172,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('passes')
-                  // .where('host_name', isEqualTo: hostName)
-                  // .where('departmentId', isEqualTo: departmentId)
+                  .collection('checked_in_out')
                   .orderBy('created_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -184,7 +182,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
                 }
-                // TEMP: Show all passes for debugging
+                // Show all checked out visitors
                 final visitors = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).where((v) => v['checkout_code'] != null && v['checkout_code'].toString().isNotEmpty).toList();
                 if (visitors.isEmpty) {
                   return const Center(child: Text('No history yet.', style: TextStyle(color: Color(0xFF091016), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)));
@@ -194,45 +192,73 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   itemCount: visitors.length,
                   itemBuilder: (context, idx) {
                     final v = visitors[idx];
-                    final name = v['v_name'] ?? '';
-                    final checkin = v['v_time'] ?? '';
-                    final hostNameValue = v['host_name'] ?? hostName ?? '';
-                    final vDate = v['v_date'];
-                    String dateStr = 'N/A';
-                    if (vDate != null) {
-                      if (vDate is Timestamp) {
-                        final dt = vDate.toDate();
-                        dateStr = DateFormat('dd/MM/yyyy').format(dt);
-                      } else if (vDate is DateTime) {
-                        dateStr = DateFormat('dd/MM/yyyy').format(vDate);
-                      } else {
-                        dateStr = vDate.toString();
-                      }
-                    }
-                    String checkout = 'N/A';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(Icons.person, color: Colors.black),
-                        title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Host Name: $hostNameValue'),
-                            Text('Date: $dateStr'),
-                            Text('Check-in Time: $checkin'),
-                            Text('Check-out Time: $checkout'),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.visibility, color: Colors.black),
-                          onPressed: () => _showVisitorDetailsDialog(context, v),
-                        ),
-                      ),
+                    final visitorId = v['visitor_id'] ?? '';
+                    
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('visitor')
+                          .doc(visitorId)
+                          .get(),
+                      builder: (context, visitorSnapshot) {
+                        if (!visitorSnapshot.hasData) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const ListTile(
+                              leading: CircularProgressIndicator(),
+                              title: Text('Loading...'),
+                            ),
+                          );
+                        }
+                        
+                        final visitorData = visitorSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+                        final name = visitorData['v_name'] ?? '';
+                        final hostNameValue = visitorData['host_name'] ?? hostName ?? '';
+                        final vDate = visitorData['v_date'];
+                        
+                        String dateStr = 'N/A';
+                        if (vDate != null) {
+                          if (vDate is Timestamp) {
+                            final dt = vDate.toDate();
+                            dateStr = DateFormat('dd/MM/yyyy').format(dt);
+                          } else if (vDate is DateTime) {
+                            dateStr = DateFormat('dd/MM/yyyy').format(vDate);
+                          } else {
+                            dateStr = vDate.toString();
+                          }
+                        }
+                        
+                        final checkin = v['check_in_time'] ?? 'N/A';
+                        final checkout = v['check_out_time'] ?? 'N/A';
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ListTile(
+                            leading: const Icon(Icons.person, color: Colors.black),
+                            title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Host Name: $hostNameValue'),
+                                Text('Date: $dateStr'),
+                                Text('Check-in Time: $checkin'),
+                                Text('Check-out Time: $checkout'),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.visibility, color: Colors.black),
+                              onPressed: () => _showVisitorDetailsDialog(context, v),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

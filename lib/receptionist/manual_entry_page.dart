@@ -27,7 +27,7 @@ class _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv
   bool _showDeptTotalVisitors = false; // New variable to track if we should show dept's total visitors
   int _deptTotalVisitors = 1; // New variable to store dept's total visitors count
   final List<String> yesNo = ['Yes', 'No'];
-  List<String> departments = [];
+  List<Map<String, dynamic>> departments = [];
   bool _departmentsLoading = true;
   late AnimationController _buttonController;
   late Animation<double> _buttonScale;
