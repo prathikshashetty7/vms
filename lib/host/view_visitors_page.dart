@@ -435,17 +435,33 @@ class _VisitorCardState extends State<_VisitorCard> {
                       onPressed: () async {
                         final docId = widget.visitor['docId'];
                         if (docId == null) return;
-                        // Only check passes collection for checkout_code
-                        final passesQuery = await FirebaseFirestore.instance.collection('passes').where('visitorId', isEqualTo: docId).limit(1).get();
-                        if (passesQuery.docs.isNotEmpty) {
-                          final passData = passesQuery.docs.first.data();
-                          if (passData['checkout_code'] != null && passData['checkout_code'].toString().isNotEmpty) {
+                        
+                        // Check checked_in_out collection for existing checkout code
+                        final checkInOutQuery = await FirebaseFirestore.instance
+                            .collection('checked_in_out')
+                            .where('visitor_id', isEqualTo: docId)
+                            .get();
+                            
+                        if (checkInOutQuery.docs.isNotEmpty) {
+                          // Sort by created_at to get the most recent record
+                          final sortedDocs = checkInOutQuery.docs.toList()
+                            ..sort((a, b) {
+                              final aCreated = a.data()['created_at'] as Timestamp?;
+                              final bCreated = b.data()['created_at'] as Timestamp?;
+                              if (aCreated == null && bCreated == null) return 0;
+                              if (aCreated == null) return 1;
+                              if (bCreated == null) return -1;
+                              return bCreated.compareTo(aCreated); // Most recent first
+                            });
+                          
+                          final checkInOutData = sortedDocs.first.data();
+                          if (checkInOutData['checkout_code'] != null && checkInOutData['checkout_code'].toString().isNotEmpty) {
                             // Already generated, show the same code
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Checkout Code'),
-                                content: Text('Your checkout code is: ${passData['checkout_code']}'),
+                                content: Text('Your checkout code is: ${checkInOutData['checkout_code']}'),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.of(context).pop(),
@@ -457,20 +473,37 @@ class _VisitorCardState extends State<_VisitorCard> {
                             return;
                           }
                         }
+                        
                         // Generate unique 4-digit code
                         final code = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
                         final now = DateTime.now();
-                        // Add/update in passes collection only
-                        if (passesQuery.docs.isNotEmpty) {
-                          // Update existing pass
-                          await FirebaseFirestore.instance.collection('passes').doc(passesQuery.docs.first.id).update({
+                        
+                        // Store checkout code in checked_in_out collection
+                        if (checkInOutQuery.docs.isNotEmpty) {
+                          // Update the most recent check-in/out record
+                          final sortedDocs = checkInOutQuery.docs.toList()
+                            ..sort((a, b) {
+                              final aCreated = a.data()['created_at'] as Timestamp?;
+                              final bCreated = b.data()['created_at'] as Timestamp?;
+                              if (aCreated == null && bCreated == null) return 0;
+                              if (aCreated == null) return 1;
+                              if (bCreated == null) return -1;
+                              return bCreated.compareTo(aCreated); // Most recent first
+                            });
+                          
+                          await FirebaseFirestore.instance
+                              .collection('checked_in_out')
+                              .doc(sortedDocs.first.id)
+                              .update({
                             'checkout_code': code,
                           });
                         } else {
-                          // Create new pass entry with minimal info
-                          await FirebaseFirestore.instance.collection('passes').add({
-                            'visitorId': docId,
+                          // Create new check-in/out record with checkout code
+                          await FirebaseFirestore.instance.collection('checked_in_out').add({
+                            'visitor_id': docId,
                             'checkout_code': code,
+                            'created_at': FieldValue.serverTimestamp(),
+                            'status': 'Checked In', // Assuming visitor is checked in when generating checkout code
                           });
                         }
                         showDialog(
