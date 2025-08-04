@@ -539,7 +539,7 @@ class _ActivityListWidget extends StatelessWidget {
               return ListView.separated(
                 controller: scrollController,
                 itemCount: latest.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+                separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
                 itemBuilder: (context, i) => _ActivityListTile(entry: latest[i]),
               );
             } else {
@@ -896,7 +896,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                             }
                           }
                           return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -908,288 +908,292 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                 ),
                               ],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  // Profile image or icon
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.1),
-                                    ),
-                                    child: photo != null && photo.isNotEmpty
-                                        ? ClipOval(
-                                            child: Image.memory(
-                                              Base64Decoder().convert(photo),
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Colors.black);
-                                              },
-                                            ),
-                                          )
-                                        : const Icon(Icons.person, size: 30, color: Colors.black),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // Visitor details
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
+                            child: Stack(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      // Profile image or icon
+                                      Container(
+                                        width: 55,
+                                        height: 55,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withOpacity(0.1),
                                         ),
-                                        const SizedBox(height: 8),
-                                        Column(
+                                        child: photo != null && photo.isNotEmpty
+                                            ? ClipOval(
+                                                child: Image.memory(
+                                                  Base64Decoder().convert(photo),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return const Icon(Icons.person, size: 30, color: Colors.black);
+                                                  },
+                                                ),
+                                              )
+                                            : const Icon(Icons.person, size: 30, color: Colors.black),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Visitor details
+                                      Expanded(
+                                        child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            if (dateInfo.isNotEmpty)
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    dateInfo,
-                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                  ),
-                                                ],
-                                              ),
-                                            if (timeInfo.isNotEmpty) ...[
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    timeInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                                                    // Status dropdown
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF6CA4FE),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: DropdownButton<String>(
-                                      value: 'Checked In',
-                                      underline: Container(),
-                                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                      dropdownColor: const Color(0xFF6CA4FE),
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'Checked In',
-                                          child: Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'Checked Out',
-                                          child: Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                                        ),
-                                      ],
-                                      onChanged: (String? newValue) async {
-                                        if (newValue == 'Checked Out') {
-                                          // Show dialog to enter checkout code
-                                          final checkoutCodeController = TextEditingController();
-                                          final checkoutCode = await showDialog<String>(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (BuildContext context) {
-                                              return Dialog(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                elevation: 8,
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(24),
-                                                  decoration: BoxDecoration(
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    gradient: const LinearGradient(
-                                                      begin: Alignment.topLeft,
-                                                      end: Alignment.bottomRight,
-                                                      colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
-                                                    ),
-                                                  ),
-                                                  child: Column(
+                                            Text(
+                                              name,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                if (dateInfo.isNotEmpty)
+                                                  Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
-
-                                                      // Title with icon
-                                                      Row(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [
-                                                          const Icon(
-                                                            Icons.logout,
-                                                            color: Colors.white,
-                                                            size: 24,
-                                                          ),
-                                                          const SizedBox(width: 8),
-                                                          const Text(
-                                                            'Check Out Visitor',
-                                                            style: TextStyle(
-                                                              color: Colors.white,
-                                                              fontSize: 24,
-                                                              fontWeight: FontWeight.bold,
-                                                              fontFamily: 'Poppins',
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 24),
-                                                      // Input field
-                                                      Container(
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.white,
-                                                          borderRadius: BorderRadius.circular(12),
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors.black.withOpacity(0.1),
-                                                              blurRadius: 8,
-                                                              offset: const Offset(0, 2),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                                                                                 child: TextField(
-                                                           controller: checkoutCodeController,
-                                                           decoration: const InputDecoration(
-                                                             hintText: 'Enter code',
-                                                             border: InputBorder.none,
-                                                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                                             prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
-                                                           ),
-                                                          style: const TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.w500,
-                                                          ),
-                                                          onSubmitted: (value) {
-                                                            Navigator.of(context).pop(value);
-                                                          },
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 24),
-                                                      // Action buttons
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: TextButton(
-                                                              onPressed: () => Navigator.of(context).pop(),
-                                                              style: TextButton.styleFrom(
-                                                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                ),
-                                                              ),
-                                                              child: const Text(
-                                                                'Cancel',
-                                                                style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 16,
-                                                                  fontWeight: FontWeight.w600,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: ElevatedButton(
-                                                              onPressed: () {
-                                                                Navigator.of(context).pop(checkoutCodeController.text);
-                                                              },
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.white,
-                                                                foregroundColor: const Color(0xFF6CA4FE),
-                                                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(8),
-                                                                ),
-                                                                elevation: 2,
-                                                              ),
-                                                              child: const Text(
-                                                                'Confirm',
-                                                                style: TextStyle(
-                                                                  fontSize: 16,
-                                                                  fontWeight: FontWeight.w600,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
+                                                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        dateInfo,
+                                                      style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
                                                       ),
                                                     ],
                                                   ),
-                                                ),
-                                              );
-                                            },
-                                          );
-                                          
-                                          if (checkoutCode != null && checkoutCode.isNotEmpty) {
-                                            // Get the visitor's pass data to validate checkout code
-                                            try {
-                                              final docId = checkedInOutSnapshot.data!.docs[index].id;
-                                              final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
-                                              final actualCheckoutCode = visitorData['checkout_code']?.toString();
-
-                                              if (actualCheckoutCode != null && actualCheckoutCode == checkoutCode) {
-                                                // Checkout code matches, proceed with checkout
-                                                await FirebaseFirestore.instance
-                                                .collection('checked_in_out')
-                                                .doc(docId)
-                                                .update({
-                                                'status': 'Checked Out',
-                                                'check_out_time': FieldValue.serverTimestamp(),
-                                                 });
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Visitor checked out successfully'),
-                                                      backgroundColor: Colors.green,
-                                                    ),
-                                                  );
-                                                }
-                                              } else {
-                                                // Checkout code doesn't match
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Incorrect code. Please check and try again.'),
-                                                      backgroundColor: Colors.red,
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            } catch (e) {
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Error checking out visitor: $e'),
-                                                    backgroundColor: Colors.red,
+                                                if (timeInfo.isNotEmpty) ...[
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        timeInfo,
+                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
+                                                      ),
+                                                    ],
                                                   ),
-                                                );
+                                                ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Status dropdown only
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF6CA4FE),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: DropdownButton<String>(
+                                          value: 'Checked In',
+                                          underline: Container(),
+                                          icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                                          dropdownColor: const Color(0xFF6CA4FE),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'Checked In',
+                                              child: Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Checked Out',
+                                              child: Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                                            ),
+                                          ],
+                                          onChanged: (String? newValue) async {
+                                            if (newValue == 'Checked Out') {
+                                              // Show dialog to enter checkout code
+                                              final checkoutCodeController = TextEditingController();
+                                              final checkoutCode = await showDialog<String>(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder: (BuildContext context) {
+                                                  return Dialog(
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(20),
+                                                    ),
+                                                    elevation: 8,
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(24),
+                                                      decoration: BoxDecoration(
+                                                        borderRadius: BorderRadius.circular(20),
+                                                        gradient: const LinearGradient(
+                                                          begin: Alignment.topLeft,
+                                                          end: Alignment.bottomRight,
+                                                          colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
+                                                        ),
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+
+                                                          // Title with icon
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            children: [
+                                                              const Icon(
+                                                                Icons.logout,
+                                                                color: Colors.white,
+                                                                size: 24,
+                                                              ),
+                                                              const SizedBox(width: 8),
+                                                              const Text(
+                                                                'Check Out Visitor',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 24,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontFamily: 'Poppins',
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(height: 24),
+                                                          // Input field
+                                                          Container(
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.white,
+                                                              borderRadius: BorderRadius.circular(12),
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: Colors.black.withOpacity(0.1),
+                                                                  blurRadius: 8,
+                                                                  offset: const Offset(0, 2),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            child: TextField(
+                                                              controller: checkoutCodeController,
+                                                              decoration: const InputDecoration(
+                                                                hintText: 'Enter code',
+                                                                border: InputBorder.none,
+                                                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                                                prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
+                                                              ),
+                                                              style: const TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                              onSubmitted: (value) {
+                                                                Navigator.of(context).pop(value);
+                                                              },
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 24),
+                                                          // Action buttons
+                                                          Row(
+                                                            children: [
+                                                              Expanded(
+                                                                child: TextButton(
+                                                                  onPressed: () => Navigator.of(context).pop(),
+                                                                  style: TextButton.styleFrom(
+                                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                    shape: RoundedRectangleBorder(
+                                                                      borderRadius: BorderRadius.circular(8),
+                                                                    ),
+                                                                  ),
+                                                                  child: const Text(
+                                                                    'Cancel',
+                                                                    style: TextStyle(
+                                                                      color: Colors.white,
+                                                                      fontSize: 16,
+                                                                      fontWeight: FontWeight.w600,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(width: 12),
+                                                              Expanded(
+                                                                child: ElevatedButton(
+                                                                  onPressed: () {
+                                                                    Navigator.of(context).pop(checkoutCodeController.text);
+                                                                  },
+                                                                  style: ElevatedButton.styleFrom(
+                                                                    backgroundColor: Colors.white,
+                                                                    foregroundColor: const Color(0xFF6CA4FE),
+                                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                    shape: RoundedRectangleBorder(
+                                                                      borderRadius: BorderRadius.circular(8),
+                                                                    ),
+                                                                    elevation: 2,
+                                                                  ),
+                                                                  child: const Text(
+                                                                    'Confirm',
+                                                                    style: TextStyle(
+                                                                      fontSize: 16,
+                                                                      fontWeight: FontWeight.w600,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              );
+                                              
+                                              if (checkoutCode != null && checkoutCode.isNotEmpty) {
+                                                // Get the visitor's pass data to validate checkout code
+                                                try {
+                                                  final docId = checkedInOutSnapshot.data!.docs[index].id;
+                                                  final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
+                                                  final actualCheckoutCode = visitorData['checkout_code']?.toString();
+
+                                                  if (actualCheckoutCode != null && actualCheckoutCode == checkoutCode) {
+                                                    // Checkout code matches, proceed with checkout
+                                                    await FirebaseFirestore.instance
+                                                    .collection('checked_in_out')
+                                                    .doc(docId)
+                                                    .update({
+                                                    'status': 'Checked Out',
+                                                    'check_out_time': FieldValue.serverTimestamp(),
+                                                     });
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Visitor checked out successfully'),
+                                                          backgroundColor: Colors.green,
+                                                        ),
+                                                      );
+                                                    }
+                                                  } else {
+                                                    // Checkout code doesn't match
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Incorrect code. Please check and try again.'),
+                                                          backgroundColor: Colors.red,
+                                                        ),
+                                                      );
+                                                    }
+                                                  }
+                                                } catch (e) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Error checking out visitor: $e'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
                                               }
                                             }
-                                          }
-                                        }
-                                      },
-                                    ),
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -1228,92 +1232,96 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                 ),
                               ],
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  // Profile image or icon
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.1),
-                                    ),
-                                    child: photo != null && photo.isNotEmpty
-                                        ? ClipOval(
-                                            child: Image.memory(
-                                              Base64Decoder().convert(photo),
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(Icons.person, size: 30, color: Colors.black);
-                                              },
-                                            ),
-                                          )
-                                        : const Icon(Icons.person, size: 30, color: Colors.black),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // Visitor details
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 1,
+                            child: Stack(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      // Profile image or icon
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withOpacity(0.1),
                                         ),
-                                        const SizedBox(height: 8),
-                                        Column(
+                                        child: photo != null && photo.isNotEmpty
+                                            ? ClipOval(
+                                                child: Image.memory(
+                                                  Base64Decoder().convert(photo),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return const Icon(Icons.person, size: 30, color: Colors.black);
+                                                  },
+                                                ),
+                                              )
+                                            : const Icon(Icons.person, size: 30, color: Colors.black),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Visitor details
+                                      Expanded(
+                                        child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            if (dateInfo.isNotEmpty)
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    dateInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
+                                            Text(
+                                              name,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                if (dateInfo.isNotEmpty)
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        dateInfo,
+                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
+                                                      ),
+                                                    ],
+                                                  ),
+                                                if (timeInfo.isNotEmpty) ...[
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        timeInfo,
+                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
-                                              ),
-                                            if (timeInfo.isNotEmpty) ...[
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    timeInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      // Status badge only
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFF6CA4FE), // blue
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text(
+                                          'Checked Out',
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  // Status badge
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8, right: 16),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFF6CA4FE), // blue
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: const Text(
-                                      'Checked Out',
-                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           );
                         },

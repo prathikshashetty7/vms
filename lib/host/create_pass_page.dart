@@ -342,54 +342,52 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                       ),
                                     ),
                                   );
-                                                                     if (confirm != true) return;
-                                   
-                                   // Perform both operations with timeout
-                                   try {
-                                     print('Generating pass for visitor: $visitorId');
-                                     print('Pass data: $passData');
-                                     
-                                     // Update visitor document
-                                     await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
-                                       'pass_generated': true,
-                                       'pass_generated_by': 'host',
-                                       'departmentId': departmentId ?? '',
-                                       'department': departmentName ?? '',
-                                       'host_name': hostName ?? '',
-                                     }).timeout(const Duration(seconds: 10));
-                                     
-                                     // Add pass document
-                                     final passDocRef = await FirebaseFirestore.instance.collection('passes').add({
-                                       ...passData,
-                                       'source': 'host',
-                                       'created_at': FieldValue.serverTimestamp(),
-                                     }).timeout(const Duration(seconds: 10));
-                                     
-                                     print('Pass generated successfully for visitor: $visitorId');
-                                     print('Pass document ID: ${passDocRef.id}');
-                                     
-                                     // Verify the pass was created
-                                     final passDoc = await FirebaseFirestore.instance.collection('passes').doc(passDocRef.id).get();
-                                     if (passDoc.exists) {
-                                       print('Pass document verified in database');
-                                     } else {
-                                       print('ERROR: Pass document not found in database!');
-                                     }
-                                   } catch (e) {
-                                     print('Error generating pass: $e');
-                                     if (context.mounted) {
-                                       ScaffoldMessenger.of(context).showSnackBar(
-                                         SnackBar(content: Text('Failed to generate pass: $e'), backgroundColor: Colors.red),
-                                       );
-                                     }
-                                     return;
-                                   }
+                                  if (confirm != true) return;
                                   
+                                  // Perform both operations with timeout
+                                  try {
+                                    print('Generating pass for visitor: $visitorId');
+                                    print('Pass data: $passData');
+                                    
+                                    // Update visitor document
+                                    await FirebaseFirestore.instance.collection('visitor').doc(visitorId).update({
+                                      'pass_generated': true,
+                                      'pass_generated_by': 'host',
+                                      'departmentId': departmentId ?? '',
+                                      'department': departmentName ?? '',
+                                      'host_name': hostName ?? '',
+                                    }).timeout(const Duration(seconds: 10));
+                                    
+                                    // Add pass document
+                                    final passDocRef = await FirebaseFirestore.instance.collection('passes').add({
+                                      ...passData,
+                                      'group': 'host',
+                                      'created_at': FieldValue.serverTimestamp(),
+                                    }).timeout(const Duration(seconds: 10));
+                                    
+                                    print('Pass generated successfully for visitor: $visitorId');
+                                    print('Pass document ID: ${passDocRef.id}');
+                                    
+                                    // Verify the pass was created
+                                    final passDoc = await FirebaseFirestore.instance.collection('passes').doc(passDocRef.id).get();
+                                    if (passDoc.exists) {
+                                      print('Pass document verified in database');
+                                    } else {
+                                      print('ERROR: Pass document not found in database!');
+                                    }
+                                  } catch (e) {
+                                    print('Error generating pass: $e');
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Failed to generate pass: $e'), backgroundColor: Colors.red),
+                                      );
+                                    }
+                                    return;
+                                  }
                                   // Force UI refresh
                                   if (mounted) {
                                     setState(() {});
                                   }
-                                  
                                   // Show a snackbar for success after generating
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(

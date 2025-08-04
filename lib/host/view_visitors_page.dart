@@ -202,6 +202,49 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                     ],
                   ),
                   const SizedBox(height: 18),
+                  // Status Filter Buttons
+                  Container(
+                    height: 50,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _statusOptions.length,
+                      itemBuilder: (context, index) {
+                        final status = _statusOptions[index];
+                        final isSelected = _statusFilter == status;
+                        return Container(
+                          margin: EdgeInsets.only(right: 12),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _statusFilter = status;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isSelected ? const Color(0xFF6CA4FE) : Colors.white,
+                              foregroundColor: isSelected ? Colors.white : const Color(0xFF6CA4FE),
+                              elevation: isSelected ? 2 : 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                side: BorderSide(
+                                  color: isSelected ? const Color(0xFF6CA4FE) : Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Visitor Cards List
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
@@ -293,7 +336,10 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
                                 child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
                               ),
-                              ...grouped[date]!.map((v) => _VisitorCard(visitor: v)).toList(),
+                              ...grouped[date]!.map((v) => _VisitorCard(
+                                visitor: v,
+                                statusFilter: _statusFilter,
+                              )).toList(),
                             ]
                           ],
                         );
@@ -309,7 +355,8 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
 
 class _VisitorCard extends StatefulWidget {
   final Map<String, dynamic> visitor;
-  const _VisitorCard({required this.visitor});
+  final String statusFilter;
+  const _VisitorCard({required this.visitor, required this.statusFilter});
 
   @override
   State<_VisitorCard> createState() => _VisitorCardState();
@@ -318,7 +365,7 @@ class _VisitorCard extends StatefulWidget {
 class _VisitorCardState extends State<_VisitorCard> {
   String? photoBase64;
   bool isLoadingPass = true;
-  bool isCheckedIn = false;
+  String visitorStatus = 'Not Checked In';
   bool isLoadingStatus = true;
 
   @override
@@ -336,15 +383,33 @@ class _VisitorCardState extends State<_VisitorCard> {
         return;
       }
       
-      final checkedInOutQuery = await FirebaseFirestore.instance
+      // Check for Checked Out status first
+      final checkedOutQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .where('visitor_id', isEqualTo: visitorId)
+          .where('status', isEqualTo: 'Checked Out')
+          .limit(1)
+          .get();
+      
+      // Check for Checked In status
+      final checkedInQuery = await FirebaseFirestore.instance
           .collection('checked_in_out')
           .where('visitor_id', isEqualTo: visitorId)
           .where('status', isEqualTo: 'Checked In')
           .limit(1)
           .get();
       
+      String status;
+      if (checkedOutQuery.docs.isNotEmpty) {
+        status = 'Checked Out';
+      } else if (checkedInQuery.docs.isNotEmpty) {
+        status = 'Checked In';
+      } else {
+        status = 'Not Checked In';
+      }
+      
       setState(() {
-        isCheckedIn = checkedInOutQuery.docs.isNotEmpty;
+        visitorStatus = status;
         isLoadingStatus = false;
       });
     } catch (e) {
@@ -387,6 +452,11 @@ class _VisitorCardState extends State<_VisitorCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Apply status filter - hide visitors that don't match the selected filter
+    if (widget.statusFilter != 'All' && visitorStatus.toLowerCase() != widget.statusFilter.toLowerCase()) {
+      return SizedBox.shrink(); // Hide this item
+    }
+    
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       color: Colors.white,
@@ -537,7 +607,7 @@ class _VisitorCardState extends State<_VisitorCard> {
               ],
             ),
           ),
-          // Checked In Status Button positioned at top right
+          // Status Button positioned at top right
           if (!isLoadingStatus)
             Positioned(
               top: 8,
@@ -545,7 +615,7 @@ class _VisitorCardState extends State<_VisitorCard> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isCheckedIn ? Colors.green : Colors.grey.shade300,
+                  color: _getStatusColor(visitorStatus),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -559,17 +629,17 @@ class _VisitorCardState extends State<_VisitorCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isCheckedIn ? Icons.check_circle : Icons.schedule,
+                      _getStatusIcon(visitorStatus),
                       size: 16,
-                      color: isCheckedIn ? Colors.white : Colors.grey.shade600,
+                      color: (visitorStatus == 'Checked In' || visitorStatus == 'Checked Out') ? Colors.white : Colors.grey.shade600,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isCheckedIn ? 'Checked In' : 'Not Checked In',
+                      visitorStatus,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isCheckedIn ? Colors.white : Colors.grey.shade600,
+                        color: (visitorStatus == 'Checked In' || visitorStatus == 'Checked Out') ? Colors.white : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -748,4 +818,30 @@ Future<String?> _getVisitorImage(String? visitorId) async {
   } catch (e) {
     return null;
   }
-} 
+}
+
+Color _getStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'checked in':
+      return Colors.green;
+    case 'checked out':
+      return Colors.orange;
+    case 'not checked in':
+      return Colors.grey.shade300;
+    default:
+      return Colors.grey.shade300;
+  }
+}
+
+IconData _getStatusIcon(String status) {
+  switch (status.toLowerCase()) {
+    case 'checked in':
+      return Icons.check_circle;
+    case 'checked out':
+      return Icons.logout;
+    case 'not checked in':
+      return Icons.schedule;
+    default:
+      return Icons.schedule;
+  }
+}

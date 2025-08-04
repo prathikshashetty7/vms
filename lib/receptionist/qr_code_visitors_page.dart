@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dashboard.dart' show VisitorsPage;
 
 class QRCodeVisitorsPage extends StatefulWidget {
   const QRCodeVisitorsPage({Key? key}) : super(key: key);
@@ -11,6 +13,51 @@ class QRCodeVisitorsPage extends StatefulWidget {
 }
 
 class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
+  int _selectedIndex = 1; // Set to 1 for Visitors tab
+
+  void _onItemTapped(int index) async {
+    if (index == 4) {
+      // Show logout confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
+      return;
+    }
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+    } else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const VisitorsPage()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/manual_entry');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -38,6 +85,36 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
               Tab(text: 'Generated Passes'),
             ],
           ),
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+          unselectedItemColor: Color(0xFF091016), // black for unselected
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_alt_rounded),
+              label: 'Visitors',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.check_circle_rounded),
+              label: 'Status',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_rounded),
+              label: 'Add Visitor',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.logout_rounded),
+              label: 'Logout',
+            ),
+          ],
         ),
         body: TabBarView(
           children: [
@@ -68,7 +145,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
           final docs = snapshot.data!.docs;
           return ListView.separated(
             itemCount: docs.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               final name = data['fullName'] ?? 'Unknown';
@@ -159,7 +236,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
           final docs = snapshot.data!.docs;
           return ListView.separated(
             itemCount: docs.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               final name = data['v_name'] ?? data['visitorName'] ?? 'Unknown';

@@ -7,8 +7,9 @@ import 'dashboard.dart' show VisitorsPage;
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:firebase_auth/firebase_auth.dart'; // Added for FirebaseAuth
 
-class ManualRegistrationsPage extends StatelessWidget {
+class ManualRegistrationsPage extends StatefulWidget {
   final String collection;
   final String title;
   final IconData icon;
@@ -28,6 +29,56 @@ class ManualRegistrationsPage extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ManualRegistrationsPage> createState() => _ManualRegistrationsPageState();
+}
+
+class _ManualRegistrationsPageState extends State<ManualRegistrationsPage> {
+  int _selectedIndex = 1; // Set to 1 for Visitors tab
+
+  void _onItemTapped(int index) async {
+    if (index == 4) {
+      // Show logout confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
+      return;
+    }
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+    } else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const VisitorsPage()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/manual_entry');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, String>>(
       future: _fetchDepartmentMap(),
@@ -40,7 +91,7 @@ class ManualRegistrationsPage extends StatelessWidget {
         }
         final departmentMap = snapshot.data!;
         // Only show tabs for manual_registrations
-        if (collection == 'manual_registrations') {
+        if (widget.collection == 'manual_registrations') {
           return DefaultTabController(
             length: 2,
             child: Scaffold(
@@ -49,7 +100,7 @@ class ManualRegistrationsPage extends StatelessWidget {
                   children: [
                     Image.asset('assets/images/rdl.png', height: 36),
                     const SizedBox(width: 12),
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(widget.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 backgroundColor: const Color(0xFF6CA4FE),
@@ -67,6 +118,36 @@ class ManualRegistrationsPage extends StatelessWidget {
                 ),
               ),
               backgroundColor: const Color(0xFFD4E9FF),
+              bottomNavigationBar: BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.white,
+                selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+                unselectedItemColor: Color(0xFF091016), // black for unselected
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard_rounded),
+                    label: 'Dashboard',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.people_alt_rounded),
+                    label: 'Visitors',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.check_circle_rounded),
+                    label: 'Status',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.person_add_alt_1_rounded),
+                    label: 'Add Visitor',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.logout_rounded),
+                    label: 'Logout',
+                  ),
+                ],
+              ),
               body: TabBarView(
                 children: [
                   // Tab 1: Manual Registrations
@@ -86,7 +167,7 @@ class ManualRegistrationsPage extends StatelessWidget {
                 children: [
                   Image.asset('assets/images/rdl.png', height: 36),
                   const SizedBox(width: 12),
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(widget.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               backgroundColor: const Color(0xFF6CA4FE),
@@ -96,6 +177,36 @@ class ManualRegistrationsPage extends StatelessWidget {
               automaticallyImplyLeading: false,
             ),
             backgroundColor: const Color(0xFFD4E9FF),
+            bottomNavigationBar: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white,
+              selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+              unselectedItemColor: Color(0xFF091016), // black for unselected
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard_rounded),
+                  label: 'Dashboard',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people_alt_rounded),
+                  label: 'Visitors',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.check_circle_rounded),
+                  label: 'Status',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_add_alt_1_rounded),
+                  label: 'Add Visitor',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.logout_rounded),
+                  label: 'Logout',
+                ),
+              ],
+            ),
             body: _buildVisitorList(context, showPassButton: false),
           );
         }
@@ -129,7 +240,7 @@ class ManualRegistrationsPage extends StatelessWidget {
     try {
       // Update records that don't have source field
       final snapshot = await FirebaseFirestore.instance
-          .collection(collection)
+          .collection(widget.collection)
           .where('source', isNull: true)
           .limit(20)
           .get();
@@ -140,7 +251,7 @@ class ManualRegistrationsPage extends StatelessWidget {
       
       // Also update records that have empty source field
       final snapshot2 = await FirebaseFirestore.instance
-          .collection(collection)
+          .collection(widget.collection)
           .where('source', isEqualTo: '')
           .limit(20)
           .get();
@@ -162,15 +273,15 @@ class ManualRegistrationsPage extends StatelessWidget {
       padding: const EdgeInsets.all(18.0),
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection(collection)
-            .orderBy(timeField, descending: true)
+            .collection(widget.collection)
+            .orderBy(widget.timeField, descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No visitors found.', style: TextStyle(color: color)));
+            return Center(child: Text('No visitors found.', style: TextStyle(color: widget.color)));
           }
           final docs = snapshot.data!.docs;
           // Filter docs based on pass_generated_by if filter is provided
@@ -182,7 +293,7 @@ class ManualRegistrationsPage extends StatelessWidget {
               : docs;
           
           // For manual_registrations collection, filter for manual source only
-          if (collection == 'manual_registrations') {
+          if (widget.collection == 'manual_registrations') {
             filteredDocs = filteredDocs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               // Show only records that have source: 'manual'
@@ -191,12 +302,12 @@ class ManualRegistrationsPage extends StatelessWidget {
           }
           return ListView.separated(
             itemCount: filteredDocs.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
               final data = filteredDocs[index].data() as Map<String, dynamic>;
               final docId = filteredDocs[index].id;
-              final name = data[nameField] ?? 'Unknown';
-              final time = (data[timeField] as Timestamp?)?.toDate();
+              final name = data[widget.nameField] ?? 'Unknown';
+              final time = (data[widget.timeField] as Timestamp?)?.toDate();
               return LayoutBuilder(
                 builder: (context, constraints) {
                   return Container(
@@ -218,7 +329,7 @@ class ManualRegistrationsPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            backgroundColor: color.withOpacity(0.13),
+                            backgroundColor: widget.color.withOpacity(0.13),
                             radius: 26,
                             child: data['photo'] != null && data['photo'].toString().isNotEmpty
                                 ? ClipOval(
@@ -261,7 +372,7 @@ class ManualRegistrationsPage extends StatelessWidget {
                                     } else if (value == 'delete') {
                                       _confirmDeleteVisitor(context, docId);
                                     } else if (value == 'view') {
-                                      if (collection == 'visitor' || collection == 'visitors') {
+                                      if (widget.collection == 'visitor' || widget.collection == 'visitors') {
                                         String hostName = '';
                                         if (data['emp_id'] != null && data['emp_id'].toString().isNotEmpty) {
                                           final hostDoc = await FirebaseFirestore.instance.collection('host').doc(data['emp_id']).get();
@@ -273,12 +384,6 @@ class ManualRegistrationsPage extends StatelessWidget {
                                           context: context,
                                           builder: (context) => _AppointedVisitorDetailsDialog(
                                             data: data,
-                                            color: color,
-                                            icon: icon,
-                                            name: data['v_name'] ?? '',
-                                            docId: docId,
-                                            collection: collection,
-                                            hostName: hostName,
                                           ),
                                         );
                                       } else {
@@ -286,8 +391,8 @@ class ManualRegistrationsPage extends StatelessWidget {
                                           context: context,
                                           builder: (context) => _VisitorDetailsDialog(
                                             data: data,
-                                            color: color,
-                                            icon: icon,
+                                            color: widget.color,
+                                            icon: widget.icon,
                                             name: name,
                                           ),
                                         );
@@ -524,7 +629,7 @@ class ManualRegistrationsPage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _EditVisitorForm(data: data, docId: docId, collection: collection),
+      builder: (context) => _EditVisitorForm(data: data, docId: docId, collection: widget.collection),
     );
   }
 
@@ -541,7 +646,7 @@ class ManualRegistrationsPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await FirebaseFirestore.instance.collection(collection).doc(docId).delete();
+              await FirebaseFirestore.instance.collection(widget.collection).doc(docId).delete();
               if (context.mounted) {
                 Navigator.of(context).pop();
               }
@@ -1027,16 +1132,81 @@ class _ManualPassDetailDialog extends StatelessWidget {
                     
                     // Save to Checked In/Out collection for status page
                     try {
+                      print('Debug: pass data - ${pass.toString()}');
+                      print('Debug: pass_id = ${pass['id']}');
+                      print('Debug: visitor_name = ${pass['visitorName'] ?? pass['fullName'] ?? pass['v_name']}');
+                      print('Debug: visitorId field = ${pass['visitorId']}');
+                      print('Debug: visitor_id field = ${pass['visitor_id']}');
+                      print('Debug: All pass keys = ${pass.keys.toList()}');
+                      
+                      // Check if visitor already exists in checked_in_out collection
+                      // Use visitor_name as primary check since pass_id might be empty
+                      final visitorName = pass['visitorName'] ?? pass['fullName'] ?? pass['v_name'] ?? '';
+                      final passId = pass['id'] ?? '';
+                      
+                      // Try multiple possible field names for visitor_id
+                      final visitorId = pass['visitorId']?.toString().isNotEmpty == true 
+                          ? pass['visitorId'] 
+                          : pass['visitor_id']?.toString().isNotEmpty == true
+                              ? pass['visitor_id']
+                              : pass['id'] ?? '';
+                      
+                      print('Debug: Final visitor_id = $visitorId');
+                      
+                      // If visitor_id is still empty, try to fetch it from manual_registrations collection
+                      String finalVisitorId = visitorId;
+                      if (finalVisitorId.isEmpty) {
+                        try {
+                          print('Debug: Trying to fetch visitor_id from manual_registrations collection for visitor: $visitorName');
+                          final manualRegDocs = await FirebaseFirestore.instance
+                              .collection('manual_registrations')
+                              .where('fullName', isEqualTo: visitorName)
+                              .limit(1)
+                              .get();
+                          
+                          if (manualRegDocs.docs.isNotEmpty) {
+                            final manualRegData = manualRegDocs.docs.first.data();
+                            finalVisitorId = manualRegData['visitor_id'] ?? '';
+                            print('Debug: Found visitor_id from manual_registrations: $finalVisitorId');
+                          } else {
+                            print('Debug: No manual registration found for visitor: $visitorName');
+                          }
+                        } catch (e) {
+                          print('Debug: Error fetching visitor_id from manual_registrations: $e');
+                        }
+                      }
+                      
+                      print('Debug: Using final visitor_id = $finalVisitorId');
+                      
+                      Query existingQuery;
+                      if (passId.isNotEmpty) {
+                        existingQuery = FirebaseFirestore.instance
+                            .collection('checked_in_out')
+                            .where('pass_id', isEqualTo: passId);
+                      } else {
+                        existingQuery = FirebaseFirestore.instance
+                            .collection('checked_in_out')
+                            .where('visitor_name', isEqualTo: visitorName)
+                            .where('status', isEqualTo: 'Checked In');
+                      }
+                      
+                      final existingDocs = await existingQuery.get();
+                      
+                      if (existingDocs.docs.isEmpty) {
+                        // Only add if visitor doesn't already exist
                       await FirebaseFirestore.instance.collection('checked_in_out').add({
-                        'visitor_id': pass['visitorId'] ?? '',
-                        'visitor_name': pass['visitorName'] ?? pass['fullName'] ?? pass['v_name'] ?? '',
+                          'visitor_id': finalVisitorId,
+                          'visitor_name': visitorName,
                         'check_in_time': FieldValue.serverTimestamp(),
                         'check_in_date': _formatDateOnly(now.toDate()),
                         'status': 'Checked In',
-                        'pass_id': pass['id'] ?? '',
+                          'pass_id': passId,
                         'created_at': FieldValue.serverTimestamp(),
                       });
-                      print('Successfully saved to checked_in_out collection');
+                        print('Successfully saved to checked_in_out collection with visitor_id: $finalVisitorId');
+                      } else {
+                        print('Visitor already exists in checked_in_out collection');
+                      }
                     } catch (e) {
                       print('Error saving to checked_in_out collection: ${e.toString()}');
                     }
@@ -1232,6 +1402,45 @@ String _formatDateOnly(dynamic date) {
   }
 }
 
+class _AppointedVisitorDetailsDialog extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const _AppointedVisitorDetailsDialog({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Visitor Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text('Name: ${data['visitorName'] ?? data['fullName'] ?? 'N/A'}'),
+            Text('Mobile: ${data['mobile'] ?? 'N/A'}'),
+            Text('Email: ${data['email'] ?? 'N/A'}'),
+            Text('Company: ${data['company'] ?? 'N/A'}'),
+            Text('Host: ${data['host'] ?? 'N/A'}'),
+            Text('Purpose: ${data['purpose'] ?? 'N/A'}'),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Close'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EditVisitorForm extends StatefulWidget {
   final Map<String, dynamic> data;
   final String docId;
@@ -1329,361 +1538,89 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
+    return Dialog(
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Padding(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
             padding: const EdgeInsets.all(20),
             child: Form(
               key: formKey,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Text(
-                      'Edit Visitor',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                        color: Color(0xFF091016),
-                        fontFamily: 'Poppins',
+              Text('Edit Visitor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: fullNameController,
+                        decoration: InputDecoration(labelText: 'Full Name'),
+                        validator: (value) => value?.isEmpty == true ? 'Please enter full name' : null,
                       ),
-                    ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: mobileController,
+                        decoration: InputDecoration(labelText: 'Mobile'),
+                        validator: (value) => value?.isEmpty == true ? 'Please enter mobile number' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: InputDecoration(labelText: 'Email'),
+                        validator: (value) => value?.isEmpty == true ? 'Please enter email' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: designationController,
+                        decoration: InputDecoration(labelText: 'Designation'),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: companyController,
+                        decoration: InputDecoration(labelText: 'Company'),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: hostController,
+                        decoration: InputDecoration(labelText: 'Host'),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: purposeController,
+                        decoration: InputDecoration(labelText: 'Purpose'),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: purposeOtherController,
+                        decoration: InputDecoration(labelText: 'Other Purpose'),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: departmentController,
+                        decoration: InputDecoration(labelText: 'Department'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 18),
-                  _buildEditField(fullNameController, 'Full Name', Icons.person, TextInputType.text, true),
-                  const SizedBox(height: 14),
-                  _buildEditField(mobileController, 'Mobile', Icons.phone, TextInputType.phone, true),
-                  const SizedBox(height: 14),
-                  _buildEditField(emailController, 'Email', Icons.email, TextInputType.emailAddress, false),
-                  const SizedBox(height: 14),
-                  _buildEditField(companyController, 'Company', Icons.business, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  _buildEditField(designationController, 'Designation', Icons.badge, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  // Host dropdown
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('host').snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return Center(child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: CircularProgressIndicator(),
-                        ));
-                      }
-                      final hosts = snapshot.data!.docs
-                        .map((doc) => doc['emp_name'] as String)
-                        .where((name) => name.isNotEmpty)
-                        .toSet() // Remove duplicates
-                        .toList();
-                      
-                      // Create unique dropdown items
-                      final dropdownItems = <String>['Select Host'];
-                      dropdownItems.addAll(hosts);
-                      
-                      // Ensure the visitor's current host is in the list if it's not empty
-                      final currentHost = hostController.text;
-                      if (currentHost.isNotEmpty && 
-                          currentHost != 'Select Host' && 
-                          !dropdownItems.contains(currentHost)) {
-                        dropdownItems.add(currentHost);
-                      }
-                      
-                      // Validate the selected value
-                      final validValue = dropdownItems.contains(currentHost) ? currentHost : 'Select Host';
-                      
-                      return InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'Host',
-                          labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.85),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: validValue,
-                            isExpanded: true,
-                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                            dropdownColor: Colors.white,
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                            items: dropdownItems.map((e) => DropdownMenuItem(
-                              value: e,
-                              enabled: e != 'Select Host',
-                              child: Text(e, style: TextStyle(color: e == 'Select Host' ? Color(0xFF888888) : Colors.black)),
-                            )).toList(),
-                            onChanged: (v) {
-                              if (v != null && v != 'Select Host') {
-                                setState(() {
-                                  hostController.text = v;
-                                });
-                              } else {
-                                setState(() {
-                                  hostController.text = '';
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('Cancel'),
                   ),
-                  const SizedBox(height: 14),
-                  // Purpose text field
-                  _buildEditField(purposeController, 'Purpose of the Visit', Icons.info_outline, TextInputType.text, false),
-                  const SizedBox(height: 14),
-                  // Appointment dropdown
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Do you have an appointment',
-                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.85),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedAppointment,
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                        items: yesNo.map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        )).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() {
-                              selectedAppointment = v;
-                              appointmentController.text = v;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  // Department dropdown
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('department').snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return Center(child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: CircularProgressIndicator(),
-                        ));
-                      }
-                      final departments = snapshot.data!.docs
-                        .map((doc) => doc['d_name'] as String)
-                        .where((name) => name.isNotEmpty)
-                        .toSet() // Remove duplicates
-                        .toList();
-                      
-                      // Create unique dropdown items
-                      final dropdownItems = <String>['Select Dept'];
-                      dropdownItems.addAll(departments);
-                      
-                      // Ensure the visitor's current department is in the list if it's not empty
-                      if (selectedDepartment.isNotEmpty && 
-                          selectedDepartment != 'Select Dept' && 
-                          !dropdownItems.contains(selectedDepartment)) {
-                        dropdownItems.add(selectedDepartment);
-                      }
-                      
-                      // Validate the selected value
-                      final validValue = dropdownItems.contains(selectedDepartment) ? selectedDepartment : 'Select Dept';
-                      
-                      return InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'Department',
-                          labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.85),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: validValue,
-                            isExpanded: true,
-                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                            dropdownColor: Colors.white,
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                            items: dropdownItems.map((e) => DropdownMenuItem(
-                              value: e,
-                              enabled: e != 'Select Dept',
-                              child: Text(e, style: TextStyle(color: e == 'Select Dept' ? Color(0xFF888888) : Colors.black)),
-                            )).toList(),
-                            onChanged: (v) {
-                              if (v != null && v != 'Select Dept') {
-                                setState(() => selectedDepartment = v);
-                              } else {
-                                setState(() => selectedDepartment = 'Select Dept');
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  // Accompanying visitors dropdown
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Are you accompanied by other visitors?',
-                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.85),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedAccompanying,
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                        items: yesNo.map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        )).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() {
-                              selectedAccompanying = v;
-                              accompanyingController.text = v;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  if (selectedAccompanying == 'Yes')
-                    _buildEditField(accompanyingCountController, 'Number of accompanying visitors', Icons.group, TextInputType.number, false),
-                  const SizedBox(height: 14),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  // Laptop dropdown
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Do you carrying a laptop?',
-                      labelStyle: const TextStyle(color: Color(0xFF555555), fontWeight: FontWeight.w600),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.85),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.blueAccent.withOpacity(0.2))),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Color(0xFF005FFE), width: 2),
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedLaptop,
-                        isExpanded: true,
-                        icon: Icon(Icons.arrow_drop_down, color: Color(0xFF005FFE)),
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                        items: yesNo.map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
-                        )).toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setState(() {
-                              selectedLaptop = v;
-                              laptopController.text = v;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  if (selectedLaptop == 'Yes')
-                    _buildEditField(laptopDetailsController, 'Enter the laptop model & serial number', Icons.laptop, TextInputType.text, false),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: ElevatedButton.icon(
+                  SizedBox(width: 8),
+                  ElevatedButton(
                       onPressed: () async {
                         if (formKey.currentState!.validate()) {
-                          final updatedData = {
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection(widget.collection)
+                              .doc(widget.docId)
+                              .update({
                             'fullName': fullNameController.text,
                             'mobile': mobileController.text,
                             'email': emailController.text,
@@ -1692,640 +1629,29 @@ class _EditVisitorFormState extends State<_EditVisitorForm> {
                             'host': hostController.text,
                             'purpose': purposeController.text,
                             'purposeOther': purposeOtherController.text,
-                            'appointment': appointmentController.text,
-                            'department': selectedDepartment == 'Select Dept' ? '' : selectedDepartment,
-                            'accompanying': accompanyingController.text,
-                            'accompanyingCount': accompanyingCountController.text,
-                            'laptop': laptopController.text,
-                            'laptopDetails': laptopDetailsController.text,
-                          };
-                          await FirebaseFirestore.instance.collection(widget.collection).doc(widget.docId).update(updatedData);
+                            'department': departmentController.text,
+                          });
                           if (context.mounted) {
                             Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Visitor updated successfully')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error updating visitor: $e')),
+                            );
                           }
                         }
-                      },
-                      icon: const Icon(Icons.save),
-                      label: const Text('Save Changes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF6CA4FE),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        elevation: 6,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditField(TextEditingController controller, String label, IconData icon, TextInputType type, bool required) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: type,
-      validator: required ? (v) => v == null || v.isEmpty ? 'Required' : null : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.black12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.black12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Color(0xFF6CA4FE), width: 2),
-        ),
-      ),
-    );
-  }
-} 
-
- 
-
-class _AppointedVisitorDetailsDialog extends StatelessWidget {
-  final Map<String, dynamic> data;
-  final Color color;
-  final IconData icon;
-  final String name;
-  final String docId;
-  final String collection;
-  final String hostName;
-  const _AppointedVisitorDetailsDialog({required this.data, required this.color, required this.icon, required this.name, required this.docId, required this.collection, required this.hostName, Key? key}) : super(key: key);
-
-  // Add this function to generate a unique 4-digit pass number
-  Future<int> _generateUniquePassNo() async {
-    final random = Random();
-    int passNo;
-    bool exists = true;
-    final passesRef = FirebaseFirestore.instance.collection('passes');
-    do {
-      passNo = 1000 + random.nextInt(9000); // 4-digit number
-      final query = await passesRef.where('pass_no', isEqualTo: passNo).limit(1).get();
-      exists = query.docs.isNotEmpty;
-    } while (exists);
-    return passNo;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-      child: SingleChildScrollView(
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 36,
-                      backgroundColor: color.withOpacity(0.13),
-                      child: Icon(Icons.person, color: Colors.black, size: 36),
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          color: Color(0xFF091016),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black54),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildDetailRow(Icons.phone, 'Contact No', data['v_contactno']),
-                _buildDetailRow(Icons.email, 'Email', data['v_email']),
-                _buildDetailRow(Icons.badge, 'Designation', data['v_designation']),
-                _buildDetailRow(Icons.business, 'Company', data['v_company_name']),
-                _buildDetailRow(Icons.group, 'Total Visitors', data['v_totalno']),
-                _buildDetailRow(Icons.calendar_today, 'Date', (data['v_date'] is Timestamp) ? _formatDateOnly((data['v_date'] as Timestamp).toDate()) : data['v_date']),
-                _buildDetailRow(Icons.access_time, 'Time', data['v_time']),
-                // Host row: show host name directly
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.person_outline, color: Color(0xFF6CA4FE), size: 22),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Host: ',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016)),
-                      ),
-                      Expanded(
-                        child: Text(
-                          hostName,
-                          style: const TextStyle(color: Colors.black87),
-                          softWrap: true,
-                          overflow: TextOverflow.visible,
-                          maxLines: null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Center(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    ),
-                    icon: const Icon(Icons.qr_code, size: 18, color: Colors.white),
-                    label: const Text('Generate Pass', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                    onPressed: () async {
-                      // Generate unique pass number
-                      final passNo = await _generateUniquePassNo();
-                      final passData = {
-                        'passNo': passNo,
-                        'visitorName': data['v_name'] ?? '',
-                        'company': data['v_company_name'] ?? '',
-                        'department': data['departmentId'] ?? '',
-                        'designation': data['v_designation'] ?? '',
-                        'accompanyingVisitors': data['v_totalno'] ?? 1,
-                        'host': data['host_name'] ?? '',
-                        'photoBase64': data['photoBase64'] ?? '', // Add photo field for appointed visitors
-                        'date': _formatDateOnly(DateTime.now()),
-                        'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-                        'generated_at': FieldValue.serverTimestamp(),
-                        'visitor_doc_id': docId,
-                        'pass_generated_by': 'receptionist', // Distinguish from host-generated passes
-                        'departmentId': data['departmentId'] ?? '', // Add departmentId for filtering
-                      };
-                      await FirebaseFirestore.instance.collection('passes').add(passData); // Use 'passes' collection
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pass generated and saved!')));
                       }
                     },
+                    child: Text('Update'),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, dynamic value) {
-    if (value == null || value.toString().isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Color(0xFF6CA4FE), size: 22),
-          const SizedBox(width: 12),
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016)),
-          ),
-          Expanded(
-            child: Text(
-              value.toString(),
-              style: const TextStyle(color: Colors.black87),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-              maxLines: null,
-            ),
+                ],
           ),
         ],
       ),
-    );
-  }
-} 
-
-class _AppointedPassDetailDialog extends StatelessWidget {
-  final Map<String, dynamic> pass;
-  final double cardWidth;
-  final String departmentName;
-  const _AppointedPassDetailDialog({required this.pass, required this.cardWidth, required this.departmentName, Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Handle photo for appointed visitors
-    final photo = pass['photoBase64'] ?? pass['photo'];
-    Uint8List? imageBytes;
-    Widget avatar;
-    if (photo != null && photo is String && photo.isNotEmpty) {
-      try {
-        imageBytes = const Base64Decoder().convert(photo);
-        avatar = Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            color: Color(0xFF6CA4FE),
-            borderRadius: BorderRadius.circular(4),
-            image: DecorationImage(image: MemoryImage(imageBytes!), fit: BoxFit.cover),
-          ),
-        );
-      } catch (_) {
-        avatar = Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            color: Color(0xFF6CA4FE),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Icon(Icons.person, color: Colors.white, size: 48),
-        );
-      }
-    } else {
-      avatar = Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          color: Color(0xFF6CA4FE),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Icon(Icons.person, color: Colors.white, size: 48),
-      );
-    }
-
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      elevation: 4,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Close',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/rdl.png',
-                  width: 40,
-                  height: 40,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'RDL Technologies Pvt Ltd',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black, decoration: TextDecoration.none),
-                    textAlign: TextAlign.left,
-                    softWrap: true,
-                    overflow: TextOverflow.visible,
-                    maxLines: null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Center(
-              child: Text('Visitor Pass', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 18, decoration: TextDecoration.none), softWrap: true, overflow: TextOverflow.visible, maxLines: null),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                avatar,
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                                            RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(text: 'Pass No      : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                            TextSpan(text: '${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                          ],
-                        ),
-                        softWrap: true,
-                        overflow: TextOverflow.visible,
-                      ),
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(text: 'Visitor Name : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                            TextSpan(text: '${pass['visitorName'] ?? pass['v_name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 16, color: Color(0xFF091016), decoration: TextDecoration.none)),
-                          ],
-                        ),
-                        softWrap: true,
-                        overflow: TextOverflow.visible,
-                      ),
-                      if (pass['company'] != null && pass['company'].toString().isNotEmpty)
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(text: 'Company : ', style: const TextStyle(fontSize: 16, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                              TextSpan(text: '${pass['company']}', style: const TextStyle(fontSize: 16, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                            ],
-                          ),
-                          softWrap: true,
-                          overflow: TextOverflow.visible,
-                        ),
-                      if (pass['designation'] != null && pass['designation'].toString().isNotEmpty)
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(text: 'Designation: ', style: const TextStyle(fontSize: 16, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                              TextSpan(text: '${pass['designation']}', style: const TextStyle(fontSize: 16, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                            ],
-                          ),
-                          softWrap: true,
-                          overflow: TextOverflow.visible,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (pass['accompanyingVisitors'] != null && pass['accompanyingVisitors'].toString().isNotEmpty)
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'Total Visitors: ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                    TextSpan(text: '${pass['accompanyingVisitors']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                  ],
-                ),
-                softWrap: true,
-                overflow: TextOverflow.visible,
-              ),
-            if (departmentName.isNotEmpty)
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'Department: ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                    TextSpan(text: '$departmentName', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                  ],
-                ),
-                softWrap: true,
-                overflow: TextOverflow.visible,
-              ),
-            if (pass['host'] != null && pass['host'].toString().isNotEmpty)
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'Host          : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                    TextSpan(text: '${pass['host']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                  ],
-                ),
-                softWrap: true,
-                overflow: TextOverflow.visible,
-              ),
-            if (pass['date'] != null)
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'Date     : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                    TextSpan(text: '${pass['date']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                  ],
-                ),
-                softWrap: true,
-                overflow: TextOverflow.visible,
-              ),
-            if (pass['time'] != null)
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'Time     : ', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.bold, decoration: TextDecoration.none)),
-                    TextSpan(text: '${pass['time']}', style: const TextStyle(fontSize: 18, color: Color(0xFF091016), fontWeight: FontWeight.normal, decoration: TextDecoration.none)),
-                  ],
-                ),
-                softWrap: true,
-                overflow: TextOverflow.visible,
-              ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.print),
-                  label: const Text('Print'),
-                  onPressed: () async {
-                    final now = Timestamp.now();
-                    try {
-                      print('Attempting to update printed_at for pass: ${pass['id']}');
-                      if (pass['id'] != null) {
-                        await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
-                          'printed_at': now,
-                        });
-                        print('printed_at updated!');
-                      }
-                    } catch (e) {
-                      print('Error updating printed_at: ${e.toString()}');
-                    }
-                    
-                    // Save to Checked In/Out collection for status page
-                    try {
-                      await FirebaseFirestore.instance.collection('checked_in_out').add({
-                        'visitor_id': pass['visitorId'] ?? '',
-                        'visitor_name': pass['visitorName'] ?? pass['v_name'] ?? pass['fullName'] ?? '',
-                        'check_in_time': FieldValue.serverTimestamp(),
-                        'check_in_date': _formatDateOnly(now.toDate()),
-                        'status': 'Checked In',
-                        'pass_id': pass['id'] ?? '',
-                        'created_at': FieldValue.serverTimestamp(),
-                      });
-                      print('Successfully saved to checked_in_out collection');
-                    } catch (e) {
-                      print('Error saving to checked_in_out collection: ${e.toString()}');
-                    }
-                    
-                    final logoBytes = await DefaultAssetBundle.of(context).load('assets/images/rdl.png');
-                    final logoUint8List = logoBytes.buffer.asUint8List();
-                    await Printing.layoutPdf(
-                      onLayout: (PdfPageFormat format) async {
-                        final pdf = pw.Document();
-                        pdf.addPage(
-                          pw.Page(
-                            pageFormat: format,
-                            build: (pw.Context context) {
-                              return pw.Container(
-                                padding: const pw.EdgeInsets.all(18),
-                                decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(color: PdfColor.fromInt(0xFF000000), width: 1),
-                                  borderRadius: pw.BorderRadius.circular(12),
-                                ),
-                                child: pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                  children: [
-                                    pw.Row(
-                                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                                      children: [
-                                        pw.Container(
-                                          width: 40,
-                                          height: 40,
-                                          child: pw.Image(pw.MemoryImage(logoUint8List)),
-                                        ),
-                                        pw.SizedBox(width: 12),
-                                        pw.Text('RDL Technologies Pvt Ltd', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                                      ],
-                                    ),
-                                    pw.SizedBox(height: 8),
-                                    pw.Center(
-                                      child: pw.Text('Visitor Pass', style: pw.TextStyle(color: PdfColor.fromInt(0xFFEF4444), fontWeight: pw.FontWeight.bold, fontSize: 18)),
-                                    ),
-                                    pw.SizedBox(height: 12),
-                                    pw.Row(
-                                      children: [
-                                        if (imageBytes != null)
-                                          pw.Container(
-                                            width: 70,
-                                            height: 70,
-                                            decoration: pw.BoxDecoration(
-                                              color: PdfColor.fromInt(0xFF6CA4FE),
-                                              borderRadius: pw.BorderRadius.circular(4),
-                                              image: pw.DecorationImage(
-                                                image: pw.MemoryImage(imageBytes),
-                                                fit: pw.BoxFit.cover,
-                                              ),
-                                            ),
-                                          )
-                                        else
-                                        pw.Container(
-                                          width: 70,
-                                          height: 70,
-                                          decoration: pw.BoxDecoration(
-                                            color: PdfColor.fromInt(0xFF6CA4FE),
-                                            borderRadius: pw.BorderRadius.circular(4),
-                                          ),
-                                          child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
-                                        ),
-                                        pw.SizedBox(width: 16),
-                                        pw.Expanded(
-                                          child: pw.Column(
-                                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                            children: [
-                                              pw.Text('Pass No      : ${pass['passNo'] ?? pass['pass_no'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                                              pw.Text('Visitor Name : ${pass['visitorName'] ?? pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                                              if (pass['company'] != null && pass['company'].toString().isNotEmpty)
-                                                pw.RichText(
-                                                  text: pw.TextSpan(
-                                                    children: [
-                                                      pw.TextSpan(text: 'Company : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                                      pw.TextSpan(text: '${pass['company']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                                    ],
-                                                  ),
-                                                ),
-                                              if (pass['designation'] != null && pass['designation'].toString().isNotEmpty)
-                                                pw.RichText(
-                                                  text: pw.TextSpan(
-                                                    children: [
-                                                      pw.TextSpan(text: 'Designation: ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                                      pw.TextSpan(text: '${pass['designation']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    pw.SizedBox(height: 10),
-                                    if (pass['accompanyingVisitors'] != null && pass['accompanyingVisitors'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Total Visitors: ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['accompanyingVisitors']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
-                                        ),
-                                      ),
-                                    if (departmentName.isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Department: ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '$departmentName', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
-                                        ),
-                                      ),
-                                    if (pass['host'] != null && pass['host'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Host          : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['host']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
-                                        ),
-                                      ),
-                                    if (pass['date'] != null)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Date     : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['date']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
-                                        ),
-                                      ),
-                                    if (pass['time'] != null)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Time     : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['time']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                        return pdf.save();
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
