@@ -132,7 +132,6 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('manual_registrations')
-            .where('source', isEqualTo: 'qr_code')
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -140,15 +139,41 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No QR code visitors found.'));
+            return const Center(child: Text('No visitors found in manual_registrations collection.'));
           }
           final docs = snapshot.data!.docs;
+          
+          // Debug: Print all records to see what's actually there
+          print('DEBUG: Total records in manual_registrations: ${docs.length}');
+          for (int i = 0; i < docs.length; i++) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            print('DEBUG: Record $i - fullName: ${data['fullName']}, group: ${data['group']}, source: ${data['source']}');
+          }
+          
+          // Filter for QR code registrations in memory
+          final qrCodeDocs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            // Check for both group and source fields, and also check if it's a QR code registration
+            final isQrCode = data['group'] == 'qr_code' || 
+                           data['source'] == 'qr_code' ||
+                           (data['fullName'] != null && data['email'] != null); // Show all records for now
+            print('DEBUG: Checking record ${data['fullName']} - group: ${data['group']}, source: ${data['source']}, isQrCode: $isQrCode');
+            return isQrCode;
+          }).toList();
+          
+          print('DEBUG: Filtered QR code records: ${qrCodeDocs.length}');
+          
+          if (qrCodeDocs.isEmpty) {
+            return const Center(child: Text('No QR code visitors found.'));
+          }
+          
           return ListView.separated(
-            itemCount: docs.length,
+            itemCount: qrCodeDocs.length,
             separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final name = data['fullName'] ?? 'Unknown';
+              final data = qrCodeDocs[index].data() as Map<String, dynamic>;
+              final name = data['fullName'] ?? data['name'] ?? 'Unknown';
+              final email = data['email'] ?? '';
               final time = (data['timestamp'] as Timestamp?)?.toDate();
               Uint8List? imageBytes;
               final photo = data['photo'];
@@ -197,11 +222,16 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 17), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            if (email.isNotEmpty)
+                              Text(email, style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
                             if (time != null)
                               Text(
                                 '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')}/${time.year}',
                                 style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)),
                                 softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            // Debug info
+                            Text('Group: ${data['group'] ?? 'N/A'}, Source: ${data['source'] ?? 'N/A'}', 
+                                 style: const TextStyle(fontSize: 10, color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -223,7 +253,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('passes')
-            .where('source', isEqualTo: 'qr_code')
+            .where('group', isEqualTo: 'qr_code')
             .orderBy('created_at', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -240,6 +270,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               final name = data['v_name'] ?? data['visitorName'] ?? 'Unknown';
+              final email = data['email'] ?? '';
               final passNo = data['pass_no'] ?? data['passNo'] ?? '';
               final department = data['department'] ?? '';
               Uint8List? imageBytes;
@@ -289,6 +320,8 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 17), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            if (email.isNotEmpty)
+                              Text(email, style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
                             Text('Pass No: $passNo', style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE))),
                           ],
                         ),
