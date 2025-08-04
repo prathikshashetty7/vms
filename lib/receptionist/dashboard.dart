@@ -118,9 +118,9 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6CA4FE),
-        unselectedItemColor: Color(0xFF091016),
-        currentIndex: 1,
+        selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+        unselectedItemColor: Color(0xFF091016), // black for unselected
+        currentIndex: _selectedIndex, // Make sure this is set correctly
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
@@ -1148,14 +1148,12 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               if (actualCheckoutCode != null && actualCheckoutCode == checkoutCode) {
                                                 // Checkout code matches, proceed with checkout
                                                 await FirebaseFirestore.instance
-                                                    .collection('checked_in_out')
-                                                    .doc(docId)
-                                                    .update({
-                                                  'status': 'Checked Out',
-                                                  'check_out_time': FieldValue.serverTimestamp(),
-                                                  'check_out_code': checkoutCode,
-                                                });
-
+                                                .collection('checked_in_out')
+                                                .doc(docId)
+                                                .update({
+                                                'status': 'Checked Out',
+                                                'check_out_time': FieldValue.serverTimestamp(),
+                                                 });
                                                 if (context.mounted) {
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     const SnackBar(
@@ -1274,11 +1272,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFFEF4444)),
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     dateInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
                                                   ),
                                                 ],
                                               ),
@@ -1287,11 +1285,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     timeInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
                                                   ),
                                                 ],
                                               ),
@@ -1306,10 +1304,13 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     margin: const EdgeInsets.only(left: 8, right: 16),
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: Colors.red,
+                                      color: Color(0xFF6CA4FE), // blue
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    child: const Text(
+                                      'Checked Out',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1324,7 +1325,6 @@ class _VisitorsPageState extends State<VisitorsPage> {
             ),
           ],
         ),
-
       ),
     );
   }
