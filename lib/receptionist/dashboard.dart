@@ -48,14 +48,36 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
       });
     } else {
       setState(() {
+        receptionistName = null;
         _loadingReceptionist = false;
       });
     }
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
     if (index == 4) {
-      Navigator.pushReplacementNamed(context, '/signin');
+      // Show logout confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
       return;
     }
     setState(() {
@@ -96,9 +118,9 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF6CA4FE),
-        unselectedItemColor: Color(0xFF091016),
-        currentIndex: _selectedIndex,
+        selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+        unselectedItemColor: Color(0xFF091016), // black for unselected
+        currentIndex: _selectedIndex, // Make sure this is set correctly
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
@@ -286,8 +308,7 @@ class _ReceptionistDashboardState extends State<ReceptionistDashboard> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 2),
+              ),           
               // Optionally, add more creative widgets here
             ],
           ),
@@ -1122,66 +1143,31 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                             try {
                                               final docId = checkedInOutSnapshot.data!.docs[index].id;
                                               final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
-                                              final passId = visitorData['pass_id'];
-                                              
-                                              if (passId != null && passId.isNotEmpty) {
-                                                // Fetch the pass data to get the checkout code
-                                                final passDoc = await FirebaseFirestore.instance
-                                                    .collection('passes')
-                                                    .doc(passId)
-                                                    .get();
-                                                
-                                                if (passDoc.exists) {
-                                                  final passData = passDoc.data() as Map<String, dynamic>;
-                                                  final hostCheckoutCode = passData['checkout_code'];
-                                                  
-                                                  if (hostCheckoutCode != null && hostCheckoutCode.toString() == checkoutCode) {
-                                                    // Checkout code matches, proceed with checkout
-                                                    await FirebaseFirestore.instance
-                                                        .collection('checked_in_out')
-                                                        .doc(docId)
-                                                        .update({
-                                                      'status': 'Checked Out',
-                                                      'check_out_time': FieldValue.serverTimestamp(),
-                                                      'check_out_code': checkoutCode,
-                                                    });
-                                                    
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Visitor checked out successfully'),
-                                                          backgroundColor: Colors.green,
-                                                        ),
-                                                      );
-                                                    }
-                                                  } else {
-                                                    // Checkout code doesn't match
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Invalid checkout code. Please try again.'),
-                                                          backgroundColor: Colors.red,
-                                                        ),
-                                                      );
-                                                    }
-                                                  }
-                                                } else {
-                                                  // Pass document not found
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('Pass data not found. Cannot validate checkout.'),
-                                                        backgroundColor: Colors.red,
-                                                      ),
-                                                    );
-                                                  }
-                                                }
-                                              } else {
-                                                // No pass_id found
+                                              final actualCheckoutCode = visitorData['checkout_code']?.toString();
+
+                                              if (actualCheckoutCode != null && actualCheckoutCode == checkoutCode) {
+                                                // Checkout code matches, proceed with checkout
+                                                await FirebaseFirestore.instance
+                                                .collection('checked_in_out')
+                                                .doc(docId)
+                                                .update({
+                                                'status': 'Checked Out',
+                                                'check_out_time': FieldValue.serverTimestamp(),
+                                                 });
                                                 if (context.mounted) {
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     const SnackBar(
-                                                      content: Text('No pass associated with this visitor.'),
+                                                      content: Text('Visitor checked out successfully'),
+                                                      backgroundColor: Colors.green,
+                                                    ),
+                                                  );
+                                                }
+                                              } else {
+                                                // Checkout code doesn't match
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Incorrect code. Please check and try again.'),
                                                       backgroundColor: Colors.red,
                                                     ),
                                                   );
@@ -1286,11 +1272,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFFEF4444)),
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     dateInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
                                                   ),
                                                 ],
                                               ),
@@ -1299,11 +1285,11 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFFEF4444)),
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     timeInfo,
-                                                    style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
                                                   ),
                                                 ],
                                               ),
@@ -1318,10 +1304,13 @@ class _VisitorsPageState extends State<VisitorsPage> {
                                     margin: const EdgeInsets.only(left: 8, right: 16),
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: Colors.red,
+                                      color: Color(0xFF6CA4FE), // blue
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: const Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    child: const Text(
+                                      'Checked Out',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1336,51 +1325,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
             ),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF6CA4FE),
-          unselectedItemColor: const Color(0xFF091016),
-          currentIndex: 2,
-          onTap: (index) {
-            if (index == 4) {
-              Navigator.pushReplacementNamed(context, '/signin');
-              return;
-            }
-            if (index == 0) {
-              Navigator.pushReplacementNamed(context, '/dashboard');
-            } else if (index == 1) {
-              Navigator.pushReplacementNamed(context, '/receptionist_reports');
-            } else if (index == 2) {
-              // Already here (Checked In)
-            } else if (index == 3) {
-              Navigator.pushReplacementNamed(context, '/manual_entry');
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_alt_rounded),
-              label: 'Visitors',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.check_circle_rounded),
-              label: 'Status',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_add_alt_1_rounded),
-              label: 'Add Visitor',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.logout_rounded),
-              label: 'Logout',
-            ),
-          ],
-        ),
       ),
     );
   }
-} 
+}

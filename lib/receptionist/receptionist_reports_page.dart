@@ -221,7 +221,7 @@ class _SectionCard extends StatelessWidget {
                       style: const TextStyle(
                         color: Color(0xFF091016),
                         fontWeight: FontWeight.w900,
-                        fontSize: 24,
+                        fontSize: 18,
                         letterSpacing: 1.1,
                         fontFamily: 'Poppins',
                       ),
@@ -231,7 +231,7 @@ class _SectionCard extends StatelessWidget {
                       subtitle ?? _subtitleForTitle(title),
                       style: TextStyle(
                         color: color.withOpacity(0.7),
-                        fontSize: 15,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.2,
                       ),

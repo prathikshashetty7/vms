@@ -858,7 +858,13 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                            title: Row(
                              children: [
                                Text('Name: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
-                               Text(doc['v_name'], style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                               Expanded(
+                                 child: Text(
+                                   doc['v_name'], 
+                                   style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14),
+                                   overflow: TextOverflow.ellipsis,
+                                 ),
+                               ),
                              ],
                            ),
                            subtitle: Column(
@@ -867,21 +873,39 @@ class _ManageVisitorsState extends State<ManageVisitors> {
                                Row(
                                  children: [
                                    Text('Designation: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
-                                   Text(doc['v_designation'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                   Expanded(
+                                     child: Text(
+                                       doc['v_designation'] ?? '', 
+                                       style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14),
+                                       overflow: TextOverflow.ellipsis,
+                                     ),
+                                   ),
                                  ],
                                ),
                                const SizedBox(height: 2),
                                Row(
                                  children: [
                                    Text('Company: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
-                                   Text(doc['v_company_name'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                   Expanded(
+                                     child: Text(
+                                       doc['v_company_name'] ?? '', 
+                                       style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14),
+                                       overflow: TextOverflow.ellipsis,
+                                     ),
+                                   ),
                                  ],
                                ),
                                const SizedBox(height: 2),
                                Row(
                                  children: [
                                    Text('Contact: ', style: SystemTheme.body.copyWith(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14)),
-                                   Text(doc['v_contactno'] ?? '', style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14)),
+                                   Expanded(
+                                     child: Text(
+                                       doc['v_contactno'] ?? '', 
+                                       style: SystemTheme.body.copyWith(color: Colors.black54, fontSize: 14),
+                                       overflow: TextOverflow.ellipsis,
+                                     ),
+                                   ),
                                  ],
                                ),
                              ],

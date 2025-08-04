@@ -15,6 +15,8 @@ class DeptReport extends StatefulWidget {
 class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
+  
+  String _selectedFilter = 'All'; // 'All', 'Checked Out', 'Checked In', 'Not Checked In'
 
   @override
   Widget build(BuildContext context) {
@@ -24,16 +26,17 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       child: Scaffold(
         backgroundColor: const Color(0xFFD4E9FF),
         body: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              Expanded(
+          padding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 24.0),
+                      child: Column(
+              children: [
+                SizedBox(height: 10),
+                Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: widget.currentDepartmentId == null
                       ? null
                       : FirebaseFirestore.instance
-                          .collection('manual_registrations')
-                          .where('department', isEqualTo: widget.currentDepartmentId)
+                          .collection('visitor')
+                          .where('departmentId', isEqualTo: widget.currentDepartmentId)
                           .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
@@ -56,12 +59,18 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                           future: _getVisitorWithCheckInOutDetails(doc),
                           builder: (context, checkInOutSnapshot) {
                             final visitorData = checkInOutSnapshot.data ?? {};
-                            final name = doc['fullName'] ?? doc['v_name'] ?? '';
-                            final hostName = doc['host'] ?? '';
-                            final vDate = doc['timestamp'];
+                            final status = visitorData['status'] ?? 'Not Checked In';
+                            
+                            // Apply filter - hide visitors that don't match the selected filter
+                            if (_selectedFilter != 'All' && status.toLowerCase() != _selectedFilter.toLowerCase()) {
+                              return SizedBox.shrink(); // Hide this item
+                            }
+                            
+                            final name = doc['v_name'] ?? '';
+                            final hostName = doc['host_name'] ?? '';
+                            final vDate = doc['v_date'];
                             final checkin = visitorData['check_in_time'] ?? 'N/A';
                             final checkout = visitorData['check_out_time'] ?? 'N/A';
-                            final status = visitorData['status'] ?? 'Not Checked In';
                             
                             String dateStr = 'N/A';
                             if (vDate != null) {
@@ -106,8 +115,10 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                                   children: [
                                     Text('Host Name: $hostName'),
                                     Text('Date: $dateStr'),
-                                    Text('Check-in Time: $checkin'),
-                                    Text('Check-out Time: $checkout'),
+                                    if (checkin != 'N/A')
+                                      Text('Check-in Time: $checkin'),
+                                    if (status.toLowerCase() == 'checked out')
+                                      Text('Check-out Time: $checkout'),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
@@ -123,6 +134,23 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                                         ),
                                       ),
                                     ),
+                                    if (status.toLowerCase() == 'checked out')
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Check-out completed',
+                                          style: TextStyle(
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                                 trailing: IconButton(
@@ -147,19 +175,29 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
 
   Future<Map<String, dynamic>> _getVisitorWithCheckInOutDetails(Map<String, dynamic> visitorDoc) async {
     try {
+      // Get the visitor_id from visitor table
       final visitorId = visitorDoc['visitor_id'] ?? visitorDoc['id'];
       if (visitorId == null) return {};
       
-      // Query checked_in_out collection for this visitor
+      // Query checked_in_out collection for this visitor using visitor_id
       final checkInOutQuery = await FirebaseFirestore.instance
           .collection('checked_in_out')
           .where('visitor_id', isEqualTo: visitorId)
-          .orderBy('created_at', descending: true)
-          .limit(1)
           .get();
       
       if (checkInOutQuery.docs.isNotEmpty) {
-        final checkInOutData = checkInOutQuery.docs.first.data();
+        // Sort by created_at to get the most recent record
+        final sortedDocs = checkInOutQuery.docs.toList()
+          ..sort((a, b) {
+            final aCreated = a.data()['created_at'] as Timestamp?;
+            final bCreated = b.data()['created_at'] as Timestamp?;
+            if (aCreated == null && bCreated == null) return 0;
+            if (aCreated == null) return 1;
+            if (bCreated == null) return -1;
+            return bCreated.compareTo(aCreated); // Most recent first
+          });
+        
+        final checkInOutData = sortedDocs.first.data();
         return {
           'check_in_time': _formatTimestamp(checkInOutData['check_in_time']),
           'check_out_time': _formatTimestamp(checkInOutData['check_out_time']),
@@ -171,6 +209,27 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       return {};
     } catch (e) {
       print('Error fetching check-in/out details: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> _getManualRegistrationDetails(String visitorId) async {
+    try {
+      // Query manual_registrations collection for this visitor
+      final manualRegQuery = await FirebaseFirestore.instance
+          .collection('manual_registrations')
+          .where('visitor_id', isEqualTo: visitorId)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+      
+      if (manualRegQuery.docs.isNotEmpty) {
+        return manualRegQuery.docs.first.data();
+      }
+      
+      return {};
+    } catch (e) {
+      print('Error fetching manual registration details: $e');
       return {};
     }
   }
@@ -216,116 +275,125 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
   }
 
   void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc, Map<String, dynamic> checkInOutData) {
+    final String? visitorId = doc['visitor_id'] ?? doc['id'];
+    
     showDialog(
       context: context,
       builder: (context) {
-        final String? photoBase64 = doc['photo'] as String?;
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              elevation: 8,
-              backgroundColor: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.blue.shade100,
-                              backgroundImage: (photoBase64 != null && photoBase64.isNotEmpty)
-                                  ? MemoryImage(base64Decode(photoBase64))
-                                  : null,
-                              child: (photoBase64 == null || photoBase64.isEmpty)
-                                  ? const Icon(Icons.person, size: 44, color: Colors.blue)
-                                  : null,
+        return FutureBuilder<Map<String, dynamic>>(
+          future: visitorId != null ? _getManualRegistrationDetails(visitorId) : Future.value({}),
+          builder: (context, manualRegSnapshot) {
+            final manualRegData = manualRegSnapshot.data ?? {};
+            final String? photoBase64 = manualRegData['photoBase64'] ?? doc['photoBase64'] as String?;
+            
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 8,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.blue.shade100,
+                                  backgroundImage: (photoBase64 != null && photoBase64.isNotEmpty)
+                                      ? MemoryImage(base64Decode(photoBase64))
+                                      : null,
+                                  child: (photoBase64 == null || photoBase64.isEmpty)
+                                      ? const Icon(Icons.person, size: 44, color: Colors.blue)
+                                      : null,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Visitor Details',
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Visitor Details',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Card(
-                        color: Colors.grey[50],
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _detailRow('Full Name', doc['fullName'] ?? doc['v_name'] ?? ''),
-                              _detailRow('Email', doc['email'] ?? ''),
-                              _detailRow('Mobile Number', doc['mobile'] ?? ''),
-                              _detailRow('Designation', doc['designation'] ?? ''),
-                              _detailRow('Company Name', doc['company'] ?? ''),
-                              _detailRow('Purpose of Visit', doc['purpose'] ?? ''),
-                              _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
-                              _detailRow('Host Name', doc['host'] ?? ''),
-                              _detailRow('Department', doc['department'] ?? ''),
-                              _detailRow('Accompanied by others?', doc['accompanying'] ?? ''),
-                              if ((doc['accompanying'] ?? '').toString().toLowerCase() == 'yes')
-                                _detailRow('Number of Accompanied', doc['accompanyingCount'] ?? ''),
-                              _detailRow('Carrying Laptop?', doc['laptop'] ?? ''),
-                              if ((doc['laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptopDetails'] ?? '').toString().isNotEmpty)
-                                _detailRow('Laptop Details', doc['laptopDetails']),
-                              _detailRow('Pass Number', doc['pass_no']?.toString() ?? ''),
-                            ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Card(
-                        color: Colors.grey[50],
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Check-in/Out Details',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                          const SizedBox(height: 18),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _detailRow('Full Name', manualRegData['fullName'] ?? doc['v_name'] ?? ''),
+                                  _detailRow('Email', manualRegData['email'] ?? doc['v_email'] ?? ''),
+                                  _detailRow('Mobile Number', manualRegData['mobile'] ?? doc['v_contactno'] ?? ''),
+                                  _detailRow('Designation', manualRegData['designation'] ?? doc['v_designation'] ?? ''),
+                                  _detailRow('Company Name', manualRegData['company'] ?? doc['v_company_name'] ?? ''),
+                                  _detailRow('Purpose of Visit', manualRegData['purpose'] ?? doc['purpose'] ?? ''),
+                                  _detailRow('Do you have appointment?', manualRegData['appointment'] ?? ''),
+                                  _detailRow('Host Name', manualRegData['host'] ?? doc['host_name'] ?? ''),
+                                  _detailRow('Department', manualRegData['department'] ?? doc['department'] ?? ''),
+                                  _detailRow('Accompanied by others?', manualRegData['accompanying'] ?? ''),
+                                  if ((manualRegData['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                    _detailRow('Number of Accompanied', manualRegData['accompanyingCount'] ?? ''),
+                                  _detailRow('Carrying Laptop?', manualRegData['laptop'] ?? ''),
+                                  if ((manualRegData['laptop'] ?? '').toString().toLowerCase() == 'yes' && (manualRegData['laptopDetails'] ?? '').toString().isNotEmpty)
+                                    _detailRow('Laptop Details', manualRegData['laptopDetails']),
+                                  _detailRow('Pass Number', manualRegData['pass_no']?.toString() ?? ''),
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              _detailRow('Status', checkInOutData['status'] ?? 'Not Checked In'),
-                              _detailRow('Check-in Date', checkInOutData['check_in_date'] ?? 'N/A'),
-                              _detailRow('Check-in Time', checkInOutData['check_in_time'] ?? 'N/A'),
-                              _detailRow('Check-out Time', checkInOutData['check_out_time'] ?? 'N/A'),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Card(
+                            color: Colors.grey[50],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Check-in/Out Details',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _detailRow('Status', checkInOutData['status'] ?? 'Not Checked In'),
+                                  _detailRow('Check-in Date', checkInOutData['check_in_date'] ?? 'N/A'),
+                                  _detailRow('Check-in Time', checkInOutData['check_in_time'] ?? 'N/A'),
+                                  _detailRow('Check-out Time', checkInOutData['check_out_time'] ?? 'N/A'),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              child: Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 18),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          child: Text('Close', style: TextStyle(fontSize: 16, color: Colors.black87)),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
