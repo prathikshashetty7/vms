@@ -33,10 +33,9 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       child: Scaffold(
         backgroundColor: const Color(0xFFD4E9FF),
         body: Padding(
-          padding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 24.0),
+          padding: const EdgeInsets.all(0.0),
           child: Column(
             children: [
-              SizedBox(height: 10),
               // Status Filter Dropdown
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -86,7 +85,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: widget.currentDepartmentId == null

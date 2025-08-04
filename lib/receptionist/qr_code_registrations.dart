@@ -498,8 +498,8 @@ List<String> _currentHosts = ['Select Host'];
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
 
-                                      // Save to manual_registrations collection
-                                      await FirebaseFirestore.instance.collection('manual_registrations').add({
+                                      // Save to visitors collection
+                                      final visitorDocRef = await FirebaseFirestore.instance.collection('visitor').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
                                         'email': email,
@@ -517,7 +517,29 @@ List<String> _currentHosts = ['Select Host'];
                                         'timestamp': FieldValue.serverTimestamp(),
                                         'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
                                         'pass_no': passNo,
-                                        'source': 'qr_code',
+                                        'visitor_id': '', // Will be updated after pass creation
+                                      });
+
+                                      // Add pass to passes collection
+                                      await FirebaseFirestore.instance.collection('passes').add({
+                                        'pass_no': passNo,
+                                        'v_name': fullName,
+                                        'email': email,
+                                        'mobile': mobile,
+                                        'company': company,
+                                        'designation': designation,
+                                        'host': host,
+                                        'purpose': purpose,
+                                        'department': department == 'Select Dept' ? '' : department,
+                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
+                                        'created_at': FieldValue.serverTimestamp(),
+                                        'group': 'qr_code',
+                                        'visitor_id': visitorDocRef.id,
+                                      });
+
+                                      // Update visitor document with visitor_id
+                                      await visitorDocRef.update({
+                                        'visitor_id': visitorDocRef.id,
                                       });
 
                                       setState(() => _isSaving = false);

@@ -54,6 +54,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return date.toString();
   }
 
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    if (timestamp is Timestamp) {
+      final dt = timestamp.toDate();
+      return DateFormat('HH:mm').format(dt);
+    }
+    if (timestamp is DateTime) {
+      return DateFormat('HH:mm').format(timestamp);
+    }
+    if (timestamp is String) {
+      try {
+        final dt = DateTime.parse(timestamp);
+        return DateFormat('HH:mm').format(dt);
+      } catch (e) {
+        return timestamp;
+      }
+    }
+    return timestamp.toString();
+  }
+
   // Add this function to show details dialog
   void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) async {
     // Fetch extra details from visitor table if visitorId is present
@@ -116,8 +136,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
                               _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
                               _detailRow('Host Name', doc['host_name'] ?? ''),
-                              _detailRow('Check-in Time', doc['v_time'] ?? ''),
-                              _detailRow('Check-out Time', doc['checkout_time'] ?? ''),
+                              _detailRow('Check-in Time', doc['check_in_time'] != null ? _formatTimestamp(doc['check_in_time']) : 'N/A'),
+                              _detailRow('Check-out Time', doc['check_out_time'] != null ? _formatTimestamp(doc['check_out_time']) : 'N/A'),
                               _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
                               if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
                                 _detailRow('Laptop Name', doc['laptop_name'] ?? ''),
@@ -231,8 +251,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           }
                         }
                         
-                        final checkin = v['check_in_time'] ?? 'N/A';
-                        final checkout = v['check_out_time'] ?? 'N/A';
+                        // Get check-in and check-out times from the checked_in_out collection
+                        final checkin = v['check_in_time'] != null ? _formatTimestamp(v['check_in_time']) : 'N/A';
+                        final checkout = v['check_out_time'] != null ? _formatTimestamp(v['check_out_time']) : 'N/A';
                         
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),

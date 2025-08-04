@@ -131,8 +131,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
       padding: const EdgeInsets.all(18.0),
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('manual_registrations')
-            .where('source', isEqualTo: 'qr_code')
+            .collection('visitor')
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -140,7 +139,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No QR code visitors found.'));
+            return const Center(child: Text('No visitors found.'));
           }
           final docs = snapshot.data!.docs;
           return ListView.separated(
@@ -148,7 +147,8 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
             separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
-              final name = data['fullName'] ?? 'Unknown';
+              final name = data['fullName'] ?? data['name'] ?? 'Unknown';
+              final email = data['email'] ?? '';
               final time = (data['timestamp'] as Timestamp?)?.toDate();
               Uint8List? imageBytes;
               final photo = data['photo'];
@@ -197,6 +197,8 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 17), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            if (email.isNotEmpty)
+                              Text(email, style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
                             if (time != null)
                               Text(
                                 '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')}/${time.year}',
@@ -223,7 +225,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('passes')
-            .where('source', isEqualTo: 'qr_code')
+            .where('group', isEqualTo: 'qr_code')
             .orderBy('created_at', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -240,6 +242,7 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               final name = data['v_name'] ?? data['visitorName'] ?? 'Unknown';
+              final email = data['email'] ?? '';
               final passNo = data['pass_no'] ?? data['passNo'] ?? '';
               final department = data['department'] ?? '';
               Uint8List? imageBytes;
@@ -289,6 +292,8 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF091016), fontSize: 17), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            if (email.isNotEmpty)
+                              Text(email, style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE)), softWrap: true, overflow: TextOverflow.ellipsis, maxLines: 1),
                             Text('Pass No: $passNo', style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE))),
                           ],
                         ),
