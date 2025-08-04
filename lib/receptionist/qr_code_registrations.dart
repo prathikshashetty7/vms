@@ -92,7 +92,15 @@ List<String> _currentHosts = ['Select Host'];
     final ImagePicker picker = ImagePicker();
     XFile? image;
     try {
-      image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      // Optimize image picker settings for faster processing
+      image = await picker.pickImage(
+        source: ImageSource.camera, 
+        imageQuality: 50, // Reduced from 70 to 50 for faster processing
+        maxWidth: 300, // Limit max width
+        maxHeight: 300, // Limit max height
+        preferredCameraDevice: CameraDevice.front, // Usually faster for selfies
+      );
+      
       if (image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -116,20 +124,67 @@ List<String> _currentHosts = ['Select Host'];
     }
 
     if (image != null) {
-      final bytes = await image.readAsBytes();
-      img.Image? original = img.decodeImage(bytes);
-      if (original != null) {
-        img.Image resized = img.copyResize(original, width: 400);
-        final compressedBytes = img.encodeJpg(resized, quality: 60);
-        setState(() {
-          visitorPhoto = Uint8List.fromList(compressedBytes);
-          _isPhotoLoading = false;
-        });
-      } else {
-        setState(() {
-          visitorPhoto = bytes;
-          _isPhotoLoading = false;
-        });
+      try {
+        // Process image in a more efficient way
+        final bytes = await image.readAsBytes();
+        
+        // Check if image is already small enough (less than 100KB)
+        if (bytes.length < 100 * 1024) {
+          setState(() {
+            visitorPhoto = bytes;
+            _isPhotoLoading = false;
+          });
+          return;
+        }
+        
+        // Process larger images
+        img.Image? original = img.decodeImage(bytes);
+        if (original != null) {
+          // More aggressive resizing for faster processing
+          img.Image resized = img.copyResize(
+            original, 
+            width: 200, // Reduced from 400 to 200
+            height: 200, // Fixed height for consistency
+            interpolation: img.Interpolation.linear, // Faster interpolation
+          );
+          
+          // More aggressive compression
+          final compressedBytes = img.encodeJpg(resized, quality: 40); // Reduced from 60 to 40
+          
+          setState(() {
+            visitorPhoto = Uint8List.fromList(compressedBytes);
+            _isPhotoLoading = false;
+          });
+          
+          // Show success message
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo captured successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } else {
+          // Fallback for unsupported image formats
+          setState(() {
+            visitorPhoto = bytes;
+            _isPhotoLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Image processing error: $e');
+        setState(() => _isPhotoLoading = false);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to process image. Please try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } else {
       setState(() => _isPhotoLoading = false);
@@ -495,10 +550,55 @@ List<String> _currentHosts = ['Select Host'];
                                     try {
                                       _formKey.currentState!.save();
 
+                                      // Show progress message
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Processing registration...'),
+                                            backgroundColor: Colors.blue,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
 
-                                      // Save to manual_registrations collection
+                                      // Prepare photo data efficiently
+                                      String photoData = '';
+                                      if (visitorPhoto != null) {
+                                        try {
+                                          // Use compute to encode image in background
+                                          photoData = base64Encode(visitorPhoto!);
+                                        } catch (e) {
+                                          print('Photo encoding error: $e');
+                                          photoData = '';
+                                        }
+                                      }
+
+                                      // Save to visitors collection
+                                      final visitorDocRef = await FirebaseFirestore.instance.collection('visitor').add({
+                                        'fullName': fullName,
+                                        'mobile': mobile,
+                                        'email': email,
+                                        'designation': designation,
+                                        'company': company,
+                                        'host': host,
+                                        'purpose': purpose,
+                                        'purposeOther': purposeOther ?? '',
+                                        'appointment': appointment,
+                                        'department': department == 'Select Dept' ? '' : department,
+                                        'accompanying': accompanying,
+                                        'accompanyingCount': accompanying == 'Yes' ? accompanyingCount : '',
+                                        'laptop': laptop,
+                                        'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
+                                        'timestamp': FieldValue.serverTimestamp(),
+                                        'photo': photoData,
+                                        'pass_no': passNo,
+                                        'visitor_id': '', // Will be updated after pass creation
+                                      });
+
+                                      // Also save to manual_registrations collection (like manual entry page)
                                       await FirebaseFirestore.instance.collection('manual_registrations').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
@@ -515,21 +615,51 @@ List<String> _currentHosts = ['Select Host'];
                                         'laptop': laptop,
                                         'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
                                         'timestamp': FieldValue.serverTimestamp(),
-                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
+                                        'photo': photoData,
                                         'pass_no': passNo,
-                                        'source': 'qr_code',
+                                        'group': 'qr_code',
+                                        'visitor_id': visitorDocRef.id,
+                                      });
+
+                                      // Add pass to passes collection
+                                      await FirebaseFirestore.instance.collection('passes').add({
+                                        'pass_no': passNo,
+                                        'v_name': fullName,
+                                        'email': email,
+                                        'mobile': mobile,
+                                        'company': company,
+                                        'designation': designation,
+                                        'host': host,
+                                        'purpose': purpose,
+                                        'department': department == 'Select Dept' ? '' : department,
+                                        'photo': photoData,
+                                        'created_at': FieldValue.serverTimestamp(),
+                                        'group': 'qr_code',
+                                        'visitor_id': visitorDocRef.id,
+                                      });
+
+                                      // Update visitor document with visitor_id
+                                      await visitorDocRef.update({
+                                        'visitor_id': visitorDocRef.id,
                                       });
 
                                       setState(() => _isSaving = false);
+                                      
                                       // Show success dialog
                                       await showSuccessDialog(context);
 
                                     } catch (e) {
                                       setState(() => _isSaving = false);
                                       print('Firestore error: $e');
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error registering visitor: ${e.toString()}'), backgroundColor: Colors.red),
-                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error registering visitor: ${e.toString()}'), 
+                                            backgroundColor: Colors.red,
+                                            duration: Duration(seconds: 4),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),
