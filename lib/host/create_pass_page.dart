@@ -361,7 +361,7 @@ class _CreatePassPageState extends State<CreatePassPage> {
                                     // Add pass document
                                     final passDocRef = await FirebaseFirestore.instance.collection('passes').add({
                                       ...passData,
-                                      'source': 'host',
+                                      'group': 'host',
                                       'created_at': FieldValue.serverTimestamp(),
                                     }).timeout(const Duration(seconds: 10));
                                     

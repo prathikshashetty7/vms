@@ -7,9 +7,60 @@ import 'dashboard.dart' show VisitorsPage;
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:firebase_auth/firebase_auth.dart';
 
-class KioskRegistrationsPage extends StatelessWidget {
+class KioskRegistrationsPage extends StatefulWidget {
   const KioskRegistrationsPage({Key? key}) : super(key: key);
+
+  @override
+  State<KioskRegistrationsPage> createState() => _KioskRegistrationsPageState();
+}
+
+class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
+  int _selectedIndex = 1; // Set to 1 for Visitors tab
+
+  void _onItemTapped(int index) async {
+    if (index == 4) {
+      // Show logout confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      if (shouldLogout == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
+      return;
+    }
+    setState(() {
+      _selectedIndex = index;
+    });
+    if (index == 0) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, '/receptionist_reports');
+    } else if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const VisitorsPage()),
+      );
+    } else if (index == 3) {
+      Navigator.pushReplacementNamed(context, '/manual_entry');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +101,36 @@ class KioskRegistrationsPage extends StatelessWidget {
               ),
             ),
             backgroundColor: const Color(0xFFD4E9FF),
+            bottomNavigationBar: BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white,
+              selectedItemColor: Color(0xFF6CA4FE), // blue for selected
+              unselectedItemColor: Color(0xFF091016), // black for unselected
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard_rounded),
+                  label: 'Dashboard',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people_alt_rounded),
+                  label: 'Visitors',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.check_circle_rounded),
+                  label: 'Status',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_add_alt_1_rounded),
+                  label: 'Add Visitor',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.logout_rounded),
+                  label: 'Logout',
+                ),
+              ],
+            ),
             body: TabBarView(
               children: [
                 // Tab 1: Kiosk Visitors
@@ -113,7 +194,7 @@ class KioskRegistrationsPage extends StatelessWidget {
           padding: const EdgeInsets.all(18.0),
           child: ListView.separated(
             itemCount: docs.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
             itemBuilder: (context, index) {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
@@ -859,16 +940,81 @@ class _KioskPassDetailDialog extends StatelessWidget {
                     
                     // Save to Checked In/Out collection for status page
                     try {
-                      await FirebaseFirestore.instance.collection('checked_in_out').add({
-                        'visitor_id': pass['visitorId'] ?? '',
-                        'visitor_name': pass['v_name'] ?? '',
-                        'check_in_time': FieldValue.serverTimestamp(),
-                        'check_in_date': _formatDateOnly(now.toDate()),
-                        'status': 'Checked In',
-                        'pass_id': pass['id'] ?? '',
-                        'created_at': FieldValue.serverTimestamp(),
-                      });
-                      print('Successfully saved to checked_in_out collection');
+                      print('Debug: pass data - ${pass.toString()}');
+                      print('Debug: pass_id = ${pass['id']}');
+                      print('Debug: visitor_name = ${pass['v_name']}');
+                      print('Debug: visitorId field = ${pass['visitorId']}');
+                      print('Debug: visitor_id field = ${pass['visitor_id']}');
+                      print('Debug: All pass keys = ${pass.keys.toList()}');
+                      
+                      // Check if visitor already exists in checked_in_out collection
+                      // Use visitor_name as primary check since pass_id might be empty
+                      final visitorName = pass['v_name'] ?? '';
+                      final passId = pass['id'] ?? '';
+                      
+                      // Try multiple possible field names for visitor_id
+                      final visitorId = pass['visitorId']?.toString().isNotEmpty == true 
+                          ? pass['visitorId'] 
+                          : pass['visitor_id']?.toString().isNotEmpty == true
+                              ? pass['visitor_id']
+                              : pass['id'] ?? '';
+                      
+                      print('Debug: Final visitor_id = $visitorId');
+                      
+                      // If visitor_id is still empty, try to fetch it from manual_registrations collection
+                      String finalVisitorId = visitorId;
+                      if (finalVisitorId.isEmpty) {
+                        try {
+                          print('Debug: Trying to fetch visitor_id from manual_registrations collection for visitor: $visitorName');
+                          final manualRegDocs = await FirebaseFirestore.instance
+                              .collection('manual_registrations')
+                              .where('fullName', isEqualTo: visitorName)
+                              .limit(1)
+                              .get();
+                          
+                          if (manualRegDocs.docs.isNotEmpty) {
+                            final manualRegData = manualRegDocs.docs.first.data();
+                            finalVisitorId = manualRegData['visitor_id'] ?? '';
+                            print('Debug: Found visitor_id from manual_registrations: $finalVisitorId');
+                          } else {
+                            print('Debug: No manual registration found for visitor: $visitorName');
+                          }
+                        } catch (e) {
+                          print('Debug: Error fetching visitor_id from manual_registrations: $e');
+                        }
+                      }
+                      
+                      print('Debug: Using final visitor_id = $finalVisitorId');
+                      
+                      Query existingQuery;
+                      if (passId.isNotEmpty) {
+                        existingQuery = FirebaseFirestore.instance
+                            .collection('checked_in_out')
+                            .where('pass_id', isEqualTo: passId);
+                      } else {
+                        existingQuery = FirebaseFirestore.instance
+                            .collection('checked_in_out')
+                            .where('visitor_name', isEqualTo: visitorName)
+                            .where('status', isEqualTo: 'Checked In');
+                      }
+                      
+                      final existingDocs = await existingQuery.get();
+                      
+                      if (existingDocs.docs.isEmpty) {
+                        // Only add if visitor doesn't already exist
+                        await FirebaseFirestore.instance.collection('checked_in_out').add({
+                          'visitor_id': finalVisitorId,
+                          'visitor_name': visitorName,
+                          'check_in_time': FieldValue.serverTimestamp(),
+                          'check_in_date': _formatDateOnly(now.toDate()),
+                          'status': 'Checked In',
+                          'pass_id': passId,
+                          'created_at': FieldValue.serverTimestamp(),
+                        });
+                        print('Successfully saved to checked_in_out collection with visitor_id: $finalVisitorId');
+                      } else {
+                        print('Visitor already exists in checked_in_out collection');
+                      }
                     } catch (e) {
                       print('Error saving to checked_in_out collection: ${e.toString()}');
                     }
@@ -1208,7 +1354,6 @@ class _KioskVisitorDetailsDialog extends StatelessWidget {
                         'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
                         'created_at': FieldValue.serverTimestamp(),
                         'registration_type': 'kiosk',
-                        'source': 'kiosk',
                         'group': 'kiosk',
                       };
                       await FirebaseFirestore.instance.collection('passes').add(passData);

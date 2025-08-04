@@ -141,4 +141,209 @@
 [34m|[m [36m|[m[34m\[m [1;35m\[m  
 [34m|[m [36m|[m[34m/[m [1;35m/[m  
 [34m|[m[34m/[m[36m|[m [1;35m|[m   
-* [36m|[m [1;35m|[m   [33m69e0c57[m Merge pull request #4 from prathikshashett
+* [36m|[m [1;35m|[m   [33m69e0c57[m Merge pull request #4 from prathikshashett[1mdiff --git a/lib/receptionist/manual_entry_page.dart b/lib/receptionist/manual_entry_page.dart[m
+[1mindex 73a92b0..c22459d 100644[m
+[1m--- a/lib/receptionist/manual_entry_page.dart[m
+[1m+++ b/lib/receptionist/manual_entry_page.dart[m
+[36m@@ -27,13 +27,14 @@[m [mclass _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv[m
+   bool _showDeptTotalVisitors = false; // New variable to track if we should show dept's total visitors[m
+   int _deptTotalVisitors = 1; // New variable to store dept's total visitors count[m
+   final List<String> yesNo = ['Yes', 'No'];[m
+[32m+[m[32m  final List<String> purposes = ['Meeting', 'Interview', 'Delivery', 'Service', 'Other'];[m
+   List<String> departments = [];[m
+   bool _departmentsLoading = true;[m
+[31m-  bool _isSaving = false; // Add this line[m
+   late AnimationController _buttonController;[m
+   late Animation<double> _buttonScale;[m
+   String designation = '';[m
+   String? selectedVisitorId; // Add variable to store selected visitor ID[m
+[32m+[m[32m  String? departmentId;[m
+   // Add focus nodes for each field[m
+   final _fullNameFocus = FocusNode();[m
+   final _mobileFocus = FocusNode();[m
+[36m@@ -203,16 +204,15 @@[m [mclass _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv[m
+       ),[m
+       backgroundColor: Color(0xFFD4E9FF),[m
+       body: StreamBuilder<QuerySnapshot>([m
+[31m-        stream: FirebaseFirestore.instance.collection('department').snapshots(),[m
+[32m+[m[32m        stream: FirebaseFirestore.instance.collection('department').limit(50).snapshots(),[m
+         builder: (context, snapshot) {[m
+           if (!snapshot.hasData) {[m
+             return const Center(child: CircularProgressIndicator());[m
+           }[m
+           final departments = snapshot.data!.docs[m
+[31m-            .map((doc) => doc['d_name'] as String)[m
+[31m-            .where((name) => name.isNotEmpty)[m
+[31m-            .toSet() // Remove duplicates[m
+[31m-            .toList();[m
+[32m+[m[32m              .map((doc) => {'id': doc.id, 'name': doc['d_name'] as String})[m
+[32m+[m[32m              .where((dept) => dept['name']!.isNotEmpty)[m
+[32m+[m[32m              .toList();[m
+           return Stack([m
+             children: [[m
+               // Gradient wavy header[m
+[36m@@ -388,102 +388,62 @@[m [mclass _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv[m
+                             const SizedBox(height: 16),[m
+                             _buildDropdown('Do you have an appointment', yesNo, appointment, (v) => setState(() => appointment = v!)),[m
+                             const SizedBox(height: 16),[m
+[31m-                            StreamBuilder<QuerySnapshot>([m
+[31m-  stream: FirebaseFirestore.instance[m
+[31m-      .collection('department')[m
+[31m-      .snapshots(),[m
+[31m-  builder: (context, snapshot) {[m
+[31m-    if (!snapshot.hasData) {[m
+[31m-      return Center(child: Padding([m
+[31m-        padding: EdgeInsets.symmetric(vertical: 12),[m
+[31m-        child: CircularProgressIndicator(),[m
+[31m-      ));[m
+[31m-    }[m
+[31m-    final departments = snapshot.data!.docs[m
+[31m-      .map((doc) => doc['d_name'] as String)[m
+[31m-      .where((name) => name.isNotEmpty)[m
+[31m-      .toSet() // Remove duplicates[m
+[31m-      .toList();[m
+[31m-    [m
+[31m-    // Create unique dropdown items[m
+[31m-    final dropdownItems = <String>['Select Dept'];[m
+[31m-    dropdownItems.addAll(departments);[m
+[31m-    [m
+[31m-    // Ensure the current department is in the list if it's not empty[m
+[31m-    if (department.isNotEmpty && [m
+[31m-        department != 'Select Dept' && [m
+[31m-        !dropdownItems.contains(department)) {[m
+[31m-      dropdownItems.add(department);[m
+[31m-    }[m
+[31m-    [m
+[31m-    // Validate the selected value[m
+[31m-    final validValue = dropdownItems.contains(department) ? department : 'Select Dept';[m
+[31m-    [m
+[31m-    return _buildDropdown([m
+[31m-      'Department',[m
+[31m-      dropdownItems,[m
+[31m-      validValue,[m
+[31m->>>>>>> e9f7e31ef09a3a692f1b367bf40096632e1ac24d[m
+[31m-      (v) {[m
+[31m-        if (v != null && v != 'Select Dept') {[m
+[31m-          setState(() => department = v);[m
+[31m-        } else {[m
+[31m-          setState(() => department = '');[m
+[31m-        }[m
+[31m-      },[m
+[31m-    );[m
+[31m-  },[m
+[31m-),[m
+[31m-                            const SizedBox(height: 16),[m
+[31m-                            StreamBuilder<QuerySnapshot>([m
+[31m-                              stream: FirebaseFirestore.instance[m
+[31m-                                  .collection('host')[m
+[31m-                                  .snapshots(),[m
+[31m-                              builder: (context, snapshot) {[m
+[31m-                                if (!snapshot.hasData) {[m
+[31m-                                  return Center(child: Padding([m
+[31m-                                    padding: EdgeInsets.symmetric(vertical: 12),[m
+[31m-                                    child: CircularProgressIndicator(),[m
+[31m-                                  ));[m
+[31m-                                }[m
+[31m-                                [m
+[31m-                                // Extract host names from host collection[m
+[31m-                                final hosts = snapshot.data!.docs;[m
+[31m-                                final allHostNames = hosts[m
+[31m-                                    .map((doc) => doc.data() as Map<String, dynamic>)[m
+[31m-                                    .where((data) => data['emp_name'] != null && data['emp_name'].toString().isNotEmpty)[m
+[31m-                                    .map((data) => data['emp_name'].toString())[m
+[31m-                                    .toSet()[m
+[31m-                                    .toList();[m
+[31m-                                [m
+[31m-                                // Add "Select Host" option at the beginning[m
+[31m-                                final hostNames = <String>['Select Host'];[m
+[31m-                                hostNames.addAll(allHostNames);[m
+[31m-                                [m
+[31m-                                // Sort all hosts alphabetically (except "Select Host")[m
+[31m-                                if (hostNames.length > 1) {[m
+[31m-                                  final selectHost = hostNames[0];[m
+[31m-                                  final remainingHosts = hostNames.sublist(1)..sort();[m
+[31m-                                  hostNames.clear();[m
+[31m-                                  hostNames.add(selectHost);[m
+[31m-                                  hostNames.addAll(remainingHosts);[m
+[31m-                                }[m
+[31m-                                [m
+[31m-                                return _buildDropdown([m
+[31m-                                  'Host Name',[m
+[31m-                                  hostNames,[m
+[31m-                                  host.isEmpty ? 'Select Host' : host,[m
+[31m-                                  (v) {[m
+[31m-                                    if (v != null && v != 'Select Host') {[m
+[31m-                                      setState(() => host = v);[m
+[31m-                                    } else {[m
+[31m-                                      setState(() => host = '');[m
+[31m-                                    }[m
+[31m-                                  },[m
+[31m-                                  hintText: 'Select Host',[m
+[31m-                                );[m
+[32m+[m[32m                            // Department dropdown[m
+[32m+[m[32m                            _buildDropdown([m
+[32m+[m[32m                              'Department',[m
+[32m+[m[32m                              [[m
+[32m+[m[32m                                'Select Dept',[m
+[32m+[m[32m                                ...departments.map((dept) => dept['name'] as String),[m
+[32m+[m[32m                              ],[m
+[32m+[m[32m                              department,[m
+[32m+[m[32m                              (value) {[m
+[32m+[m[32m                                setState(() {[m
+[32m+[m[32m                                  department = value!;[m
+[32m+[m[32m                                  final selected = departments.firstWhere([m
+[32m+[m[32m                                    (d) => d['name'] == value,[m
+[32m+[m[32m                                    orElse: () => {'id': '', 'name': 'Select Dept'},[m
+[32m+[m[32m                                  );[m
+[32m+[m[32m                                  departmentId = selected['id'];[m
+[32m+[m[32m                                  host = '';[m
+[32m+[m[32m                                });[m
+                               },[m
+                             ),[m
+[32m+[m[32mconst SizedBox(height: 16),[m
+[32m+[m[32m// Only show host dropdown if a department is selected[m
+[32m+[m[32mif (departmentId != null && departmentId!.isNotEmpty)[m
+[32m+[m[32m  StreamBuilder<QuerySnapshot>([m
+[32m+[m[32m    stream: FirebaseFirestore.instance[m
+[32m+[m[32m        .collection('host')[m
+[32m+[m[32m        .where('departmentId', isEqualTo: departmentId)[m
+[32m+[m[32m        .limit(50)[m
+[32m+[m[32m        .snapshots(),[m
+[32m+[m[32m    builder: (context, snapshot) {[m
+[32m+[m[32m      if (snapshot.connectionState == ConnectionState.waiting) {[m
+[32m+[m[32m        return Center(child: CircularProgressIndicator());[m
+[32m+[m[32m      }[m
+[32m+[m[32m      if (snapshot.hasError) {[m
+[32m+[m[32m        return Text('Error: ${snapshot.error}');[m
+[32m+[m[32m      }[m
+[32m+[m[32m      final hosts = snapshot.data!.docs;[m
+[32m+[m[32m      final hostNames = <String>['Select Host'];[m
+[32m+[m[32m      hostNames.addAll([m
+[32m+[m[32m        hosts[m
+[32m+[m[32m          .map((doc) => (doc.data() as Map<String, dynamic>)['emp_name'] as String)[m
+[32m+[m[32m          .where((name) => name.isNotEmpty)[m
+[32m+[m[32m          .toList()[m
+[32m+[m[32m      );[m
+[32m+[m[32m      return _buildDropdown([m
+[32m+[m[32m        'Host Name',[m
+[32m+[m[32m        hostNames,[m
+[32m+[m[32m        host.isEmpty ? 'Select Host' : host,[m
+[32m+[m[32m        (value) {[m
+[32m+[m[32m          setState(() {[m
+[32m+[m[32m            host = value == 'Select Host' ? '' : value!;[m
+[32m+[m[32m          });[m
+[32m+[m[32m        },[m
+[32m+[m[32m      );[m
+[32m+[m[32m    },[m
+[32m+[m[32m  ),[m
+                             const SizedBox(height: 16),[m
+                             // Conditional accompanying visitors section[m
+                             if (_showDeptTotalVisitors) ...[[m
+[36m@@ -636,7 +596,6 @@[m [mclass _ManualEntryPageState extends State<ManualEntryPage> with SingleTickerProv[m
+                                 ),[m
+                               ),[m
+                             ),[m
+[31m->>>>>>> e9f7e31ef09a3a692f1b367bf40096632e1ac24d[m
+                           ],[m
+                         ),[m
+                       ),[m

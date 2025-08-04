@@ -16,7 +16,14 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
   @override
   bool get wantKeepAlive => true;
   
-  String _selectedFilter = 'All'; // 'All', 'Checked Out', 'Checked In', 'Not Checked In'
+  String _selectedFilter = 'All'; // 'All', 'Checked In', 'Not Checked In'
+  
+  final List<String> _statusOptions = [
+    'All',
+    'Checked In',
+    'Not Checked In',
+    'Checked Out',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +34,60 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
         backgroundColor: const Color(0xFFD4E9FF),
         body: Padding(
           padding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 24.0),
-                      child: Column(
-              children: [
-                SizedBox(height: 10),
-                Expanded(
+          child: Column(
+            children: [
+              SizedBox(height: 10),
+              // Status Filter Dropdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.filter_list, color: Color(0xFF6CA4FE)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Filter by Status:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButton<String>(
+                        value: _selectedFilter,
+                        isExpanded: true,
+                        underline: Container(),
+                        items: _statusOptions.map((String status) {
+                          return DropdownMenuItem<String>(
+                            value: status,
+                            child: Text(status),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedFilter = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: widget.currentDepartmentId == null
                       ? null
@@ -55,6 +112,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final doc = docs[index].data() as Map<String, dynamic>;
+                        // Add docId to the visitor data (same as host page)
+                        doc['docId'] = docs[index].id;
                         return FutureBuilder<Map<String, dynamic>>(
                           future: _getVisitorWithCheckInOutDetails(doc),
                           builder: (context, checkInOutSnapshot) {
@@ -115,42 +174,43 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                                   children: [
                                     Text('Host Name: $hostName'),
                                     Text('Date: $dateStr'),
-                                    if (checkin != 'N/A')
-                                      Text('Check-in Time: $checkin'),
-                                    if (status.toLowerCase() == 'checked out')
-                                      Text('Check-out Time: $checkout'),
+                                                                         if (checkin != 'N/A')
+                                       Text('Check-in Time: $checkin'),
+                                     if (status.toLowerCase() == 'checked out' && checkout != 'N/A')
+                                       Text('Check-out Time: $checkout'),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: _getStatusColor(status).withOpacity(0.2),
+                                        color: _getStatusColor(status),
                                         borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      child: Text(
-                                        'Status: $status',
-                                        style: TextStyle(
-                                          color: _getStatusColor(status),
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            _getStatusIcon(status),
+                                            size: 16,
+                                            color: (status.toLowerCase() == 'checked in' || status.toLowerCase() == 'checked out') ? Colors.white : Colors.grey.shade600,
+                                          ),
+                                          const SizedBox(width: 4),
+                                                                                      Text(
+                                              status,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: (status.toLowerCase() == 'checked in' || status.toLowerCase() == 'checked out') ? Colors.white : Colors.grey.shade600,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                    if (status.toLowerCase() == 'checked out')
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 4),
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          'Check-out completed',
-                                          style: TextStyle(
-                                            color: Colors.orange,
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ),
                                   ],
                                 ),
                                 trailing: IconButton(
@@ -175,8 +235,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
 
   Future<Map<String, dynamic>> _getVisitorWithCheckInOutDetails(Map<String, dynamic> visitorDoc) async {
     try {
-      // Get the visitor_id from visitor table
-      final visitorId = visitorDoc['visitor_id'] ?? visitorDoc['id'];
+      // Get the visitor_id from visitor table - use docId as fallback
+      final visitorId = visitorDoc['visitor_id'] ?? visitorDoc['id'] ?? visitorDoc['docId'];
       if (visitorId == null) return {};
       
       // Query checked_in_out collection for this visitor using visitor_id
@@ -198,10 +258,35 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
           });
         
         final checkInOutData = sortedDocs.first.data();
+        
+        // Check visitor status (Checked In, Checked Out, or Not Checked In)
+        final checkedInQuery = await FirebaseFirestore.instance
+            .collection('checked_in_out')
+            .where('visitor_id', isEqualTo: visitorId)
+            .where('status', isEqualTo: 'Checked In')
+            .limit(1)
+            .get();
+        
+        final checkedOutQuery = await FirebaseFirestore.instance
+            .collection('checked_in_out')
+            .where('visitor_id', isEqualTo: visitorId)
+            .where('status', isEqualTo: 'Checked Out')
+            .limit(1)
+            .get();
+        
+        String status;
+        if (checkedOutQuery.docs.isNotEmpty) {
+          status = 'Checked Out';
+        } else if (checkedInQuery.docs.isNotEmpty) {
+          status = 'Checked In';
+        } else {
+          status = 'Not Checked In';
+        }
+        
         return {
           'check_in_time': _formatTimestamp(checkInOutData['check_in_time']),
           'check_out_time': _formatTimestamp(checkInOutData['check_out_time']),
-          'status': checkInOutData['status'] ?? 'Unknown',
+          'status': status,
           'check_in_date': checkInOutData['check_in_date'],
         };
       }
@@ -251,9 +336,9 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       case 'checked out':
         return Colors.orange;
       case 'not checked in':
-        return Colors.grey;
+        return Colors.grey.shade300;
       default:
-        return Colors.blue;
+        return Colors.grey.shade300;
     }
   }
 
@@ -266,7 +351,7 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       case 'not checked in':
         return Icons.schedule;
       default:
-        return Icons.person;
+        return Icons.schedule;
     }
   }
 
@@ -413,4 +498,100 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       ),
     );
   }
-} 
+
+  // Generate checkout code (same logic as host page)
+  Future<void> _generateCheckoutCode(BuildContext context, String? visitorId) async {
+    if (visitorId == null) return;
+    
+    try {
+      // Check checked_in_out collection for existing checkout code
+      final checkInOutQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .where('visitor_id', isEqualTo: visitorId)
+          .get();
+          
+      if (checkInOutQuery.docs.isNotEmpty) {
+        // Sort by created_at to get the most recent record
+        final sortedDocs = checkInOutQuery.docs.toList()
+          ..sort((a, b) {
+            final aCreated = a.data()['created_at'] as Timestamp?;
+            final bCreated = b.data()['created_at'] as Timestamp?;
+            if (aCreated == null && bCreated == null) return 0;
+            if (aCreated == null) return 1;
+            if (bCreated == null) return -1;
+            return bCreated.compareTo(aCreated); // Most recent first
+          });
+        
+        final checkInOutData = sortedDocs.first.data();
+        if (checkInOutData['checkout_code'] != null && checkInOutData['checkout_code'].toString().isNotEmpty) {
+          // Already generated, show the same code
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Checkout Code'),
+              content: Text('Your checkout code is: ${checkInOutData['checkout_code']}'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      }
+      
+      // Generate unique 4-digit code
+      final code = (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
+      final now = DateTime.now();
+      
+      // Store checkout code in checked_in_out collection
+      if (checkInOutQuery.docs.isNotEmpty) {
+        // Update the most recent check-in/out record
+        final sortedDocs = checkInOutQuery.docs.toList()
+          ..sort((a, b) {
+            final aCreated = a.data()['created_at'] as Timestamp?;
+            final bCreated = b.data()['created_at'] as Timestamp?;
+            if (aCreated == null && bCreated == null) return 0;
+            if (aCreated == null) return 1;
+            if (bCreated == null) return -1;
+            return bCreated.compareTo(aCreated); // Most recent first
+          });
+        
+        await FirebaseFirestore.instance
+            .collection('checked_in_out')
+            .doc(sortedDocs.first.id)
+            .update({
+          'checkout_code': code,
+        });
+      } else {
+        // Create new check-in/out record with checkout code
+        await FirebaseFirestore.instance.collection('checked_in_out').add({
+          'visitor_id': visitorId,
+          'checkout_code': code,
+          'created_at': FieldValue.serverTimestamp(),
+          'status': 'Checked In', // Assuming visitor is checked in when generating checkout code
+        });
+      }
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Checkout Code'),
+          content: Text('Your checkout code is: $code'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating checkout code: $e')),
+      );
+    }
+  }
+}

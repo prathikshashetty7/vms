@@ -560,7 +560,6 @@ if (departmentId != null && departmentId!.isNotEmpty)
                                         'purpose': purpose,
                                         'created_at': FieldValue.serverTimestamp(),
                                         'pass_generated_by': 'receptionist',
-                                        'source': 'manual',
                                       });
                                       
                                       setState(() => _isSaving = false);
@@ -877,7 +876,7 @@ if (departmentId != null && departmentId!.isNotEmpty)
                       return ListView.separated(
                         controller: scrollController,
                         itemCount: visitors.length,
-                        separatorBuilder: (, _) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
+                        separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFD4E9FF)),
                         itemBuilder: (context, index) {
                           final visitor = visitors[index].data() as Map<String, dynamic>;
                           final visitorId = visitors[index].id;

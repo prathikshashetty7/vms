@@ -514,16 +514,81 @@ class _HostPassDetailDialog extends StatelessWidget {
                       
                     // Save to Checked In/Out collection for status page
                       try {
-                        await FirebaseFirestore.instance.collection('checked_in_out').add({
-                          'visitor_id': pass['visitorId'] ?? '',
-                          'visitor_name': pass['v_name'] ?? '',
-                          'check_in_time': FieldValue.serverTimestamp(),
-                          'check_in_date': _formatDateOnly(now.toDate()),
-                          'status': 'Checked In',
-                          'pass_id': pass['id'] ?? '',
-                          'created_at': FieldValue.serverTimestamp(),
-                        });
-                        print('Successfully saved to checked_in_out collection');
+                        print('Debug: pass data - ${pass.toString()}');
+                        print('Debug: pass_id = ${pass['id']}');
+                        print('Debug: visitor_name = ${pass['v_name']}');
+                        print('Debug: visitorId field = ${pass['visitorId']}');
+                        print('Debug: visitor_id field = ${pass['visitor_id']}');
+                        print('Debug: All pass keys = ${pass.keys.toList()}');
+                        
+                        // Check if visitor already exists in checked_in_out collection
+                        // Use visitor_name as primary check since pass_id might be empty
+                        final visitorName = pass['v_name'] ?? '';
+                        final passId = pass['id'] ?? '';
+                        
+                        // Try multiple possible field names for visitor_id
+                        final visitorId = pass['visitorId']?.toString().isNotEmpty == true 
+                            ? pass['visitorId'] 
+                            : pass['visitor_id']?.toString().isNotEmpty == true
+                                ? pass['visitor_id']
+                                : pass['id'] ?? '';
+                        
+                        print('Debug: Final visitor_id = $visitorId');
+                        
+                        // If visitor_id is still empty, try to fetch it from manual_registrations collection
+                        String finalVisitorId = visitorId;
+                        if (finalVisitorId.isEmpty) {
+                          try {
+                            print('Debug: Trying to fetch visitor_id from manual_registrations collection for visitor: $visitorName');
+                            final manualRegDocs = await FirebaseFirestore.instance
+                                .collection('manual_registrations')
+                                .where('fullName', isEqualTo: visitorName)
+                                .limit(1)
+                                .get();
+                            
+                            if (manualRegDocs.docs.isNotEmpty) {
+                              final manualRegData = manualRegDocs.docs.first.data();
+                              finalVisitorId = manualRegData['visitor_id'] ?? '';
+                              print('Debug: Found visitor_id from manual_registrations: $finalVisitorId');
+                            } else {
+                              print('Debug: No manual registration found for visitor: $visitorName');
+                            }
+                          } catch (e) {
+                            print('Debug: Error fetching visitor_id from manual_registrations: $e');
+                          }
+                        }
+                        
+                        print('Debug: Using final visitor_id = $finalVisitorId');
+                        
+                        Query existingQuery;
+                        if (passId.isNotEmpty) {
+                          existingQuery = FirebaseFirestore.instance
+                              .collection('checked_in_out')
+                              .where('pass_id', isEqualTo: passId);
+                        } else {
+                          existingQuery = FirebaseFirestore.instance
+                              .collection('checked_in_out')
+                              .where('visitor_name', isEqualTo: visitorName)
+                              .where('status', isEqualTo: 'Checked In');
+                        }
+                        
+                        final existingDocs = await existingQuery.get();
+                        
+                        if (existingDocs.docs.isEmpty) {
+                          // Only add if visitor doesn't already exist
+                          await FirebaseFirestore.instance.collection('checked_in_out').add({
+                            'visitor_id': finalVisitorId,
+                            'visitor_name': visitorName,
+                            'check_in_time': FieldValue.serverTimestamp(),
+                            'check_in_date': _formatDateOnly(now.toDate()),
+                            'status': 'Checked In',
+                            'pass_id': passId,
+                            'created_at': FieldValue.serverTimestamp(),
+                          });
+                          print('Successfully saved to checked_in_out collection with visitor_id: $finalVisitorId');
+                        } else {
+                          print('Visitor already exists in checked_in_out collection');
+                        }
                       } catch (e) {
                         print('Error saving to checked_in_out collection: ${e.toString()}');
                       }
