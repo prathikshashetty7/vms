@@ -54,19 +54,57 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return date.toString();
   }
 
+  Future<Map<String, dynamic>> _getVisitorDetails(String visitorId) async {
+    try {
+      // First, try to fetch visitor details from manual_registrations collection
+      Map<String, dynamic> visitorDetails = {};
+      try {
+        final manualRegQuery = await FirebaseFirestore.instance
+            .collection('manual_registrations')
+            .where('visitor_id', isEqualTo: visitorId)
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .get();
+        
+        if (manualRegQuery.docs.isNotEmpty) {
+          visitorDetails = manualRegQuery.docs.first.data();
+        }
+      } catch (e) {
+        print('Error fetching from manual_registrations: $e');
+      }
+      
+      // If not found in manual_registrations, fetch from visitor collection
+      if (visitorDetails.isEmpty) {
+        final visitorDoc = await FirebaseFirestore.instance
+            .collection('visitor')
+            .doc(visitorId)
+            .get();
+        
+        if (visitorDoc.exists) {
+          visitorDetails = visitorDoc.data() ?? {};
+        }
+      }
+      
+      return visitorDetails;
+    } catch (e) {
+      print('Error fetching visitor details: $e');
+      return {};
+    }
+  }
+
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
     if (timestamp is Timestamp) {
       final dt = timestamp.toDate();
-      return DateFormat('HH:mm').format(dt);
+      return DateFormat('h:mm a').format(dt);
     }
     if (timestamp is DateTime) {
-      return DateFormat('HH:mm').format(timestamp);
+      return DateFormat('h:mm a').format(timestamp);
     }
     if (timestamp is String) {
       try {
         final dt = DateTime.parse(timestamp);
-        return DateFormat('HH:mm').format(dt);
+        return DateFormat('h:mm a').format(dt);
       } catch (e) {
         return timestamp;
       }
@@ -76,13 +114,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // Add this function to show details dialog
   void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) async {
-    // Fetch extra details from visitor table if visitorId is present
+    // Fetch visitor details using the same logic as the list
     Map<String, dynamic> visitorData = {};
-    if (doc['visitorId'] != null) {
-      final visitorSnap = await FirebaseFirestore.instance.collection('visitor').doc(doc['visitorId']).get();
-      if (visitorSnap.exists) {
-        visitorData = visitorSnap.data() ?? {};
-      }
+    if (doc['visitor_id'] != null) {
+      visitorData = await _getVisitorDetails(doc['visitor_id']);
     }
     showDialog(
       context: context,
@@ -129,19 +164,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _detailRow('Full Name', visitorData['v_name'] ?? ''),
-                              _detailRow('Email', visitorData['v_email'] ?? ''),
-                              _detailRow('Mobile Number', visitorData['v_contactno'] ?? ''),
-                              _detailRow('Company Name', visitorData['v_company_name'] ?? ''),
+                              _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
+                              _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
+                              _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
+                              _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
+                              _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
                               _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
-                              _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
-                              _detailRow('Host Name', doc['host_name'] ?? ''),
+                              _detailRow('Do you have appointment?', visitorData['appointment'] ?? ''),
+                              _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
                               _detailRow('Check-in Time', doc['check_in_time'] != null ? _formatTimestamp(doc['check_in_time']) : 'N/A'),
                               _detailRow('Check-out Time', doc['check_out_time'] != null ? _formatTimestamp(doc['check_out_time']) : 'N/A'),
-                              _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
-                              if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
-                                _detailRow('Laptop Name', doc['laptop_name'] ?? ''),
-                              _detailRow('Accomplished No of visitors', doc['accomplished_visitors']?.toString() ?? ''),
+                              _detailRow('Department', visitorData['department'] ?? ''),
+                              _detailRow('Accompanied by others?', visitorData['accompanying'] ?? ''),
+                              if ((visitorData['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                _detailRow('Number of Accompanied', visitorData['accompanyingCount'] ?? ''),
+                              _detailRow('Carrying Laptop?', visitorData['laptop'] ?? ''),
+                              if ((visitorData['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorData['laptopDetails'] ?? '').toString().isNotEmpty)
+                                _detailRow('Laptop Details', visitorData['laptopDetails']),
+                              _detailRow('Pass Number', visitorData['pass_no']?.toString() ?? ''),
                             ],
                           ),
                         ),
@@ -214,11 +254,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final v = visitors[idx];
                     final visitorId = v['visitor_id'] ?? '';
                     
-                    return FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('visitor')
-                          .doc(visitorId)
-                          .get(),
+                    return FutureBuilder<Map<String, dynamic>>(
+                      future: _getVisitorDetails(visitorId),
                       builder: (context, visitorSnapshot) {
                         if (!visitorSnapshot.hasData) {
                           return Container(
@@ -234,10 +271,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           );
                         }
                         
-                        final visitorData = visitorSnapshot.data!.data() as Map<String, dynamic>? ?? {};
-                        final name = visitorData['v_name'] ?? '';
-                        final hostNameValue = visitorData['host_name'] ?? hostName ?? '';
-                        final vDate = visitorData['v_date'];
+                        final visitorData = visitorSnapshot.data ?? {};
+                        final name = visitorData['fullName'] ?? visitorData['v_name'] ?? '';
+                        final hostNameValue = visitorData['host'] ?? visitorData['host_name'] ?? hostName ?? '';
+                        final vDate = visitorData['v_date'] ?? visitorData['visitDate'];
                         
                         String dateStr = 'N/A';
                         if (vDate != null) {

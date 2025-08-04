@@ -52,7 +52,7 @@ class _HostPassesPageState extends State<HostPassesPage> {
         child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('passes')
-                  .where('source', isEqualTo: 'host')
+                  .where('group', isEqualTo: 'host')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
