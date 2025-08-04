@@ -1028,8 +1028,8 @@ class _ManualPassDetailDialog extends StatelessWidget {
                     // Save to Checked In/Out collection for status page
                     try {
                       await FirebaseFirestore.instance.collection('checked_in_out').add({
+                        'visitor_id': pass['visitorId'] ?? '',
                         'visitor_name': pass['visitorName'] ?? pass['fullName'] ?? pass['v_name'] ?? '',
-                        'visitor_photo': pass['photo'] ?? '',
                         'check_in_time': FieldValue.serverTimestamp(),
                         'check_in_date': _formatDateOnly(now.toDate()),
                         'status': 'Checked In',
@@ -1092,15 +1092,15 @@ class _ManualPassDetailDialog extends StatelessWidget {
                                             ),
                                           )
                                         else
-                                          pw.Container(
-                                            width: 70,
-                                            height: 70,
-                                            decoration: pw.BoxDecoration(
-                                              color: PdfColor.fromInt(0xFF6CA4FE),
-                                              borderRadius: pw.BorderRadius.circular(4),
-                                            ),
-                                            child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                                        pw.Container(
+                                          width: 70,
+                                          height: 70,
+                                          decoration: pw.BoxDecoration(
+                                            color: PdfColor.fromInt(0xFF6CA4FE),
+                                            borderRadius: pw.BorderRadius.circular(4),
                                           ),
+                                          child: pw.Icon(pw.IconData(0xe491), size: 48, color: PdfColor.fromInt(0xFFFFFFFF)),
+                                        ),
                                         pw.SizedBox(width: 16),
                                         pw.Expanded(
                                           child: pw.Column(
@@ -1213,7 +1213,7 @@ class _ManualPassDetailDialog extends StatelessWidget {
       ),
     );
   }
-}
+} 
 
 String _formatDateOnly(dynamic date) {
   if (date == null) return '';
@@ -2163,8 +2163,8 @@ class _AppointedPassDetailDialog extends StatelessWidget {
                     // Save to Checked In/Out collection for status page
                     try {
                       await FirebaseFirestore.instance.collection('checked_in_out').add({
+                        'visitor_id': pass['visitorId'] ?? '',
                         'visitor_name': pass['visitorName'] ?? pass['v_name'] ?? pass['fullName'] ?? '',
-                        'visitor_photo': pass['photo'] ?? '',
                         'check_in_time': FieldValue.serverTimestamp(),
                         'check_in_date': _formatDateOnly(now.toDate()),
                         'status': 'Checked In',

@@ -37,36 +37,38 @@ class _SignInPageState extends State<SignInPage> {
     super.dispose();
   }
 
-  // Replace the UID-based lookup with an email-based lookup
+  // Optimized email-based lookup with specific field mapping
   Future<Map<String, dynamic>?> _getUserDataByEmail(String email) async {
-    final collections = ['admin', 'department', 'host', 'receptionist'];
-    final fieldNames = [
-      'email', // receptionist, admin
-      'emp_email', // host
-      'd_email', // department
+    // Define collection and field mapping for each role
+    final roleMappings = [
+      {'collection': 'receptionist', 'field': 'email'},
+      {'collection': 'admin', 'field': 'email'},
+      {'collection': 'host', 'field': 'emp_email'},
+      {'collection': 'department', 'field': 'd_email'},
     ];
-    // Prepare all queries in parallel
-    List<Future<Map<String, dynamic>?>> futures = [];
-    for (final collection in collections) {
-      for (final field in fieldNames) {
-        futures.add(_firestore
-            .collection(collection)
-            .where(field, isEqualTo: email)
+    
+    // Try each mapping sequentially until we find a match
+    for (final mapping in roleMappings) {
+      try {
+        final query = await _firestore
+            .collection(mapping['collection']!)
+            .where(mapping['field']!, isEqualTo: email)
             .limit(1)
             .get()
-            .then((query) {
-              if (query.docs.isNotEmpty) {
-                final data = query.docs.first.data();
-                data['role'] = collection;
-                return data;
-              }
-              return null;
-            }));
+            .timeout(const Duration(seconds: 5));
+        
+        if (query.docs.isNotEmpty) {
+          final data = query.docs.first.data();
+          data['role'] = mapping['collection'];
+          return data;
+        }
+      } catch (e) {
+        // Continue to next mapping if this one fails
+        continue;
       }
     }
-    // Wait for all queries to complete and return the first non-null result
-    final results = await Future.wait(futures);
-    return results.firstWhere((data) => data != null, orElse: () => null);
+    
+    return null;
   }
 
   void _signIn() async {
@@ -79,7 +81,7 @@ class _SignInPageState extends State<SignInPage> {
         final userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text,
-        );
+        ).timeout(const Duration(seconds: 10));
         final email = _emailController.text.trim();
         // If admin, skip Firestore lookup
         if (email.toLowerCase() == 'admin@gmail.com') {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'signin.dart';
 import 'admin/admin_dashboard.dart';
 import 'dept/dept_dashboard.dart';
@@ -14,9 +14,17 @@ import 'splash_screen.dart';
 import 'receptionist/receptionist_reports_page.dart';
 import 'receptionist/qr_code_registrations.dart';
 
+// Conditional import for web configuration
+import 'web_config.dart' if (dart.library.io) 'web_config_stub.dart';
+
 void main() async{          
   WidgetsFlutterBinding.ensureInitialized();
-  usePathUrlStrategy(); // Enable path-based URLs for web
+  
+  // Configure web-specific settings if running on web
+  if (kIsWeb) {
+    configureWeb();
+  }
+  
   await Firebase.initializeApp(                     
     options: const FirebaseOptions(                 
       apiKey: 'AIzaSyByxS4j4y-tOx1AbTqxm7kv8zTOj-P1wNc',
