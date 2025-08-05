@@ -820,6 +820,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                         'pass_time': checkInTime,
                         'type': 'all',
                         'doc': data,
+                        'docId': doc.id,
                         'photo': data['visitor_photo'],
                       });
                     } else if (checkInTime != null && status == 'Checked Out') {
@@ -828,6 +829,7 @@ class _VisitorsPageState extends State<VisitorsPage> {
                         'pass_time': checkInTime,
                         'type': 'all',
                         'doc': data,
+                        'docId': doc.id,
                         'photo': data['visitor_photo'],
                       });
                     }
@@ -912,286 +914,341 @@ class _VisitorsPageState extends State<VisitorsPage> {
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.all(20),
-                                  child: Row(
-                                    children: [
-                                      // Profile image or icon
-                                      Container(
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
                                         width: 55,
                                         height: 55,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.1),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.1),
+                                    ),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
+                                              },
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
-                                        child: photo != null && photo.isNotEmpty
-                                            ? ClipOval(
-                                                child: Image.memory(
-                                                  Base64Decoder().convert(photo),
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) {
-                                                    return const Icon(Icons.person, size: 30, color: Colors.black);
-                                                  },
-                                                ),
-                                              )
-                                            : const Icon(Icons.person, size: 30, color: Colors.black),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      // Visitor details
-                                      Expanded(
-                                        child: Column(
+                                        const SizedBox(height: 8),
+                                        Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              name,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                if (dateInfo.isNotEmpty)
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                    const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        dateInfo,
-                                                      style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                if (timeInfo.isNotEmpty) ...[
-                                                  const SizedBox(height: 4),
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        timeInfo,
-                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
-                                                      ),
-                                                    ],
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                  style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
                                                   ),
                                                 ],
-                                              ],
-                                            ),
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ],
                                         ),
-                                      ),
+                                      ],
+                                    ),
+                                  ),
                                       // Status dropdown only
-                                      Container(
+                                  Container(
                                         margin: const EdgeInsets.only(left: 4),
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF6CA4FE),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6CA4FE),
                                           borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: DropdownButton<String>(
-                                          value: 'Checked In',
-                                          underline: Container(),
+                                    ),
+                                    child: DropdownButton<String>(
+                                      value: 'Checked In',
+                                      underline: Container(),
                                           icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                                          dropdownColor: const Color(0xFF6CA4FE),
-                                          items: const [
-                                            DropdownMenuItem(
-                                              value: 'Checked In',
+                                      dropdownColor: const Color(0xFF6CA4FE),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'Checked In',
                                               child: Text('Checked In', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: 'Checked Out',
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Checked Out',
                                               child: Text('Checked Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                                            ),
-                                          ],
-                                          onChanged: (String? newValue) async {
-                                            if (newValue == 'Checked Out') {
-                                              // Show dialog to enter checkout code
-                                              final checkoutCodeController = TextEditingController();
-                                              final checkoutCode = await showDialog<String>(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (BuildContext context) {
-                                                  return Dialog(
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(20),
+                                        ),
+                                      ],
+                                      onChanged: (String? newValue) async {
+                                        if (newValue == 'Checked Out') {
+                                          // Show dialog to enter checkout code
+                                          final checkoutCodeController = TextEditingController();
+                                          final checkoutCode = await showDialog<String>(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return Dialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                elevation: 8,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(24),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    gradient: const LinearGradient(
+                                                      begin: Alignment.topLeft,
+                                                      end: Alignment.bottomRight,
+                                                      colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
                                                     ),
-                                                    elevation: 8,
-                                                    child: Container(
-                                                      padding: const EdgeInsets.all(24),
-                                                      decoration: BoxDecoration(
-                                                        borderRadius: BorderRadius.circular(20),
-                                                        gradient: const LinearGradient(
-                                                          begin: Alignment.topLeft,
-                                                          end: Alignment.bottomRight,
-                                                          colors: [Color(0xFF6CA4FE), Color(0xFF5A8FE8)],
-                                                        ),
-                                                      ),
-                                                      child: Column(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: [
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
 
-                                                          // Title with icon
-                                                          Row(
-                                                            mainAxisAlignment: MainAxisAlignment.center,
-                                                            children: [
-                                                              const Icon(
-                                                                Icons.logout,
-                                                                color: Colors.white,
-                                                                size: 24,
-                                                              ),
-                                                              const SizedBox(width: 8),
-                                                              const Text(
-                                                                'Check Out Visitor',
-                                                                style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 24,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontFamily: 'Poppins',
-                                                                ),
-                                                              ),
-                                                            ],
+                                                      // Title with icon
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.logout,
+                                                            color: Colors.white,
+                                                            size: 24,
                                                           ),
-                                                          const SizedBox(height: 24),
-                                                          // Input field
-                                                          Container(
-                                                            decoration: BoxDecoration(
+                                                          const SizedBox(width: 8),
+                                                          const Text(
+                                                            'Check Out Visitor',
+                                                            style: TextStyle(
                                                               color: Colors.white,
-                                                              borderRadius: BorderRadius.circular(12),
-                                                              boxShadow: [
-                                                                BoxShadow(
-                                                                  color: Colors.black.withOpacity(0.1),
-                                                                  blurRadius: 8,
-                                                                  offset: const Offset(0, 2),
-                                                                ),
-                                                              ],
+                                                              fontSize: 24,
+                                                              fontWeight: FontWeight.bold,
+                                                              fontFamily: 'Poppins',
                                                             ),
-                                                            child: TextField(
-                                                              controller: checkoutCodeController,
-                                                              decoration: const InputDecoration(
-                                                                hintText: 'Enter code',
-                                                                border: InputBorder.none,
-                                                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                                                prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
-                                                              ),
-                                                              style: const TextStyle(
-                                                                fontSize: 16,
-                                                                fontWeight: FontWeight.w500,
-                                                              ),
-                                                              onSubmitted: (value) {
-                                                                Navigator.of(context).pop(value);
-                                                              },
-                                                            ),
-                                                          ),
-                                                          const SizedBox(height: 24),
-                                                          // Action buttons
-                                                          Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: TextButton(
-                                                                  onPressed: () => Navigator.of(context).pop(),
-                                                                  style: TextButton.styleFrom(
-                                                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                    shape: RoundedRectangleBorder(
-                                                                      borderRadius: BorderRadius.circular(8),
-                                                                    ),
-                                                                  ),
-                                                                  child: const Text(
-                                                                    'Cancel',
-                                                                    style: TextStyle(
-                                                                      color: Colors.white,
-                                                                      fontSize: 16,
-                                                                      fontWeight: FontWeight.w600,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              const SizedBox(width: 12),
-                                                              Expanded(
-                                                                child: ElevatedButton(
-                                                                  onPressed: () {
-                                                                    Navigator.of(context).pop(checkoutCodeController.text);
-                                                                  },
-                                                                  style: ElevatedButton.styleFrom(
-                                                                    backgroundColor: Colors.white,
-                                                                    foregroundColor: const Color(0xFF6CA4FE),
-                                                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                    shape: RoundedRectangleBorder(
-                                                                      borderRadius: BorderRadius.circular(8),
-                                                                    ),
-                                                                    elevation: 2,
-                                                                  ),
-                                                                  child: const Text(
-                                                                    'Confirm',
-                                                                    style: TextStyle(
-                                                                      fontSize: 16,
-                                                                      fontWeight: FontWeight.w600,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
                                                           ),
                                                         ],
                                                       ),
+                                                      const SizedBox(height: 24),
+                                                      // Input field
+                                                      Container(
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.white,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withOpacity(0.1),
+                                                              blurRadius: 8,
+                                                              offset: const Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                                                                                 child: TextField(
+                                                           controller: checkoutCodeController,
+                                                           decoration: const InputDecoration(
+                                                             hintText: 'Enter code',
+                                                             border: InputBorder.none,
+                                                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                                             prefixIcon: Icon(Icons.key, color: Color(0xFF6CA4FE)),
+                                                           ),
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                          onSubmitted: (value) {
+                                                            Navigator.of(context).pop(value);
+                                                          },
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 24),
+                                                      // Action buttons
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: TextButton(
+                                                              onPressed: () => Navigator.of(context).pop(),
+                                                              style: TextButton.styleFrom(
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                              ),
+                                                              child: const Text(
+                                                                'Cancel',
+                                                                style: TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Expanded(
+                                                            child: ElevatedButton(
+                                                              onPressed: () {
+                                                                Navigator.of(context).pop(checkoutCodeController.text);
+                                                              },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.white,
+                                                                foregroundColor: const Color(0xFF6CA4FE),
+                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(8),
+                                                                ),
+                                                                elevation: 2,
+                                                              ),
+                                                              child: const Text(
+                                                                'Confirm',
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                          
+                                          if (checkoutCode != null && checkoutCode.isNotEmpty) {
+                                            // Get the visitor's pass data to validate checkout code
+                                            try {
+                                              final docId = entry['docId'];
+                                              final visitorData = entry['doc'] as Map<String, dynamic>;
+                                                  
+                                                  // Debug: Print all fields to see what's available
+                                                  print('Debug: All visitor data fields: ${visitorData.keys.toList()}');
+                                                  print('Debug: Looking for checkout_code in visitor data');
+                                                  
+                                                  final actualCheckoutCode = visitorData['checkout_code']?.toString().trim();
+                                                  print('Debug: Found checkout_code: "$actualCheckoutCode" (length: ${actualCheckoutCode?.length})');
+                                                  print('Debug: Entered checkout_code: "$checkoutCode" (length: ${checkoutCode.length})');
+                                                  print('Debug: Data types - actual: ${actualCheckoutCode.runtimeType}, entered: ${checkoutCode.runtimeType}');
+                                                  
+                                                  // If checkout_code is not found in current document, search in checked_in_out collection
+                                                  String? finalCheckoutCode = actualCheckoutCode;
+                                                  if (finalCheckoutCode == null || finalCheckoutCode.isEmpty) {
+                                                    print('Debug: Checkout code not found in current document, searching in checked_in_out collection');
+                                                    final visitorId = visitorData['visitor_id'];
+                                                    final visitorName = visitorData['visitor_name'] ?? visitorData['visitorName'] ?? visitorData['fullName'] ?? visitorData['v_name'] ?? visitorData['name'] ?? '';
+                                                    
+                                                    // Try searching by visitor_id first
+                                                    if (visitorId != null && visitorId.isNotEmpty) {
+                                                      print('Debug: Searching by visitor_id: $visitorId');
+                                                      final checkoutQuery = await FirebaseFirestore.instance
+                                                          .collection('checked_in_out')
+                                                          .where('visitor_id', isEqualTo: visitorId)
+                                                          .where('checkout_code', isNull: false)
+                                                          .limit(1)
+                                                          .get();
+                                                      
+                                                      if (checkoutQuery.docs.isNotEmpty) {
+                                                        finalCheckoutCode = checkoutQuery.docs.first.data()['checkout_code']?.toString().trim();
+                                                        print('Debug: Found checkout_code by visitor_id: "$finalCheckoutCode" (length: ${finalCheckoutCode?.length})');
+                                                      }
+                                                    }
+                                                    
+                                                    // If still not found, try searching by visitor name
+                                                    if ((finalCheckoutCode == null || finalCheckoutCode.isEmpty) && visitorName.isNotEmpty) {
+                                                      print('Debug: Searching by visitor_name: $visitorName');
+                                                      final checkoutQueryByName = await FirebaseFirestore.instance
+                                                          .collection('checked_in_out')
+                                                          .where('visitor_name', isEqualTo: visitorName)
+                                                          .where('checkout_code', isNull: false)
+                                                          .limit(1)
+                                                          .get();
+                                                      
+                                                      if (checkoutQueryByName.docs.isNotEmpty) {
+                                                        finalCheckoutCode = checkoutQueryByName.docs.first.data()['checkout_code']?.toString().trim();
+                                                        print('Debug: Found checkout_code by visitor_name: "$finalCheckoutCode" (length: ${finalCheckoutCode?.length})');
+                                                      }
+                                                    }
+                                                  }
+                                                  
+                                                  // Clean up the entered code and compare
+                                                  final cleanEnteredCode = checkoutCode.trim();
+                                                  final cleanStoredCode = finalCheckoutCode?.trim();
+                                                  
+                                                  print('Debug: Final comparison - stored: "$cleanStoredCode" vs entered: "$cleanEnteredCode"');
+                                                  print('Debug: Are they equal? ${cleanStoredCode == cleanEnteredCode}');
+                                                  
+                                                  if (cleanStoredCode != null && cleanStoredCode.isNotEmpty && cleanStoredCode == cleanEnteredCode) {
+                                                // Checkout code matches, proceed with checkout
+                                                await FirebaseFirestore.instance
+                                                .collection('checked_in_out')
+                                                .doc(docId)
+                                                .update({
+                                                'status': 'Checked Out',
+                                                'check_out_time': FieldValue.serverTimestamp(),
+                                                 });
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Visitor checked out successfully'),
+                                                      backgroundColor: Colors.green,
                                                     ),
                                                   );
-                                                },
-                                              );
-                                              
-                                              if (checkoutCode != null && checkoutCode.isNotEmpty) {
-                                                // Get the visitor's pass data to validate checkout code
-                                                try {
-                                                  final docId = checkedInOutSnapshot.data!.docs[index].id;
-                                                  final visitorData = checkedInOutSnapshot.data!.docs[index].data() as Map<String, dynamic>;
-                                                  final actualCheckoutCode = visitorData['checkout_code']?.toString();
-
-                                                  if (actualCheckoutCode != null && actualCheckoutCode == checkoutCode) {
-                                                    // Checkout code matches, proceed with checkout
-                                                    await FirebaseFirestore.instance
-                                                    .collection('checked_in_out')
-                                                    .doc(docId)
-                                                    .update({
-                                                    'status': 'Checked Out',
-                                                    'check_out_time': FieldValue.serverTimestamp(),
-                                                     });
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Visitor checked out successfully'),
-                                                          backgroundColor: Colors.green,
-                                                        ),
-                                                      );
-                                                    }
-                                                  } else {
-                                                    // Checkout code doesn't match
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text('Incorrect code. Please check and try again.'),
-                                                          backgroundColor: Colors.red,
-                                                        ),
-                                                      );
-                                                    }
-                                                  }
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text('Error checking out visitor: $e'),
-                                                        backgroundColor: Colors.red,
-                                                      ),
-                                                    );
-                                                  }
+                                                }
+                                              } else {
+                                                // Checkout code doesn't match
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Incorrect code. Please check and try again.'),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
                                                 }
                                               }
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error checking out visitor: $e'),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              }
                                             }
-                                          },
-                                        ),
-                                      ),
-                                    ],
+                                          }
+                                        }
+                                      },
+                                    ),
                                   ),
+                                ],
+                              ),
                                 ),
                               ],
                             ),
@@ -1235,91 +1292,91 @@ class _VisitorsPageState extends State<VisitorsPage> {
                             child: Stack(
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      // Profile image or icon
-                                      Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.1),
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  // Profile image or icon
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.1),
+                                    ),
+                                    child: photo != null && photo.isNotEmpty
+                                        ? ClipOval(
+                                            child: Image.memory(
+                                              Base64Decoder().convert(photo),
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Icon(Icons.person, size: 30, color: Colors.black);
+                                              },
+                                            ),
+                                          )
+                                        : const Icon(Icons.person, size: 30, color: Colors.black),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Visitor details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
-                                        child: photo != null && photo.isNotEmpty
-                                            ? ClipOval(
-                                                child: Image.memory(
-                                                  Base64Decoder().convert(photo),
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) {
-                                                    return const Icon(Icons.person, size: 30, color: Colors.black);
-                                                  },
-                                                ),
-                                              )
-                                            : const Icon(Icons.person, size: 30, color: Colors.black),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      // Visitor details
-                                      Expanded(
-                                        child: Column(
+                                        const SizedBox(height: 8),
+                                        Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              name,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins'),
-                                              overflow: TextOverflow.ellipsis,
-                                              maxLines: 1,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                if (dateInfo.isNotEmpty)
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        dateInfo,
-                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
-                                                      ),
-                                                    ],
-                                                  ),
-                                                if (timeInfo.isNotEmpty) ...[
-                                                  const SizedBox(height: 4),
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        timeInfo,
-                                                        style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
-                                                      ),
-                                                    ],
+                                            if (dateInfo.isNotEmpty)
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.calendar_today, size: 16, color: Color(0xFF6CA4FE)), // blue
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    dateInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
                                                   ),
                                                 ],
-                                              ],
-                                            ),
+                                              ),
+                                            if (timeInfo.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.access_time, size: 16, color: Color(0xFF6CA4FE)), // blue
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    timeInfo,
+                                                    style: const TextStyle(fontSize: 13, color: Color(0xFF6CA4FE), fontWeight: FontWeight.w600), // blue
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ],
                                         ),
-                                      ),
+                                      ],
+                                    ),
+                                  ),
                                       // Status badge only
-                                      Container(
+                                  Container(
                                         margin: const EdgeInsets.only(left: 4),
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFF6CA4FE), // blue
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF6CA4FE), // blue
                                           borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Text(
-                                          'Checked Out',
+                                    ),
+                                    child: const Text(
+                                      'Checked Out',
                                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
+                                ],
+                              ),
                                 ),
                               ],
                             ),

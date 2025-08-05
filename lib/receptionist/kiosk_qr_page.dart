@@ -1349,6 +1349,7 @@ class _KioskVisitorDetailsDialog extends StatelessWidget {
                         'purpose': data['purpose'] ?? '',
                         'accompanyingVisitors': data['accompanyingCount'] ?? '',
                         'host_name': data['host'] ?? '',
+                        'department': data['department'] ?? '',
                         'photo': data['photo'] ?? '',
                         'date': _formatDateOnly(DateTime.now()),
                         'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
