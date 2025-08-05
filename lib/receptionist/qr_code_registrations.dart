@@ -92,7 +92,15 @@ List<String> _currentHosts = ['Select Host'];
     final ImagePicker picker = ImagePicker();
     XFile? image;
     try {
-      image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      // Optimize image picker settings for faster processing
+      image = await picker.pickImage(
+        source: ImageSource.camera, 
+        imageQuality: 50, // Reduced from 70 to 50 for faster processing
+        maxWidth: 300, // Limit max width
+        maxHeight: 300, // Limit max height
+        preferredCameraDevice: CameraDevice.front, // Usually faster for selfies
+      );
+      
       if (image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -116,20 +124,67 @@ List<String> _currentHosts = ['Select Host'];
     }
 
     if (image != null) {
-      final bytes = await image.readAsBytes();
-      img.Image? original = img.decodeImage(bytes);
-      if (original != null) {
-        img.Image resized = img.copyResize(original, width: 400);
-        final compressedBytes = img.encodeJpg(resized, quality: 60);
-        setState(() {
-          visitorPhoto = Uint8List.fromList(compressedBytes);
-          _isPhotoLoading = false;
-        });
-      } else {
-        setState(() {
-          visitorPhoto = bytes;
-          _isPhotoLoading = false;
-        });
+      try {
+        // Process image in a more efficient way
+        final bytes = await image.readAsBytes();
+        
+        // Check if image is already small enough (less than 100KB)
+        if (bytes.length < 100 * 1024) {
+          setState(() {
+            visitorPhoto = bytes;
+            _isPhotoLoading = false;
+          });
+          return;
+        }
+        
+        // Process larger images
+        img.Image? original = img.decodeImage(bytes);
+        if (original != null) {
+          // More aggressive resizing for faster processing
+          img.Image resized = img.copyResize(
+            original, 
+            width: 200, // Reduced from 400 to 200
+            height: 200, // Fixed height for consistency
+            interpolation: img.Interpolation.linear, // Faster interpolation
+          );
+          
+          // More aggressive compression
+          final compressedBytes = img.encodeJpg(resized, quality: 40); // Reduced from 60 to 40
+          
+          setState(() {
+            visitorPhoto = Uint8List.fromList(compressedBytes);
+            _isPhotoLoading = false;
+          });
+          
+          // Show success message
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo captured successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } else {
+          // Fallback for unsupported image formats
+          setState(() {
+            visitorPhoto = bytes;
+            _isPhotoLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Image processing error: $e');
+        setState(() => _isPhotoLoading = false);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to process image. Please try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } else {
       setState(() => _isPhotoLoading = false);
@@ -495,11 +550,199 @@ List<String> _currentHosts = ['Select Host'];
                                     try {
                                       _formKey.currentState!.save();
 
+                                      // Show progress message
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Checking email...'),
+                                            backgroundColor: Colors.blue,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+
+                                      // First, check if email exists in visitor collection
+                                      final visitorQuery = await FirebaseFirestore.instance
+                                          .collection('visitor')
+                                          .where('v_email', isEqualTo: email)
+                                          .limit(1)
+                                          .get();
+
+                                      if (visitorQuery.docs.isEmpty) {
+                                        setState(() => _isSaving = false);
+                                        if (context.mounted) {
+                                          // Show beautiful error dialog instead of SnackBar
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (context) => Dialog(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(24),
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(32),
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(24),
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Colors.white,
+                                                      Colors.red.shade50,
+                                                    ],
+                                                  ),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.red.withOpacity(0.3),
+                                                      blurRadius: 20,
+                                                      offset: const Offset(0, 10),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    // Error icon
+                                                    Container(
+                                                      width: 80,
+                                                      height: 80,
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        color: Colors.red,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.red.withOpacity(0.3),
+                                                            blurRadius: 15,
+                                                            spreadRadius: 2,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.error_outline,
+                                                        color: Colors.white,
+                                                        size: 40,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 24),
+
+                                                    // Error title
+                                                    const Text(
+                                                      'Email Not Found',
+                                                      style: TextStyle(
+                                                        fontSize: 24,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.red,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                    const SizedBox(height: 16),
+
+                                                    // Error message
+                                                    const Text(
+                                                      'The email address you entered does not exist in our visitor records. Please ensure you are using the correct email address that was registered in the visitor collection.',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                    const SizedBox(height: 32),
+
+                                                    // Action buttons
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: ElevatedButton(
+                                                            onPressed: () {
+                                                              Navigator.of(context).pop();
+                                                              // Focus on email field for easy correction
+                                                              _emailFocus.requestFocus();
+                                                            },
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor: Colors.red,
+                                                              foregroundColor: Colors.white,
+                                                              padding: const EdgeInsets.symmetric(vertical: 16),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(16),
+                                                              ),
+                                                              elevation: 4,
+                                                            ),
+                                                            child: const Text(
+                                                              'Update Email',
+                                                              style: TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 16),
+                                                        Expanded(
+                                                          child: ElevatedButton(
+                                                            onPressed: () {
+                                                              Navigator.of(context).pop();
+                                                            },
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor: Colors.grey,
+                                                              foregroundColor: Colors.white,
+                                                              padding: const EdgeInsets.symmetric(vertical: 16),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(16),
+                                                              ),
+                                                              elevation: 4,
+                                                            ),
+                                                            child: const Text(
+                                                              'Cancel',
+                                                              style: TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+
+                                      // Email exists, proceed with registration
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Processing registration...'),
+                                            backgroundColor: Colors.blue,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+
+                                      // Get the visitor document ID from the existing visitor
+                                      final existingVisitorDoc = visitorQuery.docs.first;
+                                      final visitorId = existingVisitorDoc.id;
+
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
 
-                                      // Save to visitors collection
-                                      final visitorDocRef = await FirebaseFirestore.instance.collection('visitor').add({
+                                      // Prepare photo data efficiently
+                                      String photoData = '';
+                                      if (visitorPhoto != null) {
+                                        try {
+                                          // Use compute to encode image in background
+                                          photoData = base64Encode(visitorPhoto!);
+                                        } catch (e) {
+                                          print('Photo encoding error: $e');
+                                          photoData = '';
+                                        }
+                                      }
+
+                                      // Save to manual_registrations collection only
+                                      await FirebaseFirestore.instance.collection('manual_registrations').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
                                         'email': email,
@@ -515,9 +758,10 @@ List<String> _currentHosts = ['Select Host'];
                                         'laptop': laptop,
                                         'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
                                         'timestamp': FieldValue.serverTimestamp(),
-                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
+                                        'photo': photoData,
                                         'pass_no': passNo,
-                                        'visitor_id': '', // Will be updated after pass creation
+                                        'source': 'qr_code',
+                                        'visitor_id': visitorId, // Use existing visitor ID
                                       });
 
                                       // Add pass to passes collection
@@ -531,27 +775,29 @@ List<String> _currentHosts = ['Select Host'];
                                         'host': host,
                                         'purpose': purpose,
                                         'department': department == 'Select Dept' ? '' : department,
-                                        'photo': visitorPhoto != null ? base64Encode(visitorPhoto!) : '',
+                                        'photo': photoData,
                                         'created_at': FieldValue.serverTimestamp(),
                                         'group': 'qr_code',
-                                        'visitor_id': visitorDocRef.id,
-                                      });
-
-                                      // Update visitor document with visitor_id
-                                      await visitorDocRef.update({
-                                        'visitor_id': visitorDocRef.id,
+                                        'visitor_id': visitorId, // Use existing visitor ID
                                       });
 
                                       setState(() => _isSaving = false);
+                                      
                                       // Show success dialog
                                       await showSuccessDialog(context);
 
                                     } catch (e) {
                                       setState(() => _isSaving = false);
                                       print('Firestore error: $e');
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error registering visitor: ${e.toString()}'), backgroundColor: Colors.red),
-                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error registering visitor: ${e.toString()}'), 
+                                            backgroundColor: Colors.red,
+                                            duration: Duration(seconds: 4),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                 ),

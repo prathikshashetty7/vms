@@ -67,13 +67,13 @@ class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
     return FutureBuilder<Map<String, String>>(
       future: _fetchDepartmentMap(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: Color(0xFFD4E9FF),
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final departmentMap = snapshot.data!;
+        final departmentMap = snapshot.data ?? {};
         
         return DefaultTabController(
           length: 2,
@@ -147,13 +147,17 @@ class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
 
   Future<Map<String, String>> _fetchDepartmentMap() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('departments').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('departments')
+          .get()
+          .timeout(const Duration(seconds: 5));
       final Map<String, String> departmentMap = {};
       for (var doc in snapshot.docs) {
         departmentMap[doc.id] = doc['name'] ?? '';
       }
       return departmentMap;
     } catch (e) {
+      print('Error fetching departments: $e');
       return {};
     }
   }
@@ -164,6 +168,15 @@ class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading kiosk visitors: ${snapshot.error}',
+              style: const TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -325,6 +338,15 @@ class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading generated passes: ${snapshot.error}',
+              style: const TextStyle(fontSize: 18, color: Colors.red),
+            ),
+          );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -1349,6 +1371,7 @@ class _KioskVisitorDetailsDialog extends StatelessWidget {
                         'purpose': data['purpose'] ?? '',
                         'accompanyingVisitors': data['accompanyingCount'] ?? '',
                         'host_name': data['host'] ?? '',
+                        'department': data['department'] ?? '',
                         'photo': data['photo'] ?? '',
                         'date': _formatDateOnly(DateTime.now()),
                         'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
@@ -1356,6 +1379,29 @@ class _KioskVisitorDetailsDialog extends StatelessWidget {
                         'registration_type': 'kiosk',
                         'group': 'kiosk',
                       };
+                      
+                      // Save to manual_registrations collection with source: 'kiosk'
+                      await FirebaseFirestore.instance.collection('manual_registrations').add({
+                        'fullName': data['fullName'] ?? '',
+                        'mobile': data['mobile'] ?? '',
+                        'email': data['email'] ?? '',
+                        'designation': data['designation'] ?? '',
+                        'company': data['company'] ?? '',
+                        'host': data['host'] ?? '',
+                        'purpose': data['purpose'] ?? '',
+                        'purposeOther': data['purposeOther'] ?? '',
+                        'appointment': data['appointment'] ?? 'Yes',
+                        'department': data['department'] ?? '',
+                        'accompanying': data['accompanying'] ?? 'No',
+                        'accompanyingCount': data['accompanyingCount'] ?? '',
+                        'laptop': data['laptop'] ?? 'No',
+                        'laptopDetails': data['laptopDetails'] ?? '',
+                        'timestamp': FieldValue.serverTimestamp(),
+                        'photo': data['photo'] ?? '',
+                        'pass_no': passNo,
+                        'source': 'kiosk',
+                      });
+                      
                       await FirebaseFirestore.instance.collection('passes').add(passData);
                       // Show success message
                       if (context.mounted) {

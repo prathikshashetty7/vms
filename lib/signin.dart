@@ -6,6 +6,7 @@ import 'receptionist/dashboard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'theme/system_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async'; // Added for TimeoutException
 
 class SignInPage extends StatefulWidget {
   const SignInPage({Key? key}) : super(key: key);
@@ -37,7 +38,7 @@ class _SignInPageState extends State<SignInPage> {
     super.dispose();
   }
 
-  // Optimized email-based lookup with specific field mapping
+  // Optimized email-based lookup with parallel queries and shorter timeouts
   Future<Map<String, dynamic>?> _getUserDataByEmail(String email) async {
     // Define collection and field mapping for each role
     final roleMappings = [
@@ -47,15 +48,15 @@ class _SignInPageState extends State<SignInPage> {
       {'collection': 'department', 'field': 'd_email'},
     ];
     
-    // Try each mapping sequentially until we find a match
-    for (final mapping in roleMappings) {
+    // Try parallel queries with shorter timeout
+    final futures = roleMappings.map((mapping) async {
       try {
         final query = await _firestore
             .collection(mapping['collection']!)
             .where(mapping['field']!, isEqualTo: email)
             .limit(1)
             .get()
-            .timeout(const Duration(seconds: 5));
+            .timeout(const Duration(seconds: 3)); // Reduced timeout
         
         if (query.docs.isNotEmpty) {
           final data = query.docs.first.data();
@@ -63,8 +64,19 @@ class _SignInPageState extends State<SignInPage> {
           return data;
         }
       } catch (e) {
-        // Continue to next mapping if this one fails
-        continue;
+        // Return null if this query fails
+        return null;
+      }
+      return null;
+    });
+    
+    // Wait for all queries to complete
+    final results = await Future.wait(futures);
+    
+    // Return the first non-null result
+    for (final result in results) {
+      if (result != null) {
+        return result;
       }
     }
     
@@ -81,7 +93,7 @@ class _SignInPageState extends State<SignInPage> {
         final userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text,
-        ).timeout(const Duration(seconds: 10));
+        ).timeout(const Duration(seconds: 8)); // Reduced timeout
         final email = _emailController.text.trim();
         // If admin, skip Firestore lookup
         if (email.toLowerCase() == 'admin@gmail.com') {
@@ -121,16 +133,38 @@ class _SignInPageState extends State<SignInPage> {
           message = 'No user found for that email.';
         } else if (e.code == 'wrong-password') {
           message = 'Wrong password provided.';
+        } else if (e.code == 'network-request-failed') {
+          message = 'Network error. Please check your internet connection.';
+        } else if (e.code == 'timeout') {
+          message = 'Login timeout. Please try again.';
         }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      } on TimeoutException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Login timeout. Please check your internet connection and try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString())),
+            SnackBar(
+              content: Text('Login error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
           );
         }
       } finally {
@@ -367,4 +401,4 @@ class _QuickLoginButton extends StatelessWidget {
       ),
     );
   }
-} 
+}
