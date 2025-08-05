@@ -773,12 +773,12 @@ void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visito
 Widget _detailRow(String label, String value) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 3.0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Wrap(
+      crossAxisAlignment: WrapCrossAlignment.start,
       children: [
-        Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-        Expanded(
-          child: Text(value, style: TextStyle(color: Colors.black87)),
+        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+        Flexible(
+          child: Text(value, style: const TextStyle(color: Colors.black87)),
         ),
       ],
     ),
@@ -818,6 +818,183 @@ Future<String?> _getVisitorImage(String? visitorId) async {
   } catch (e) {
     return null;
   }
+}
+
+Future<Map<String, dynamic>> _getVisitorWithCheckInOutDetails(Map<String, dynamic> visitorDoc) async {
+  try {
+    // Get the visitor_id from visitor table - use docId as fallback
+    final visitorId = visitorDoc['visitor_id'] ?? visitorDoc['id'] ?? visitorDoc['docId'];
+    if (visitorId == null) return {};
+    
+    // First, try to fetch visitor details from manual_registrations collection
+    Map<String, dynamic> visitorDetails = {};
+    bool isFromManualRegistrations = false;
+    try {
+      final manualRegQuery = await FirebaseFirestore.instance
+          .collection('manual_registrations')
+          .where('visitor_id', isEqualTo: visitorId)
+          .get();
+      
+      if (manualRegQuery.docs.isNotEmpty) {
+        // Sort by timestamp to get the most recent record
+        final sortedDocs = manualRegQuery.docs.toList()
+          ..sort((a, b) {
+            final aTimestamp = a.data()['timestamp'] as Timestamp?;
+            final bTimestamp = b.data()['timestamp'] as Timestamp?;
+            if (aTimestamp == null && bTimestamp == null) return 0;
+            if (aTimestamp == null) return 1;
+            if (bTimestamp == null) return -1;
+            return bTimestamp.compareTo(aTimestamp); // Most recent first
+          });
+        
+        visitorDetails = sortedDocs.first.data();
+        isFromManualRegistrations = true;
+        print('Found manual_registrations data for visitor_id: $visitorId');
+      } else {
+        print('No manual_registrations found for visitor_id: $visitorId');
+      }
+    } catch (e) {
+      print('Error fetching from manual_registrations: $e');
+    }
+    
+    // If not found in manual_registrations, use visitor collection data
+    if (visitorDetails.isEmpty) {
+      visitorDetails = visitorDoc;
+      isFromManualRegistrations = false;
+      print('Using visitor collection data for visitor_id: $visitorId');
+    }
+    
+    // Fetch host name using emp_id
+    String hostName = visitorDetails['host_name'] ?? visitorDetails['host'] ?? '';
+    if (hostName.isEmpty && (visitorDetails['emp_id'] ?? '').toString().isNotEmpty) {
+      try {
+        final hostDoc = await FirebaseFirestore.instance
+            .collection('host')
+            .doc(visitorDetails['emp_id'])
+            .get();
+        
+        if (hostDoc.exists) {
+          final hostData = hostDoc.data() as Map<String, dynamic>?;
+          hostName = hostData?['emp_name'] ?? hostData?['name'] ?? '';
+        }
+      } catch (e) {
+        print('Error fetching host details: $e');
+      }
+    }
+    
+    // Fetch department name using departmentId
+    String departmentName = visitorDetails['department'] ?? visitorDetails['dept_name'] ?? '';
+    if (departmentName.isEmpty && (visitorDetails['departmentId'] ?? '').toString().isNotEmpty) {
+      try {
+        final deptDoc = await FirebaseFirestore.instance
+            .collection('department')
+            .doc(visitorDetails['departmentId'])
+            .get();
+        
+        if (deptDoc.exists) {
+          final deptData = deptDoc.data() as Map<String, dynamic>?;
+          departmentName = deptData?['d_name'] ?? deptData?['name'] ?? '';
+        }
+      } catch (e) {
+        print('Error fetching department details: $e');
+      }
+    }
+    
+    // Update visitor details with fetched host and department names
+    visitorDetails['host_name'] = hostName;
+    visitorDetails['department'] = departmentName;
+    
+    // Query checked_in_out collection for this visitor using visitor_id
+    final checkInOutQuery = await FirebaseFirestore.instance
+        .collection('checked_in_out')
+        .where('visitor_id', isEqualTo: visitorId)
+        .get();
+    
+    if (checkInOutQuery.docs.isNotEmpty) {
+      // Sort by created_at to get the most recent record
+      final sortedDocs = checkInOutQuery.docs.toList()
+        ..sort((a, b) {
+          final aCreated = a.data()['created_at'] as Timestamp?;
+          final bCreated = b.data()['created_at'] as Timestamp?;
+          if (aCreated == null && bCreated == null) return 0;
+          if (aCreated == null) return 1;
+          if (bCreated == null) return -1;
+          return bCreated.compareTo(aCreated); // Most recent first
+        });
+      
+      final checkInOutData = sortedDocs.first.data();
+      
+      // Check visitor status (Checked In, Checked Out, or Not Checked In)
+      final checkedInQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .where('visitor_id', isEqualTo: visitorId)
+          .where('status', isEqualTo: 'Checked In')
+          .limit(1)
+          .get();
+      
+      final checkedOutQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .where('visitor_id', isEqualTo: visitorId)
+          .where('status', isEqualTo: 'Checked Out')
+          .limit(1)
+          .get();
+      
+      String status;
+      if (checkedOutQuery.docs.isNotEmpty) {
+        status = 'Checked Out';
+      } else if (checkedInQuery.docs.isNotEmpty) {
+        status = 'Checked In';
+      } else {
+        status = 'Not Checked In';
+      }
+      
+      return {
+        'check_in_time': _formatTimestamp(checkInOutData['check_in_time']),
+        'check_out_time': _formatTimestamp(checkInOutData['check_out_time']),
+        'status': status,
+        'check_in_date': checkInOutData['check_in_date'],
+        'visitor_details': visitorDetails, // Include the fetched visitor details
+        'is_from_manual_registrations': isFromManualRegistrations, // Flag to indicate data source
+      };
+    }
+    
+    return {
+      'visitor_details': visitorDetails, // Return visitor details even if no check-in/out data
+      'is_from_manual_registrations': isFromManualRegistrations, // Flag to indicate data source
+    };
+  } catch (e) {
+    print('Error fetching check-in/out details: $e');
+    return {};
+  }
+}
+
+String _formatTimestamp(dynamic timestamp) {
+  if (timestamp == null) return 'N/A';
+  if (timestamp is Timestamp) {
+    // Convert to Indian Standard Time (IST) - UTC+5:30
+    final utcDateTime = timestamp.toDate();
+    final istDateTime = utcDateTime.add(const Duration(hours: 5, minutes: 30));
+    return DateFormat('h:mm a').format(istDateTime);
+  } else if (timestamp is DateTime) {
+    // Convert to Indian Standard Time (IST) - UTC+5:30
+    final istDateTime = timestamp.add(const Duration(hours: 5, minutes: 30));
+    return DateFormat('h:mm a').format(istDateTime);
+  }
+  return timestamp.toString();
+}
+
+String _formatVisitDate(dynamic visitDate) {
+  if (visitDate == null) return 'N/A';
+  if (visitDate is Timestamp) {
+    final dt = visitDate.toDate();
+    return DateFormat('dd/MM/yyyy').format(dt);
+  } else if (visitDate is DateTime) {
+    return DateFormat('dd/MM/yyyy').format(visitDate);
+  } else if (visitDate is String) {
+    // If it's already a formatted string, return as is
+    return visitDate;
+  }
+  return visitDate.toString();
 }
 
 Color _getStatusColor(String status) {

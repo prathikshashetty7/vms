@@ -54,16 +54,91 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return date.toString();
   }
 
-  // Add this function to show details dialog
-  void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) async {
-    // Fetch extra details from visitor table if visitorId is present
-    Map<String, dynamic> visitorData = {};
-    if (doc['visitorId'] != null) {
-      final visitorSnap = await FirebaseFirestore.instance.collection('visitor').doc(doc['visitorId']).get();
-      if (visitorSnap.exists) {
-        visitorData = visitorSnap.data() ?? {};
+  Future<Map<String, dynamic>> _getVisitorDetails(String visitorId) async {
+    try {
+      // First, try to fetch visitor details from manual_registrations collection
+      Map<String, dynamic> visitorDetails = {};
+      bool isFromManualRegistrations = false;
+      try {
+        final manualRegQuery = await FirebaseFirestore.instance
+            .collection('manual_registrations')
+            .where('visitor_id', isEqualTo: visitorId)
+            .get();
+        
+        if (manualRegQuery.docs.isNotEmpty) {
+          // Sort by timestamp to get the most recent record
+          final sortedDocs = manualRegQuery.docs.toList()
+            ..sort((a, b) {
+              final aTimestamp = a.data()['timestamp'] as Timestamp?;
+              final bTimestamp = b.data()['timestamp'] as Timestamp?;
+              if (aTimestamp == null && bTimestamp == null) return 0;
+              if (aTimestamp == null) return 1;
+              if (bTimestamp == null) return -1;
+              return bTimestamp.compareTo(aTimestamp); // Most recent first
+            });
+          
+          visitorDetails = sortedDocs.first.data();
+          isFromManualRegistrations = true;
+          print('Found manual_registrations data for visitor_id: $visitorId');
+        } else {
+          print('No manual_registrations found for visitor_id: $visitorId');
+        }
+      } catch (e) {
+        print('Error fetching from manual_registrations: $e');
+      }
+      
+      // If not found in manual_registrations, fetch from visitor collection
+      if (visitorDetails.isEmpty) {
+        final visitorDoc = await FirebaseFirestore.instance
+            .collection('visitor')
+            .doc(visitorId)
+            .get();
+        
+        if (visitorDoc.exists) {
+          visitorDetails = visitorDoc.data() ?? {};
+        }
+        isFromManualRegistrations = false;
+        print('Using visitor collection data for visitor_id: $visitorId');
+      }
+      
+      // Add flag to indicate data source
+      visitorDetails['is_from_manual_registrations'] = isFromManualRegistrations;
+      
+      return visitorDetails;
+    } catch (e) {
+      print('Error fetching visitor details: $e');
+      return {};
+    }
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    if (timestamp is Timestamp) {
+      final dt = timestamp.toDate();
+      return DateFormat('h:mm a').format(dt);
+    }
+    if (timestamp is DateTime) {
+      return DateFormat('h:mm a').format(timestamp);
+    }
+    if (timestamp is String) {
+      try {
+        final dt = DateTime.parse(timestamp);
+        return DateFormat('h:mm a').format(dt);
+      } catch (e) {
+        return timestamp;
       }
     }
+    return timestamp.toString();
+  }
+
+  // Add this function to show details dialog
+  void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> doc) async {
+    // Fetch visitor details using the same logic as the list
+    Map<String, dynamic> visitorData = {};
+    if (doc['visitor_id'] != null) {
+      visitorData = await _getVisitorDetails(doc['visitor_id']);
+    }
+    final bool isFromManualRegistrations = visitorData['is_from_manual_registrations'] ?? false;
     showDialog(
       context: context,
       builder: (context) {
@@ -109,19 +184,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _detailRow('Full Name', visitorData['v_name'] ?? ''),
-                              _detailRow('Email', visitorData['v_email'] ?? ''),
-                              _detailRow('Mobile Number', visitorData['v_contactno'] ?? ''),
-                              _detailRow('Company Name', visitorData['v_company_name'] ?? ''),
-                              _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
-                              _detailRow('Do you have appointment?', doc['appointment'] ?? ''),
-                              _detailRow('Host Name', doc['host_name'] ?? ''),
-                              _detailRow('Check-in Time', doc['v_time'] ?? ''),
-                              _detailRow('Check-out Time', doc['checkout_time'] ?? ''),
-                              _detailRow('Carrying Laptop?', doc['carrying_laptop'] ?? ''),
-                              if ((doc['carrying_laptop'] ?? '').toString().toLowerCase() == 'yes' && (doc['laptop_name'] ?? '').toString().isNotEmpty)
-                                _detailRow('Laptop Name', doc['laptop_name'] ?? ''),
-                              _detailRow('Accomplished No of visitors', doc['accomplished_visitors']?.toString() ?? ''),
+                              // Show different details based on data source
+                              if (isFromManualRegistrations) ...[
+                                // Full details for manual_registrations data
+                                _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
+                                _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
+                                _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
+                                _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
+                                _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
+                                _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
+                                _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
+                                _detailRow('Department Name', visitorData['department'] ?? visitorData['dept_name'] ?? ''),
+                                _detailRow('Do you have appointment?', visitorData['appointment'] ?? ''),
+                                _detailRow('Accompanied by others?', visitorData['accompanying'] ?? ''),
+                                if ((visitorData['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                  _detailRow('Number of accompanying', visitorData['accompanyingCount'] ?? ''),
+                                _detailRow('Do you have laptop?', visitorData['laptop'] ?? ''),
+                                if ((visitorData['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorData['laptopDetails'] ?? '').toString().isNotEmpty)
+                                  _detailRow('Laptop number', visitorData['laptopDetails']),
+                              ] else ...[
+                                // Basic details for visitor collection data
+                                _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
+                                _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
+                                _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
+                                _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
+                                _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
+                                _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
+                                _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
+                                _detailRow('Department Name', visitorData['department'] ?? visitorData['dept_name'] ?? ''),
+                              ],
+                              // Check-in/out details (always shown)
+                              _detailRow('Check-in Time', doc['check_in_time'] != null ? _formatTimestamp(doc['check_in_time']) : 'N/A'),
+                              _detailRow('Check-out Time', doc['check_out_time'] != null ? _formatTimestamp(doc['check_out_time']) : 'N/A'),
                             ],
                           ),
                         ),
@@ -150,11 +244,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
         children: [
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-          Expanded(
+          Flexible(
             child: Text(value, style: const TextStyle(color: Colors.black87)),
           ),
         ],
@@ -194,11 +288,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     final v = visitors[idx];
                     final visitorId = v['visitor_id'] ?? '';
                     
-                    return FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('visitor')
-                          .doc(visitorId)
-                          .get(),
+                    return FutureBuilder<Map<String, dynamic>>(
+                      future: _getVisitorDetails(visitorId),
                       builder: (context, visitorSnapshot) {
                         if (!visitorSnapshot.hasData) {
                           return Container(
@@ -214,25 +305,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           );
                         }
                         
-                        final visitorData = visitorSnapshot.data!.data() as Map<String, dynamic>? ?? {};
-                        final name = visitorData['v_name'] ?? '';
-                        final hostNameValue = visitorData['host_name'] ?? hostName ?? '';
-                        final vDate = visitorData['v_date'];
+                                                 final visitorData = visitorSnapshot.data ?? {};
+                         final name = visitorData['fullName'] ?? visitorData['v_name'] ?? '';
+                         final hostNameValue = visitorData['host'] ?? visitorData['host_name'] ?? hostName ?? '';
+                         
+                         // Get date from checked_in_out collection
+                         String dateStr = 'N/A';
+                         final checkInDate = v['check_in_date'];
+                         if (checkInDate != null) {
+                           if (checkInDate is Timestamp) {
+                             final dt = checkInDate.toDate();
+                             dateStr = DateFormat('dd/MM/yyyy').format(dt);
+                           } else if (checkInDate is DateTime) {
+                             dateStr = DateFormat('dd/MM/yyyy').format(checkInDate);
+                           } else if (checkInDate is String) {
+                             dateStr = checkInDate;
+                           } else {
+                             dateStr = checkInDate.toString();
+                           }
+                         }
                         
-                        String dateStr = 'N/A';
-                        if (vDate != null) {
-                          if (vDate is Timestamp) {
-                            final dt = vDate.toDate();
-                            dateStr = DateFormat('dd/MM/yyyy').format(dt);
-                          } else if (vDate is DateTime) {
-                            dateStr = DateFormat('dd/MM/yyyy').format(vDate);
-                          } else {
-                            dateStr = vDate.toString();
-                          }
-                        }
-                        
-                        final checkin = v['check_in_time'] ?? 'N/A';
-                        final checkout = v['check_out_time'] ?? 'N/A';
+                        // Get check-in and check-out times from the checked_in_out collection
+                        final checkin = v['check_in_time'] != null ? _formatTimestamp(v['check_in_time']) : 'N/A';
+                        final checkout = v['check_out_time'] != null ? _formatTimestamp(v['check_out_time']) : 'N/A';
                         
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
