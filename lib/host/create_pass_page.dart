@@ -162,10 +162,11 @@ class _CreatePassPageState extends State<CreatePassPage> {
                     }
                   }
                   final now = DateTime.now();
-                  // Show all visitors assigned to this host from last 30 days and future dates
-                  // This allows hosts to generate passes for visitors who don't have them yet
-                  final thirtyDaysAgo = DateTime(now.year, now.month, now.day - 30);
-                  return !visitDate.isBefore(thirtyDaysAgo);
+                  final today = DateTime(now.year, now.month, now.day);
+                  
+                  // Show visitors from today and future dates only
+                  // This means visitors disappear from the interface on the next day after their visit
+                  return !visitDate.isBefore(today);
                 }).toList();
                 
                 print('Visitors after date filter: ${visitors.length}');
