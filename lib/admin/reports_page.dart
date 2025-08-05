@@ -16,81 +16,6 @@ class _ReportsPageState extends State<ReportsPage> {
   final List<String> _ranges = ['Weekly', 'Monthly', 'Yearly'];
   int? _selectedStatIndex = 0; // Default to show Visitors Over Time graph
 
-  final List<Map<String, dynamic>> _dummyVisitors = [
-    {
-      'name': 'Amit Sharma',
-      'department': 'IT',
-      'host_name': 'Priya Singh',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 2))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 1))),
-      'purpose': 'Meeting',
-      'phone': '+919876543210',
-    },
-    {
-      'name': 'Sneha Patel',
-      'department': 'HR',
-      'host_name': 'Rahul Verma',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 4))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 2))),
-      'purpose': 'Interview',
-      'phone': '+919876543211',
-    },
-    {
-      'name': 'Rohit Kumar',
-      'department': 'Marketing',
-      'host_name': 'Anjali Mehta',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 6))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 4))),
-      'purpose': 'Presentation',
-      'phone': '+919876543212',
-    },
-    {
-      'name': 'Lakshmi Nair',
-      'department': 'Finance',
-      'host_name': 'Vikram Joshi',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 8))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 6))),
-      'purpose': 'Budget Review',
-      'phone': '+919876543213',
-    },
-    {
-      'name': 'Arjun Reddy',
-      'department': 'IT',
-      'host_name': 'Priya Singh',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 10))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 8))),
-      'purpose': 'System Demo',
-      'phone': '+919876543214',
-    },
-    {
-      'name': 'Meera Desai',
-      'department': 'Operations',
-      'host_name': 'Suresh Menon',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 12))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 10))),
-      'purpose': 'Process Review',
-      'phone': '+919876543215',
-    },
-    {
-      'name': 'Vikas Gupta',
-      'department': 'Marketing',
-      'host_name': 'Anjali Mehta',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 14))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 12))),
-      'purpose': 'Campaign Planning',
-      'phone': '+919876543216',
-    },
-    {
-      'name': 'Pooja Iyer',
-      'department': 'HR',
-      'host_name': 'Rahul Verma',
-      'time_in': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 16))),
-      'time_out': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 14))),
-      'purpose': 'Training Session',
-      'phone': '+919876543217',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 700;
@@ -175,37 +100,21 @@ class _ReportsPageState extends State<ReportsPage> {
                       const SizedBox(height: 16),
                       SizedBox(
                         height: 300,
-                        child: _selectedStatIndex == 2
-                          ? _AverageDurationPieChart(dummyData: _dummyVisitors)
-                          : _TrendsChart(range: _range, startWithMonday: true),
+                        child: _TrendsChart(range: _range, startWithMonday: true),
                       ),
                     ],
                   ),
                 ),
               ],
+
+
               const SizedBox(height: 24),
-              _ReportCard(
-                title: 'Department-wise Visits',
-                subtitle: 'Total visitors per department',
-                child: _DepartmentVisitorBarChart(dummyData: _dummyVisitors),
-              ),
-              const SizedBox(height: 24),
-              _ReportCard(
-                title: 'Host-wise Visitor Stats',
-                subtitle: 'Total number of visitors per host',
-                child: _HostVisitorBarChart(dummyData: _dummyVisitors),
-              ),
-              const SizedBox(height: 24),
-              _ReportCard(
-                title: 'Average Visit Duration',
-                subtitle: 'Average time spent by department',
-                child: _AverageDurationPieChart(dummyData: _dummyVisitors),
-              ),
+
               const SizedBox(height: 24),
               _ReportCard(
                 title: 'Recent Visitors',
-                subtitle: 'Latest visitor entries',
-                child: _RecentVisitorsList(dummyData: _dummyVisitors),
+                subtitle: '',
+                child: _RecentVisitorsList(),
               ),
             ],
           ),
@@ -215,86 +124,167 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildStatisticsCards(bool isWide) {
-    final totalVisitors = _dummyVisitors.length;
-    final today = DateTime.now();
-    final todayVisitorsList = _dummyVisitors.where((v) {
-      final visitDate = (v['time_in'] as Timestamp).toDate();
-      return visitDate.year == today.year && visitDate.month == today.month && visitDate.day == today.day;
-    }).toList();
-    final todayVisitors = todayVisitorsList.length;
-    final avgTodayDuration = todayVisitorsList.isNotEmpty
-        ? todayVisitorsList.fold(0.0, (sum, v) {
-              final timeIn = (v['time_in'] as Timestamp).toDate();
-              final timeOut = (v['time_out'] as Timestamp).toDate();
-              return sum + timeOut.difference(timeIn).inMinutes;
-            }) /
-            todayVisitorsList.length
-        : 0.0;
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
+        }
 
-    final cards = [
-      GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedStatIndex = 0;
-          });
-        },
-        child: _StatCard(
-          title: 'Total Visitors',
-          value: totalVisitors.toString(),
-          icon: Icons.people,
-          color: Colors.white,
-        ),
-      ),
-      GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedStatIndex = 1;
-          });
-        },
-        child: _StatCard(
-          title: "Today's Visitors",
-          value: todayVisitors.toString(),
-          icon: Icons.today,
-          color: Colors.white,
-        ),
-      ),
-      GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedStatIndex = 2;
-          });
-        },
-        child: _StatCard(
-          title: 'Average Visit Duration',
-          value: '${avgTodayDuration.round()} min',
-          icon: Icons.access_time,
-          color: Colors.white,
-        ),
-      ),
-    ];
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading data: ${snapshot.error}',
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        }
 
-    if (isWide) {
-      return Row(
-        children: [
-          for (int i = 0; i < cards.length; i++) ...[
-            if (i > 0) const SizedBox(width: 24),
-            Expanded(child: cards[i]),
-          ],
-        ],
-      );
-    } else {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (int i = 0; i < cards.length; i++) ...[
-              if (i > 0) const SizedBox(width: 24),
-              SizedBox(width: 220, child: cards[i]),
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              'No visitor data available',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          );
+        }
+
+        final visitors = snapshot.data!.docs;
+        print('Total visitors found: ${visitors.length}');
+        
+        // Debug: Print first visitor data structure
+        if (visitors.isNotEmpty) {
+          final firstVisitor = visitors.first.data() as Map<String, dynamic>;
+          print('First visitor data: $firstVisitor');
+        }
+        
+        final totalVisitors = visitors.length;
+        // Calculate today's visitors
+        int todayVisitors = 0;
+        final today = DateTime.now();
+        print('Today\'s date: ${today.day}/${today.month}/${today.year}');
+        
+        for (var doc in visitors) {
+          final data = doc.data() as Map<String, dynamic>;
+          final visitDate = data['v_date'];
+          
+          if (visitDate != null) {
+            print('Processing visit date: $visitDate (type: ${visitDate.runtimeType})');
+            try {
+              DateTime parsedDate;
+              
+              if (visitDate is Timestamp) {
+                parsedDate = visitDate.toDate();
+                print('Parsed Timestamp: ${parsedDate.day}/${parsedDate.month}/${parsedDate.year}');
+              } else {
+                final dateStr = visitDate.toString();
+                print('Processing date string: $dateStr');
+                
+                if (dateStr.contains('at')) {
+                  final datePart = dateStr.split('at')[0].trim();
+                  print('Date part after "at": $datePart');
+                  parsedDate = DateFormat('d MMMM yyyy').parse(datePart);
+                } else if (dateStr.contains('Timestamp')) {
+                  // Handle string representation of timestamp
+                  final timestampMatch = RegExp(r'Timestamp\(seconds=(\d+), nanoseconds=(\d+)\)').firstMatch(dateStr);
+                  if (timestampMatch != null) {
+                    final seconds = int.parse(timestampMatch.group(1)!);
+                    parsedDate = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+                    print('Parsed timestamp string: ${parsedDate.day}/${parsedDate.month}/${parsedDate.year}');
+                  } else {
+                    print('Could not parse timestamp string: $dateStr');
+                    continue;
+                  }
+                } else {
+                  // Try different date formats
+                  try {
+                    parsedDate = DateFormat('d MMMM yyyy').parse(dateStr);
+                  } catch (e) {
+                    try {
+                      parsedDate = DateFormat('yyyy-MM-dd').parse(dateStr);
+                    } catch (e2) {
+                      try {
+                        parsedDate = DateFormat('dd/MM/yyyy').parse(dateStr);
+                      } catch (e3) {
+                        print('Could not parse date string: $dateStr');
+                        continue;
+                      }
+                    }
+                  }
+                }
+                print('Parsed date: ${parsedDate.day}/${parsedDate.month}/${parsedDate.year}');
+              }
+              
+              // Check if it's today
+              if (parsedDate.year == today.year && 
+                  parsedDate.month == today.month && 
+                  parsedDate.day == today.day) {
+                todayVisitors++;
+                print('Found today\'s visitor! Total today: $todayVisitors');
+              }
+            } catch (e) {
+              print('Error parsing date: $e for date: $visitDate');
+            }
+          } else {
+            print('Visit date is null for document: ${doc.id}');
+          }
+        }
+        
+        print('Final today\'s visitors count: $todayVisitors');
+
+        final cards = [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedStatIndex = 0;
+              });
+            },
+            child: _StatCard(
+              title: 'Total Visitors',
+              value: totalVisitors.toString(),
+              icon: Icons.people,
+              color: Colors.white,
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedStatIndex = 1;
+              });
+            },
+            child: _StatCard(
+              title: "Today's Visitors",
+              value: todayVisitors.toString(),
+              icon: Icons.today,
+              color: Colors.white,
+            ),
+          ),
+        ];
+
+        if (isWide) {
+          return Row(
+            children: [
+              for (int i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(width: 24),
+                Expanded(child: cards[i]),
+              ],
             ],
-          ],
-        ),
-      );
-    }
+          );
+        } else {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (int i = 0; i < cards.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 24),
+                  SizedBox(width: 220, child: cards[i]),
+                ],
+              ],
+            ),
+          );
+        }
+      },
+    );
   }
 
   Widget _buildRangeDropdown() {
@@ -441,140 +431,339 @@ class _TrendsChart extends StatelessWidget {
   final String range;
   final bool startWithMonday;
 
-  const _TrendsChart({required this.range, this.startWithMonday = false});
+  const _TrendsChart({required this.range, required this.startWithMonday});
 
   @override
   Widget build(BuildContext context) {
-    List<FlSpot> spots = [];
-    int interval = 1;
-    String bottomTitleLogic(double value) {
-      DateTime date;
-      if (range == 'Weekly') {
-        int weekdayIndex = value.toInt();
-        if (startWithMonday) {
-          const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-          return weekDays[weekdayIndex % 7];
-        } else {
-          date = DateTime.now().subtract(Duration(days: 6 - value.toInt()));
-          return DateFormat('EEE').format(date);
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
         }
-      } else if (range == 'Monthly') {
-        return 'W${value.toInt() + 1}';
-      } else {
-        date = DateTime(DateTime.now().year, value.toInt() + 1, 1);
-        return DateFormat('MMM').format(date);
-      }
-    }
 
-    if (range == 'Weekly') {
-      if (startWithMonday) {
-        spots = [
-          const FlSpot(0, 6),
-          const FlSpot(1, 3),
-          const FlSpot(2, 5),
-          const FlSpot(3, 4),
-          const FlSpot(4, 6),
-          const FlSpot(5, 5),
-          const FlSpot(6, 7),
-        ];
-      } else {
-        spots = [
-          const FlSpot(0, 3), const FlSpot(1, 5), const FlSpot(2, 4), const FlSpot(3, 6),
-          const FlSpot(4, 5), const FlSpot(5, 7), const FlSpot(6, 6),
-        ];
-      }
-      interval = 1;
-    } else if (range == 'Monthly') {
-      spots = [
-        const FlSpot(0, 15), const FlSpot(1, 25), const FlSpot(2, 20), const FlSpot(3, 30),
-      ];
-      interval = 1;
-    } else if (range == 'Yearly') {
-      spots = [
-        const FlSpot(0, 150), const FlSpot(1, 200), const FlSpot(2, 180),
-        const FlSpot(3, 250), const FlSpot(4, 230), const FlSpot(5, 280),
-        const FlSpot(6, 260), const FlSpot(7, 300), const FlSpot(8, 290),
-        const FlSpot(9, 320), const FlSpot(10, 310), const FlSpot(11, 340),
-      ];
-      interval = 1;
-    }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error loading data: ${snapshot.error}'),
+          );
+        }
 
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: interval.toDouble(),
-              getTitlesWidget: (value, meta) {
-                return Text(bottomTitleLogic(value));
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No data available'));
+        }
+
+        final visitors = snapshot.data!.docs;
+        List<FlSpot> spots = [];
+        int interval = 1;
+
+        String bottomTitleLogic(double value) {
+          DateTime date;
+          if (range == 'Weekly') {
+            int weekdayIndex = value.toInt();
+            if (startWithMonday) {
+              const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+              return weekDays[weekdayIndex % 7];
+            } else {
+              date = DateTime.now().subtract(Duration(days: 6 - value.toInt()));
+              return DateFormat('EEE').format(date);
+            }
+          } else if (range == 'Monthly') {
+            return 'W${value.toInt() + 1}';
+          } else {
+            date = DateTime(DateTime.now().year, value.toInt() + 1, 1);
+            return DateFormat('MMM').format(date);
+          }
+        }
+
+        // Calculate real data based on range
+        if (range == 'Weekly') {
+          final now = DateTime.now();
+          final weekStart = startWithMonday 
+              ? now.subtract(Duration(days: now.weekday - 1))
+              : now.subtract(Duration(days: now.weekday));
+          
+          spots = List.generate(7, (index) {
+            final day = weekStart.add(Duration(days: index));
+            int dayVisitors = 0;
+            
+            for (var doc in visitors) {
+              final data = doc.data() as Map<String, dynamic>;
+              final visitDate = data['v_date'];
+              
+              if (visitDate != null) {
+                try {
+                  DateTime parsedDate;
+                  
+                  if (visitDate is Timestamp) {
+                    parsedDate = visitDate.toDate();
+                  } else {
+                    final dateStr = visitDate.toString();
+                    if (dateStr.contains('at')) {
+                      final datePart = dateStr.split('at')[0].trim();
+                      parsedDate = DateFormat('d MMMM yyyy').parse(datePart);
+                    } else {
+                      parsedDate = DateFormat('d MMMM yyyy').parse(dateStr);
+                    }
+                  }
+                  
+                  if (parsedDate.year == day.year && 
+                      parsedDate.month == day.month && 
+                      parsedDate.day == day.day) {
+                    dayVisitors++;
+                  }
+                } catch (e) {
+                  // Skip invalid dates
+                }
+              }
+            }
+            
+            return FlSpot(index.toDouble(), dayVisitors.toDouble());
+          });
+          interval = 1;
+        } else if (range == 'Monthly') {
+          final now = DateTime.now();
+          final monthStart = DateTime(now.year, now.month, 1);
+          final weeksInMonth = ((monthStart.add(Duration(days: 32)).day - 1) / 7).ceil();
+          
+          spots = List.generate(weeksInMonth, (index) {
+            final weekStart = monthStart.add(Duration(days: index * 7));
+            final weekEnd = weekStart.add(const Duration(days: 6));
+            int weekVisitors = 0;
+            
+            for (var doc in visitors) {
+              final data = doc.data() as Map<String, dynamic>;
+              final visitDate = data['v_date'];
+              
+              if (visitDate != null) {
+                try {
+                  DateTime parsedDate;
+                  
+                  if (visitDate is Timestamp) {
+                    parsedDate = visitDate.toDate();
+                  } else {
+                    final dateStr = visitDate.toString();
+                    if (dateStr.contains('at')) {
+                      final datePart = dateStr.split('at')[0].trim();
+                      parsedDate = DateFormat('d MMMM yyyy').parse(datePart);
+                    } else {
+                      parsedDate = DateFormat('d MMMM yyyy').parse(dateStr);
+                    }
+                  }
+                  
+                  if (parsedDate.isAfter(weekStart.subtract(const Duration(days: 1))) && 
+                      parsedDate.isBefore(weekEnd.add(const Duration(days: 1)))) {
+                    weekVisitors++;
+                  }
+                } catch (e) {
+                  // Skip invalid dates
+                }
+              }
+            }
+            
+            return FlSpot(index.toDouble(), weekVisitors.toDouble());
+          });
+          interval = 1;
+        } else if (range == 'Yearly') {
+          spots = List.generate(12, (index) {
+            final month = index + 1;
+            int monthVisitors = 0;
+            
+            for (var doc in visitors) {
+              final data = doc.data() as Map<String, dynamic>;
+              final visitDate = data['v_date'];
+              
+              if (visitDate != null) {
+                try {
+                  DateTime parsedDate;
+                  
+                  if (visitDate is Timestamp) {
+                    parsedDate = visitDate.toDate();
+                  } else {
+                    final dateStr = visitDate.toString();
+                    if (dateStr.contains('at')) {
+                      final datePart = dateStr.split('at')[0].trim();
+                      parsedDate = DateFormat('d MMMM yyyy').parse(datePart);
+                    } else {
+                      parsedDate = DateFormat('d MMMM yyyy').parse(dateStr);
+                    }
+                  }
+                  
+                  if (parsedDate.year == DateTime.now().year && parsedDate.month == month) {
+                    monthVisitors++;
+                  }
+                } catch (e) {
+                  // Skip invalid dates
+                }
+              }
+            }
+            
+            return FlSpot(index.toDouble(), monthVisitors.toDouble());
+          });
+          interval = 1;
+        }
+
+        if (spots.isEmpty) {
+          return const Center(child: Text('No data available for selected range'));
+        }
+
+        return LineChart(
+          LineChartData(
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: true,
+              horizontalInterval: interval.toDouble(),
+              verticalInterval: 1.0,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: Colors.grey.shade300,
+                  strokeWidth: 1,
+                );
+              },
+              getDrawingVerticalLine: (value) {
+                return FlLine(
+                  color: Colors.grey.shade300,
+                  strokeWidth: 1,
+                );
               },
             ),
-          ),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.blue,
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
-            belowBarData: BarAreaData(
+            titlesData: FlTitlesData(
               show: true,
-              gradient: LinearGradient(
-                colors: [Colors.blue.withOpacity(0.3), Colors.blue.withOpacity(0.0)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 30,
+                  interval: 1,
+                  getTitlesWidget: (double value, TitleMeta meta) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      child: Text(
+                        bottomTitleLogic(value),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (double value, TitleMeta meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                  reservedSize: 42,
+                ),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: true,
+              border: Border.all(color: Colors.black, width: 1),
+            ),
+            minX: 0,
+            maxX: (spots.length - 1).toDouble(),
+            minY: 0,
+                         maxY: spots.isNotEmpty ? spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) + 1.0 : 10.0,
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.shade400,
+                    Colors.blue.shade600,
+                  ],
+                ),
+                barWidth: 3,
+                isStrokeCapRound: true,
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) {
+                    return FlDotCirclePainter(
+                      radius: 4,
+                      color: Colors.blue.shade600,
+                      strokeWidth: 2,
+                      strokeColor: Colors.white,
+                    );
+                  },
+                ),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.blue.shade400.withOpacity(0.3),
+                      Colors.blue.shade600.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ],
+            lineTouchData: LineTouchData(
+              enabled: true,
+              touchTooltipData: LineTouchTooltipData(
+                tooltipBgColor: Colors.blue.shade600,
+                getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                  return touchedBarSpots.map((barSpot) {
+                    return LineTooltipItem(
+                      '${bottomTitleLogic(barSpot.x)}: ${barSpot.y.toInt()} visitors',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }).toList();
+                },
               ),
             ),
           ),
-        ],
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            tooltipBgColor: Color(0xFF78909C),
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((LineBarSpot touchedSpot) {
-                return LineTooltipItem(
-                  touchedSpot.y.toInt().toString(),
-                  const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                );
-              }).toList();
-            },
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class _AverageDurationPieChart extends StatelessWidget {
-  final List<Map<String, dynamic>> dummyData;
-
-  const _AverageDurationPieChart({required this.dummyData});
+  const _AverageDurationPieChart();
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<int>> deptDurations = {};
-    for (var visitor in dummyData) {
-      final dept = visitor['department'] ?? 'Unknown';
-      final timeIn = (visitor['time_in'] as Timestamp).toDate();
-      final timeOut = (visitor['time_out'] as Timestamp).toDate();
-      final duration = timeOut.difference(timeIn).inMinutes;
-      if (!deptDurations.containsKey(dept)) {
-        deptDurations[dept] = [];
-      }
-      deptDurations[dept]!.add(duration);
-    }
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('visitor').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No data available'));
+        }
+
+        final visitors = snapshot.data!.docs;
+            final Map<String, List<int>> deptDurations = {};
+        for (var visitor in visitors) {
+          final data = visitor.data() as Map<String, dynamic>;
+          final dept = data['departmentId'] ?? 'Unknown';
+          // Since we don't have check-in/check-out times, we'll use a default duration
+          final duration = 60; // Default 60 minutes per visit
+          if (!deptDurations.containsKey(dept)) {
+            deptDurations[dept] = [];
+          }
+          deptDurations[dept]!.add(duration);
+        }
 
     final Map<String, double> avgDeptDurations = {};
     deptDurations.forEach((dept, durations) {
@@ -602,6 +791,8 @@ class _AverageDurationPieChart extends StatelessWidget {
         sectionsSpace: 4,
         centerSpaceRadius: 40,
       ),
+        );
+      },
     );
   }
 }
@@ -629,298 +820,154 @@ class _AxisLinesPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _DepartmentVisitorBarChart extends StatelessWidget {
-  final List<Map<String, dynamic>> dummyData;
-  const _DepartmentVisitorBarChart({required this.dummyData});
 
-  @override
-  Widget build(BuildContext context) {
-    final Map<String, int> deptCounts = {};
-    for (var visitor in dummyData) {
-      final dept = visitor['department'] ?? 'Unknown';
-      deptCounts[dept] = (deptCounts[dept] ?? 0) + 1;
-    }
 
-    if (deptCounts.isEmpty) {
-      return const Center(child: Text('No data available'));
-    }
 
-    final depts = deptCounts.keys.toList();
-    final counts = deptCounts.values.toList();
-
-    final List<Color> barColors = [
-      Colors.lightBlue.shade300,
-      Colors.blue.shade700,
-      Colors.purple.shade400,
-      Colors.teal.shade400,
-      Colors.orange.shade400,
-      Colors.pink.shade300,
-    ];
-
-    // Minimum width: 90px per bar, at least screen width
-    final minChartWidth = (depts.length * 90.0).clamp(MediaQuery.of(context).size.width, double.infinity);
-    final labelFontSize = MediaQuery.of(context).size.width < 400 ? 12.0 : 14.0;
-
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
-          child: Container(
-            color: Colors.white,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: minChartWidth,
-                child: BarChart(
-                  BarChartData(
-                    barTouchData: BarTouchData(
-                      enabled: true,
-                      touchTooltipData: BarTouchTooltipData(
-                        tooltipBgColor: Color(0xFF78909C),
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          return BarTooltipItem(
-                            '${depts[groupIndex]}\n${rod.toY.toInt()}',
-                            const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            final index = value.toInt();
-                            if (index >= 0 && index < depts.length) {
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 8,
-                                child: SizedBox(
-                                  width: 90,
-                                  child: Text(
-                                    depts[index],
-                                    style: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
-                                    overflow: TextOverflow.visible,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    softWrap: true,
-                                  ),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                          reservedSize: 56,
-                        ),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 32,
-                          interval: 1,
-                        ),
-                      ),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                    borderData: FlBorderData(
-                      show: true,
-                      border: const Border(
-                        left: BorderSide(color: Colors.black, width: 1),
-                        bottom: BorderSide(color: Colors.black, width: 1),
-                        right: BorderSide(color: Colors.transparent, width: 0),
-                        top: BorderSide(color: Colors.transparent, width: 0),
-                      ),
-                    ),
-                    barGroups: List.generate(
-                      depts.length,
-                      (i) => BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: counts[i].toDouble(),
-                            color: barColors[i % barColors.length],
-                            width: 40,
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide.none,
-                            backDrawRodData: BackgroundBarChartRodData(show: false),
-                          )
-                        ],
-                        barsSpace: 8,
-                      ),
-                    ),
-                    gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1, getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade300, strokeWidth: 1)),
-                    alignment: BarChartAlignment.spaceEvenly,
-                    groupsSpace: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HostVisitorBarChart extends StatelessWidget {
-  final List<Map<String, dynamic>> dummyData;
-  const _HostVisitorBarChart({required this.dummyData});
-
-  @override
-  Widget build(BuildContext context) {
-    final Map<String, int> hostCounts = {};
-    for (var visitor in dummyData) {
-      final host = visitor['host_name'] ?? 'Unknown';
-      hostCounts[host] = (hostCounts[host] ?? 0) + 1;
-    }
-
-    if (hostCounts.isEmpty) {
-      return const Center(child: Text('No data available'));
-    }
-
-    final hosts = hostCounts.keys.toList();
-    final counts = hostCounts.values.toList();
-
-    final List<Color> barColors = [
-      Colors.deepPurple.shade300,
-      Colors.indigo.shade400,
-      Colors.cyan.shade400,
-      Colors.amber.shade400,
-      Colors.red.shade300,
-    ];
-
-    // Minimum width: 90px per bar, at least screen width
-    final minChartWidth = (hosts.length * 90.0).clamp(MediaQuery.of(context).size.width, double.infinity);
-    final labelFontSize = MediaQuery.of(context).size.width < 400 ? 12.0 : 14.0;
-
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
-          child: Container(
-            color: Colors.white,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: minChartWidth,
-                child: BarChart(
-                  BarChartData(
-                    barTouchData: BarTouchData(
-                      enabled: true,
-                      touchTooltipData: BarTouchTooltipData(
-                        tooltipBgColor: Color(0xFF78909C),
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          return BarTooltipItem(
-                            '${hosts[groupIndex]}\n${rod.toY.toInt()}',
-                            const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            final index = value.toInt();
-                            if (index >= 0 && index < hosts.length) {
-                              final firstName = hosts[index].split(' ').first;
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 8,
-                                child: SizedBox(
-                                  width: 90,
-                                  child: Text(
-                                    firstName,
-                                    style: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
-                                    overflow: TextOverflow.visible,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    softWrap: true,
-                                  ),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                          reservedSize: 56,
-                        ),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 32,
-                          interval: 1,
-                        ),
-                      ),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                    borderData: FlBorderData(
-                      show: true,
-                      border: const Border(
-                        left: BorderSide(color: Colors.black, width: 1),
-                        bottom: BorderSide(color: Colors.black, width: 1),
-                        right: BorderSide(color: Colors.transparent, width: 0),
-                        top: BorderSide(color: Colors.transparent, width: 0),
-                      ),
-                    ),
-                    barGroups: List.generate(
-                      hosts.length,
-                      (i) => BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: counts[i].toDouble(),
-                            color: barColors[i % barColors.length],
-                            width: 40,
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide.none,
-                            backDrawRodData: BackgroundBarChartRodData(show: false),
-                          )
-                        ],
-                        barsSpace: 8,
-                      ),
-                    ),
-                    gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 1, getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.shade300, strokeWidth: 1)),
-                    alignment: BarChartAlignment.spaceEvenly,
-                    groupsSpace: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _RecentVisitorsList extends StatelessWidget {
-  final List<Map<String, dynamic>> dummyData;
-
-  const _RecentVisitorsList({required this.dummyData});
+  const _RecentVisitorsList();
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 260, // Adjust as needed
-      child: ListView.builder(
-        itemCount: dummyData.length,
-        itemBuilder: (context, index) {
-          final visitor = dummyData[index];
-          return _VisitorListItem(visitor: visitor);
-        },
-      ),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('passes').orderBy('v_date', descending: true).limit(10).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No data available'));
+        }
+
+        final visitors = snapshot.data!.docs;
+        return FutureBuilder<List<QuerySnapshot>>(
+          future: Future.wait([
+            FirebaseFirestore.instance.collection('department').get(),
+            FirebaseFirestore.instance.collection('host').get(),
+          ]),
+          builder: (context, collectionsSnapshot) {
+            if (collectionsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final Map<String, String> deptNames = {};
+            final Map<String, String> hostNames = {};
+
+                         if (collectionsSnapshot.hasData && collectionsSnapshot.data!.length >= 2) {
+               // Process department names
+              print('Processing departments...');
+               for (var doc in collectionsSnapshot.data![0].docs) {
+                 final data = doc.data() as Map<String, dynamic>;
+                print('Department doc ID: ${doc.id}, data: $data');
+                 final deptName = data['name'] ?? 
+                                 data['department_name'] ?? 
+                                 data['dept_name'] ?? 
+                                 data['title'] ?? 
+                                 data['departmentName'] ??
+                                data['deptName'] ??
+                                 'Unknown';
+                 deptNames[doc.id] = deptName;
+                print('Added department: ${doc.id} -> $deptName');
+               }
+              print('Total departments loaded: ${deptNames.length}');
+              
+               // Process host names
+              print('Processing hosts...');
+               for (var doc in collectionsSnapshot.data![1].docs) {
+                 final data = doc.data() as Map<String, dynamic>;
+                print('Host doc ID: ${doc.id}, data: $data');
+                 final hostName = data['name'] ?? 
+                                 data['host_name'] ?? 
+                                 data['employee_name'] ?? 
+                                 data['emp_name'] ?? 
+                                 data['title'] ?? 
+                                 data['hostName'] ??
+                                 data['employeeName'] ??
+                                 'Unknown';
+                 hostNames[doc.id] = hostName;
+                print('Added host: ${doc.id} -> $hostName');
+               }
+              print('Total hosts loaded: ${hostNames.length}');
+             }
+
+        return SizedBox(
+              height: 260,
+          child: ListView.builder(
+            itemCount: visitors.length,
+            itemBuilder: (context, index) {
+              final visitor = visitors[index];
+              final data = visitor.data() as Map<String, dynamic>;
+              final visitDate = data['v_date'];
+              final visitTime = data['v_time'];
+              
+              // Format the date and time properly
+              String formattedDateTime = 'N/A';
+              if (visitDate != null) {
+                try {
+                  DateTime parsedDate;
+                  
+                  if (visitDate is Timestamp) {
+                    parsedDate = visitDate.toDate();
+                  } else {
+                    final dateStr = visitDate.toString();
+                    if (dateStr.contains('at')) {
+                      final datePart = dateStr.split('at')[0].trim();
+                      parsedDate = DateFormat('d MMMM yyyy').parse(datePart);
+                    } else {
+                      parsedDate = DateFormat('d MMMM yyyy').parse(dateStr);
+                    }
+                  }
+                  
+                  // Format time if available
+                  String timeStr = 'N/A';
+                  if (visitTime != null) {
+                    if (visitTime is Timestamp) {
+                      timeStr = DateFormat('h:mm a').format(visitTime.toDate());
+                    } else {
+                      timeStr = visitTime.toString();
+                    }
+                  }
+                  
+                  final cleanDate = DateFormat('d MMM yyyy').format(parsedDate);
+                  formattedDateTime = '$cleanDate, $timeStr';
+                } catch (e) {
+                  formattedDateTime = 'N/A';
+                }
+              }
+
+                  // Get department and employee IDs from passes collection
+              final deptId = data['departmentId'];
+              final empId = data['emp_id'];
+                  
+                  // Debug logging
+                  print('=== Passes Collection Debug Info ===');
+                  print('Visitor name: ${data['v_name']}');
+                  print('Department: ${data['department']}');
+                  print('Host name: ${data['host_name']}');
+                  print('Purpose: ${data['purpose']}');
+                  print('Pass number: ${data['pass_no']}');
+                  print('All passes data keys: ${data.keys.toList()}');
+                  print('========================');
+              
+              return _VisitorListItem(
+                visitor: {
+                  'name': data['v_name'] ?? 'N/A',
+                      'department': data['department'] ?? 'N/A', // Use department name directly from passes
+                      'host_name': data['host_name'] ?? 'N/A', // Use host name directly from passes
+                  'time_in': visitDate,
+                  'time_out': null,
+                  'purpose': data['purpose'] ?? 'N/A',
+                  'phone': data['v_contactno'] ?? 'N/A',
+                  'formatted_time': formattedDateTime,
+                },
+              );
+            },
+          ),
+        );
+          },
+        );
+      },
     );
   }
 }
@@ -932,8 +979,7 @@ class _VisitorListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeIn = (visitor['time_in'] as Timestamp).toDate();
-    final formattedTime = DateFormat('d MMM, h:mm a').format(timeIn);
+    final formattedTime = visitor['formatted_time'] ?? 'N/A';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -948,13 +994,15 @@ class _VisitorListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('To meet: ${visitor['host_name']} (${visitor['department']})'),
+            Text('To meet: ${visitor['host_name']}'),
+            Text('Department: ${visitor['department']}'),
             Text('Purpose: ${visitor['purpose']}'),
+            const SizedBox(height: 4),
+            Text(
+              formattedTime,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
           ],
-        ),
-        trailing: Text(
-          formattedTime,
-          style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
       ),
     );
