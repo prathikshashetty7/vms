@@ -164,7 +164,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             CircleAvatar(
                               radius: 40,
                               backgroundColor: Colors.blue.shade100,
-                              child: const Icon(Icons.person, size: 44, color: Colors.blue),
+                              child: const Icon(Icons.person, color: Colors.black, size: 42, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
                             ),
                             const SizedBox(height: 10),
                             const Text(
@@ -214,6 +214,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 _detailRow('Department Name', visitorData['department'] ?? visitorData['dept_name'] ?? ''),
                               ],
                               // Check-in/out details (always shown)
+                              _detailRow('Check-in Date', doc['check_in_date'] != null ? _formatDate(doc['check_in_date']) : 'N/A'),
                               _detailRow('Check-in Time', doc['check_in_time'] != null ? _formatTimestamp(doc['check_in_time']) : 'N/A'),
                               _detailRow('Check-out Time', doc['check_out_time'] != null ? _formatTimestamp(doc['check_out_time']) : 'N/A'),
                             ],
@@ -336,7 +337,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: ListTile(
-                            leading: const Icon(Icons.person, color: Colors.black),
+                            leading: const Icon(Icons.person, color: Colors.black, size: 36, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
                             title: Text(name, style: SystemTheme.heading.copyWith(fontSize: 16, color: Colors.black)),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

@@ -220,7 +220,7 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Search ',
+                            hintText: 'Search by name, email, phone, or company',
                             prefixIcon: const Icon(Icons.search),
                             suffixIcon: _isSearching 
                               ? const Padding(
@@ -418,31 +418,52 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                     child: _search.trim().isNotEmpty && _searchResults.isNotEmpty
                         ? _buildSearchResults()
                         : StreamBuilder<QuerySnapshot>(
-                            stream: FirebaseFirestore.instance
-                                .collection('visitor')
-                                .where('emp_id', isEqualTo: hostDocId)
-                                .where('departmentId', isEqualTo: departmentId)
-                                .snapshots(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return const Center(child: CircularProgressIndicator());
-                              }
-                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                                return const Center(child: Text('No visitors found.'));
-                              }
-                              final allVisitors = snapshot.data!.docs.map((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                data['docId'] = doc.id;
-                                return data;
-                              }).toList();
+                      stream: FirebaseFirestore.instance
+                          .collection('visitor')
+                          .where('emp_id', isEqualTo: hostDocId)
+                          .where('departmentId', isEqualTo: departmentId)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text('No visitors found.'));
+                        }
+                        final allVisitors = snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          data['docId'] = doc.id;
+                          return data;
+                        }).toList();
                         
-                        if (allVisitors.isEmpty) {
+                        // Filter visitors to show only today and future dates
+                        // This means visitors disappear from the interface on the next day after their visit
+                        final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+                        final filteredVisitors = allVisitors.where((v) {
+                          final date = v['v_date'];
+                          if (date == null) return false;
+                          DateTime visitDate;
+                          if (date is Timestamp) {
+                            visitDate = date.toDate();
+                          } else if (date is DateTime) {
+                            visitDate = date;
+                          } else {
+                            try {
+                              visitDate = DateTime.parse(date.toString());
+                            } catch (_) {
+                              return false;
+                            }
+                          }
+                          return !visitDate.isBefore(today);
+                        }).toList();
+                        
+                        if (filteredVisitors.isEmpty) {
                           return const Center(child: Text('No visitors found.'));
                         }
                         
                         // Group by date (formatted as dd/MM/yyyy)
                         final Map<String, List<Map<String, dynamic>>> grouped = {};
-                        for (final v in allVisitors) {
+                        for (final v in filteredVisitors) {
                           String dateStr = '';
                           if (v['v_date'] != null) {
                             if (v['v_date'] is Timestamp) {
@@ -458,9 +479,6 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                           if (dateStr.isEmpty) dateStr = 'Unknown Date';
                           grouped.putIfAbsent(dateStr, () => []).add(v);
                         }
-                        
-                        // Remove dates that have no visitors after filtering
-                        grouped.removeWhere((date, visitors) => visitors.isEmpty);
                         final sortedDates = grouped.keys.toList()
                           ..sort((a, b) {
                             // Parse dates properly for chronological sorting
@@ -557,18 +575,29 @@ class _VisitorCardState extends State<_VisitorCard> {
         return;
       }
       
-      // Use a single query to get the most recent status
-      final checkInOutQuery = await FirebaseFirestore.instance
+      // Check for Checked Out status first
+      final checkedOutQuery = await FirebaseFirestore.instance
           .collection('checked_in_out')
           .where('visitor_id', isEqualTo: visitorId)
-          .orderBy('created_at', descending: true)
+          .where('status', isEqualTo: 'Checked Out')
           .limit(1)
           .get();
       
-      String status = 'Not Checked In';
-      if (checkInOutQuery.docs.isNotEmpty) {
-        final data = checkInOutQuery.docs.first.data();
-        status = data['status'] ?? 'Not Checked In';
+      // Check for Checked In status
+      final checkedInQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .where('visitor_id', isEqualTo: visitorId)
+          .where('status', isEqualTo: 'Checked In')
+          .limit(1)
+          .get();
+      
+      String status;
+      if (checkedOutQuery.docs.isNotEmpty) {
+        status = 'Checked Out';
+      } else if (checkedInQuery.docs.isNotEmpty) {
+        status = 'Checked In';
+      } else {
+        status = 'Not Checked In';
       }
       
       setState(() {
@@ -588,17 +617,16 @@ class _VisitorCardState extends State<_VisitorCard> {
         return;
       }
       
-      // Only fetch if we need the photo data
       final passesQuery = await FirebaseFirestore.instance
           .collection('passes')
           .where('visitorId', isEqualTo: docId)
-          .where('source', isEqualTo: 'host')
           .limit(1)
           .get();
       
       if (passesQuery.docs.isNotEmpty) {
         final passData = passesQuery.docs.first.data();
-        if (passData['photoBase64'] != null) {
+        // Check if pass was generated by host
+        if (passData['source'] == 'host' && passData['photoBase64'] != null) {
           setState(() {
             photoBase64 = passData['photoBase64'];
             isLoadingPass = false;
@@ -636,7 +664,7 @@ class _VisitorCardState extends State<_VisitorCard> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Always show default icon in list view
-                    const Icon(Icons.person, size: 28, color: Colors.black),
+                    const Icon(Icons.person, color: Colors.black, size: 28, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -820,27 +848,39 @@ void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visito
   showDialog(
     context: context,
     builder: (context) {
+      return FutureBuilder<Map<String, dynamic>>(
+        future: _getVisitorWithCheckInOutDetails(visitor),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          final checkInOutData = snapshot.data ?? {};
+          final visitorDetails = checkInOutData['visitor_details'] ?? visitor;
+          final String status = checkInOutData['status'] ?? 'Not Checked In';
+          final bool isFromManualRegistrations = checkInOutData['is_from_manual_registrations'] ?? false;
+          
       return FutureBuilder<String?>(
         future: _getVisitorImage(visitor['docId']),
-        builder: (context, snapshot) {
+            builder: (context, imageSnapshot) {
           Widget avatarWidget;
-          if (snapshot.connectionState == ConnectionState.waiting) {
+              if (imageSnapshot.connectionState == ConnectionState.waiting) {
             avatarWidget = CircleAvatar(
               radius: 40,
               backgroundColor: Colors.blue.shade100,
               child: const CircularProgressIndicator(color: Colors.blue),
             );
-          } else if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
+              } else if (imageSnapshot.hasData && imageSnapshot.data != null && imageSnapshot.data!.isNotEmpty) {
             avatarWidget = CircleAvatar(
               radius: 40,
               backgroundColor: const Color(0xFF6CA4FE).withOpacity(0.15),
-              backgroundImage: MemoryImage(base64Decode(snapshot.data!)),
+                  backgroundImage: MemoryImage(base64Decode(imageSnapshot.data!)),
             );
           } else {
             avatarWidget = CircleAvatar(
               radius: 40,
               backgroundColor: Colors.blue.shade100,
-              child: const Icon(Icons.person, size: 48, color: Colors.blue),
+                  child: const Icon(Icons.person, color: Colors.black, size: 42, shadows: [Shadow(color: Colors.blueAccent, blurRadius: 16)]),
             );
           }
           
@@ -882,35 +922,54 @@ void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visito
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _detailRow('Name', visitor['v_name'] ?? ''),
-                                _detailRow('Email', visitor['v_email'] ?? ''),
-                                _detailRow('Designation', visitor['v_designation'] ?? ''),
-                                _detailRow('Contact No', visitor['v_contactno'] ?? ''),
-                                _detailRow('Company', visitor['v_company_name'] ?? ''),
-                                _detailRow('Purpose', (visitor['purpose'] ?? 'N/A').toString().trim().isEmpty ? 'N/A' : visitor['purpose'].toString().trim()),
+                                    // Show different details based on status and data source
+                                    if (status.toLowerCase() == 'not checked in') ...[
+                                      // Basic details for not checked in visitors
+                                      _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                      _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                      _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                      _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                      _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                      _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                      _detailRow('Host Name', visitorDetails['host_name'] ?? visitorDetails['host'] ?? ''),
+                                      _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                      _detailRow('Visit Date', _formatVisitDate(visitorDetails['v_date'] ?? visitorDetails['visitDate'])),
+                                    ] else ...[
+                                      // Check if data is from manual_registrations or visitor collection
+                                      if (isFromManualRegistrations) ...[
+                                        // Full details for checked in visitors from manual_registrations
+                                        _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                        _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                        _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                        _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                        _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                        _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                        _detailRow('Host Name', visitorDetails['host_name'] ?? visitorDetails['host'] ?? ''),
+                                        _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                        _detailRow('Do you have appointment?', visitorDetails['appointment'] ?? ''),
+                                        _detailRow('Accompanied by others?', visitorDetails['accompanying'] ?? ''),
+                                        if ((visitorDetails['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                          _detailRow('Number of accompanying', visitorDetails['accompanyingCount'] ?? ''),
+                                        _detailRow('Do you have laptop?', visitorDetails['laptop'] ?? ''),
+                                        if ((visitorDetails['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorDetails['laptopDetails'] ?? '').toString().isNotEmpty)
+                                          _detailRow('Laptop number', visitorDetails['laptopDetails']),
+                                      ] else ...[
+                                        // Basic details for checked in visitors from visitor collection (fallback)
+                                        _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                        _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                        _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                        _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                        _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                        _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                        _detailRow('Host Name', visitorDetails['host_name'] ?? visitorDetails['host'] ?? ''),
+                                        _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                      ],
+                                    ],
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Divider(),
-                        Card(
-                          color: Colors.grey[50],
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _detailRow('Total Visitors', visitor['v_totalno']?.toString() ?? ''),
-                                _detailRow('Date', _formatDate(visitor['v_date'])),
-                                _detailRow('Time', visitor['v_time'] ?? ''),
-                                // No Pass Generated By
-                              ],
-                            ),
-                          ),
-                        ),
+
                         const SizedBox(height: 18),
                         Align(
                           alignment: Alignment.centerRight,
@@ -927,6 +986,8 @@ void _showVisitorDetailsDialog(BuildContext context, Map<String, dynamic> visito
                 ),
               ),
             ),
+              );
+            },
           );
         },
       );
