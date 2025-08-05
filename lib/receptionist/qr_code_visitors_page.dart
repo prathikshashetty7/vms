@@ -150,8 +150,8 @@ class _QRCodeVisitorsPageState extends State<QRCodeVisitorsPage> {
           // Filter for QR code registrations only
           final qrCodeDocs = docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            // Only show records with group: 'qr_code'
-            return data['group'] == 'qr_code';
+            // Only show records with source: 'qr_code'
+            return data['source'] == 'qr_code';
           }).toList();
           
           if (qrCodeDocs.isEmpty) {
