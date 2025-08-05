@@ -52,7 +52,7 @@ class _HostPassesPageState extends State<HostPassesPage> {
         child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('passes')
-                  .where('source', isEqualTo: 'host')
+                  .where('group', isEqualTo: 'host')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -499,20 +499,20 @@ class _HostPassDetailDialog extends StatelessWidget {
                     icon: const Icon(Icons.print),
                     label: const Text('Print'),
                     onPressed: () async {
-                    final now = Timestamp.now();
-                    try {
-                      print('Attempting to update printed_at for pass: ${pass['id']}');
-                      if (pass['id'] != null) {
-                        await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
-                          'printed_at': now,
-                        });
-                        print('printed_at updated!');
-                      }
-                    } catch (e) {
-                      print('Error updating printed_at: ${e.toString()}');
+                      final now = Timestamp.now();
+                      try {
+                        print('Attempting to update printed_at for pass: ${pass['id']}');
+                        if (pass['id'] != null) {
+                          await FirebaseFirestore.instance.collection('passes').doc(pass['id']).update({
+                            'printed_at': now,
+                          });
+                          print('printed_at updated!');
+                        }
+                      } catch (e) {
+                        print('Error updating printed_at: ${e.toString()}');
                       }
                       
-                    // Save to Checked In/Out collection for status page
+                      // Save to Checked In/Out collection for status page
                       try {
                         print('Debug: pass data - ${pass.toString()}');
                         print('Debug: pass_id = ${pass['id']}');
@@ -522,7 +522,6 @@ class _HostPassDetailDialog extends StatelessWidget {
                         print('Debug: All pass keys = ${pass.keys.toList()}');
                         
                         // Check if visitor already exists in checked_in_out collection
-                        // Use visitor_name as primary check since pass_id might be empty
                         final visitorName = pass['v_name'] ?? '';
                         final passId = pass['id'] ?? '';
                         
@@ -658,77 +657,77 @@ class _HostPassDetailDialog extends StatelessWidget {
                                             child: pw.Column(
                                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                                               children: [
-                                              pw.Text('Pass No      : ${pass['pass_no'] ?? pass['passNo'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                                              pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
-                                              if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
-                                                pw.RichText(
-                                                  text: pw.TextSpan(
-                                                    children: [
-                                                      pw.TextSpan(text: 'Company      : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                                      pw.TextSpan(text: '${pass['v_company_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                                    ],
+                                                pw.Text('Pass No      : ${pass['pass_no'] ?? pass['passNo'] ?? 0}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                                pw.Text('Visitor Name : ${pass['v_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                                                if (pass['v_company_name'] != null && pass['v_company_name'].toString().isNotEmpty)
+                                                  pw.RichText(
+                                                    text: pw.TextSpan(
+                                                      children: [
+                                                        pw.TextSpan(text: 'Company      : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                                        pw.TextSpan(text: '${pass['v_company_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
                                                 if (pass['v_designation'] != null && pass['v_designation'].toString().isNotEmpty)
-                                                pw.RichText(
-                                                  text: pw.TextSpan(
-                                                    children: [
-                                                      pw.TextSpan(text: 'Designation   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                                      pw.TextSpan(text: '${pass['v_designation']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                                    ],
+                                                  pw.RichText(
+                                                    text: pw.TextSpan(
+                                                      children: [
+                                                        pw.TextSpan(text: 'Designation   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                                        pw.TextSpan(text: '${pass['v_designation']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
                                               ],
                                             ),
                                           ),
                                         ],
                                       ),
                                       pw.SizedBox(height: 10),
-                                    if (pass['v_totalno'] != null && pass['v_totalno'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Accompanying Count    : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['v_totalno']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
+                                      if (pass['v_totalno'] != null && pass['v_totalno'].toString().isNotEmpty)
+                                        pw.RichText(
+                                          text: pw.TextSpan(
+                                            children: [
+                                              pw.TextSpan(text: 'Accompanying Count    : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                              pw.TextSpan(text: '${pass['v_totalno']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    if (pass['purpose'] != null && pass['purpose'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Purpose       : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['purpose']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
+                                      if (pass['purpose'] != null && pass['purpose'].toString().isNotEmpty)
+                                        pw.RichText(
+                                          text: pw.TextSpan(
+                                            children: [
+                                              pw.TextSpan(text: 'Purpose       : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                              pw.TextSpan(text: '${pass['purpose']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    if (pass['department'] != null && pass['department'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Department   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['department']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
+                                      if (pass['department'] != null && pass['department'].toString().isNotEmpty)
+                                        pw.RichText(
+                                          text: pw.TextSpan(
+                                            children: [
+                                              pw.TextSpan(text: 'Department   : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                              pw.TextSpan(text: '${pass['department']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    if (pass['host_name'] != null && pass['host_name'].toString().isNotEmpty)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Host          : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['host_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
+                                      if (pass['host_name'] != null && pass['host_name'].toString().isNotEmpty)
+                                        pw.RichText(
+                                          text: pw.TextSpan(
+                                            children: [
+                                              pw.TextSpan(text: 'Host          : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                              pw.TextSpan(text: '${pass['host_name']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    if (pass['created_at'] != null)
-                                      pw.RichText(
-                                        text: pw.TextSpan(
-                                          children: [
-                                            pw.TextSpan(text: 'Date     : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                                            pw.TextSpan(text: '${pass['created_at'] is Timestamp ? _formatDate((pass['created_at'] as Timestamp).toDate()) : pass['created_at']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
-                                          ],
+                                      if (pass['created_at'] != null)
+                                        pw.RichText(
+                                          text: pw.TextSpan(
+                                            children: [
+                                              pw.TextSpan(text: 'Date     : ', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                                              pw.TextSpan(text: '${pass['created_at'] is Timestamp ? _formatDate((pass['created_at'] as Timestamp).toDate()) : pass['created_at']}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.normal)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                 );

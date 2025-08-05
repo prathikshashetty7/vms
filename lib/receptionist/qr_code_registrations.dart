@@ -554,12 +554,48 @@ List<String> _currentHosts = ['Select Host'];
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
+                                            content: Text('Checking email...'),
+                                            backgroundColor: Colors.blue,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+
+                                      // First, check if email exists in visitor collection
+                                      final visitorQuery = await FirebaseFirestore.instance
+                                          .collection('visitor')
+                                          .where('v_email', isEqualTo: email)
+                                          .limit(1)
+                                          .get();
+
+                                      if (visitorQuery.docs.isEmpty) {
+                                        setState(() => _isSaving = false);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Email ID does not exist'),
+                                              backgroundColor: Colors.red,
+                                              duration: Duration(seconds: 4),
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+
+                                      // Email exists, proceed with registration
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
                                             content: Text('Processing registration...'),
                                             backgroundColor: Colors.blue,
                                             duration: Duration(seconds: 2),
                                           ),
                                         );
                                       }
+
+                                      // Get the visitor document ID from the existing visitor
+                                      final existingVisitorDoc = visitorQuery.docs.first;
+                                      final visitorId = existingVisitorDoc.id;
 
                                       // Generate unique pass number
                                       final passNo = await _generateUniquePassNo();
@@ -576,29 +612,7 @@ List<String> _currentHosts = ['Select Host'];
                                         }
                                       }
 
-                                      // Save to visitors collection
-                                      final visitorDocRef = await FirebaseFirestore.instance.collection('visitor').add({
-                                        'fullName': fullName,
-                                        'mobile': mobile,
-                                        'email': email,
-                                        'designation': designation,
-                                        'company': company,
-                                        'host': host,
-                                        'purpose': purpose,
-                                        'purposeOther': purposeOther ?? '',
-                                        'appointment': appointment,
-                                        'department': department == 'Select Dept' ? '' : department,
-                                        'accompanying': accompanying,
-                                        'accompanyingCount': accompanying == 'Yes' ? accompanyingCount : '',
-                                        'laptop': laptop,
-                                        'laptopDetails': laptop == 'Yes' ? laptopDetails : '',
-                                        'timestamp': FieldValue.serverTimestamp(),
-                                        'photo': photoData,
-                                        'pass_no': passNo,
-                                        'visitor_id': '', // Will be updated after pass creation
-                                      });
-
-                                      // Also save to manual_registrations collection (like manual entry page)
+                                      // Save to manual_registrations collection only
                                       await FirebaseFirestore.instance.collection('manual_registrations').add({
                                         'fullName': fullName,
                                         'mobile': mobile,
@@ -618,7 +632,7 @@ List<String> _currentHosts = ['Select Host'];
                                         'photo': photoData,
                                         'pass_no': passNo,
                                         'group': 'qr_code',
-                                        'visitor_id': visitorDocRef.id,
+                                        'visitor_id': visitorId, // Use existing visitor ID
                                       });
 
                                       // Add pass to passes collection
@@ -635,12 +649,7 @@ List<String> _currentHosts = ['Select Host'];
                                         'photo': photoData,
                                         'created_at': FieldValue.serverTimestamp(),
                                         'group': 'qr_code',
-                                        'visitor_id': visitorDocRef.id,
-                                      });
-
-                                      // Update visitor document with visitor_id
-                                      await visitorDocRef.update({
-                                        'visitor_id': visitorDocRef.id,
+                                        'visitor_id': visitorId, // Use existing visitor ID
                                       });
 
                                       setState(() => _isSaving = false);
