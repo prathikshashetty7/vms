@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/system_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
+import '../search.dart';
 
 class ViewVisitorsPage extends StatefulWidget {
   const ViewVisitorsPage({Key? key}) : super(key: key);
@@ -19,6 +20,8 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
   String? hostDocId;
   String? departmentId;
   bool loading = true;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
 
   final List<String> _statusOptions = [
     'All',
@@ -31,6 +34,153 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
   void initState() {
     super.initState();
     _fetchHostInfo();
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final results = await SearchUtils.searchVisitors(
+        query: query,
+        departmentId: departmentId,
+        hostId: hostDocId,
+        limit: 20, // Reduced limit for faster loading
+      );
+
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print('Error performing search: $e');
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+    }
+  }
+
+  Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return const Center(
+        child: Text(
+          'No search results found.',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final result = _searchResults[index];
+        final visitorData = result['data'] as Map<String, dynamic>;
+        
+        // Add docId for compatibility with existing visitor card
+        visitorData['docId'] = result['id'];
+        
+        return _VisitorCard(
+          visitor: visitorData,
+          statusFilter: _statusFilter,
+        );
+      },
+    );
+  }
+
+  Future<List<Widget>> _buildVisitorListWithStatusCheck(
+    List<String> sortedDates,
+    Map<String, List<Map<String, dynamic>>> grouped,
+  ) async {
+    List<Widget> widgets = [];
+    
+    // Collect all visitor IDs for batch status checking
+    List<String> allVisitorIds = [];
+    for (final date in sortedDates) {
+      final visitors = grouped[date]!;
+      for (final visitor in visitors) {
+        final visitorId = visitor['docId'];
+        if (visitorId != null) {
+          allVisitorIds.add(visitorId);
+        }
+      }
+    }
+    
+    // Batch fetch all check-in/out statuses in one query
+    Map<String, String> visitorStatusMap = {};
+    if (allVisitorIds.isNotEmpty) {
+      try {
+        final checkInOutQuery = await FirebaseFirestore.instance
+            .collection('checked_in_out')
+            .where('visitor_id', whereIn: allVisitorIds)
+            .get();
+        
+        // Process results to determine status for each visitor
+        for (final doc in checkInOutQuery.docs) {
+          final data = doc.data();
+          final visitorId = data['visitor_id'] as String?;
+          final status = data['status'] as String?;
+          
+          if (visitorId != null && status != null) {
+            // If visitor has multiple records, prioritize Checked Out > Checked In > Not Checked In
+            if (status == 'Checked Out') {
+              visitorStatusMap[visitorId] = 'Checked Out';
+            } else if (status == 'Checked In' && visitorStatusMap[visitorId] != 'Checked Out') {
+              visitorStatusMap[visitorId] = 'Checked In';
+            }
+          }
+        }
+      } catch (e) {
+        print('Error fetching check-in/out statuses: $e');
+      }
+    }
+    
+    // Build widgets with pre-fetched status data
+    for (final date in sortedDates) {
+      final visitors = grouped[date]!;
+      List<Widget> visibleVisitors = [];
+      
+      for (final visitor in visitors) {
+        final visitorId = visitor['docId'];
+        if (visitorId == null) continue;
+        
+        // Get status from pre-fetched map, default to 'Not Checked In'
+        final visitorStatus = visitorStatusMap[visitorId] ?? 'Not Checked In';
+        
+        // Check if visitor should be visible based on status filter
+        bool shouldShow = _statusFilter == 'All' || 
+                         visitorStatus.toLowerCase() == _statusFilter.toLowerCase();
+        
+        if (shouldShow) {
+          visibleVisitors.add(_VisitorCard(
+            visitor: visitor,
+            statusFilter: _statusFilter,
+          ));
+        }
+      }
+      
+      // Only add date header and visitors if there are visible visitors
+      if (visibleVisitors.isNotEmpty) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
+            child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+          ),
+        );
+        widgets.addAll(visibleVisitors);
+      }
+    }
+    
+    return widgets;
   }
 
   Future<void> _fetchHostInfo() async {
@@ -70,8 +220,18 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Search by name or email',
+                            hintText: 'Search ',
                             prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _isSearching 
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
                             filled: true,
                             fillColor: Colors.white,
                             contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
@@ -80,7 +240,15 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          onChanged: (val) => setState(() => _search = val),
+                          onChanged: (val) {
+                            setState(() => _search = val);
+                            // Debounce search to avoid too many API calls
+                            Future.delayed(const Duration(milliseconds: 300), () {
+                              if (_search == val) {
+                                _performSearch(val);
+                              }
+                            });
+                          },
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -247,24 +415,26 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                   const SizedBox(height: 16),
                   // Visitor Cards List
                   Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('visitor')
-                          .where('emp_id', isEqualTo: hostDocId)
-                          .where('departmentId', isEqualTo: departmentId)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(child: Text('No visitors found.'));
-                        }
-                        final allVisitors = snapshot.data!.docs.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          data['docId'] = doc.id;
-                          return data;
-                        }).toList();
+                    child: _search.trim().isNotEmpty && _searchResults.isNotEmpty
+                        ? _buildSearchResults()
+                        : StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('visitor')
+                                .where('emp_id', isEqualTo: hostDocId)
+                                .where('departmentId', isEqualTo: departmentId)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                return const Center(child: Text('No visitors found.'));
+                              }
+                              final allVisitors = snapshot.data!.docs.map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                data['docId'] = doc.id;
+                                return data;
+                              }).toList();
                         
                         if (allVisitors.isEmpty) {
                           return const Center(child: Text('No visitors found.'));
@@ -288,6 +458,9 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                           if (dateStr.isEmpty) dateStr = 'Unknown Date';
                           grouped.putIfAbsent(dateStr, () => []).add(v);
                         }
+                        
+                        // Remove dates that have no visitors after filtering
+                        grouped.removeWhere((date, visitors) => visitors.isEmpty);
                         final sortedDates = grouped.keys.toList()
                           ..sort((a, b) {
                             // Parse dates properly for chronological sorting
@@ -329,19 +502,20 @@ class _ViewVisitorsPageState extends State<ViewVisitorsPage> {
                           });
                         }
                         
-                        return ListView(
-                          children: [
-                            for (final date in sortedDates) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
-                                child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-                              ),
-                              ...grouped[date]!.map((v) => _VisitorCard(
-                                visitor: v,
-                                statusFilter: _statusFilter,
-                              )).toList(),
-                            ]
-                          ],
+                        return FutureBuilder<List<Widget>>(
+                          future: _buildVisitorListWithStatusCheck(sortedDates, grouped),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+                            
+                            final visitorWidgets = snapshot.data ?? [];
+                            if (visitorWidgets.isEmpty) {
+                              return const Center(child: Text('No visitors found.'));
+                            }
+                            
+                            return ListView(children: visitorWidgets);
+                          },
                         );
                       },
                     ),
@@ -383,29 +557,18 @@ class _VisitorCardState extends State<_VisitorCard> {
         return;
       }
       
-      // Check for Checked Out status first
-      final checkedOutQuery = await FirebaseFirestore.instance
+      // Use a single query to get the most recent status
+      final checkInOutQuery = await FirebaseFirestore.instance
           .collection('checked_in_out')
           .where('visitor_id', isEqualTo: visitorId)
-          .where('status', isEqualTo: 'Checked Out')
+          .orderBy('created_at', descending: true)
           .limit(1)
           .get();
       
-      // Check for Checked In status
-      final checkedInQuery = await FirebaseFirestore.instance
-          .collection('checked_in_out')
-          .where('visitor_id', isEqualTo: visitorId)
-          .where('status', isEqualTo: 'Checked In')
-          .limit(1)
-          .get();
-      
-      String status;
-      if (checkedOutQuery.docs.isNotEmpty) {
-        status = 'Checked Out';
-      } else if (checkedInQuery.docs.isNotEmpty) {
-        status = 'Checked In';
-      } else {
-        status = 'Not Checked In';
+      String status = 'Not Checked In';
+      if (checkInOutQuery.docs.isNotEmpty) {
+        final data = checkInOutQuery.docs.first.data();
+        status = data['status'] ?? 'Not Checked In';
       }
       
       setState(() {
@@ -425,16 +588,17 @@ class _VisitorCardState extends State<_VisitorCard> {
         return;
       }
       
+      // Only fetch if we need the photo data
       final passesQuery = await FirebaseFirestore.instance
           .collection('passes')
           .where('visitorId', isEqualTo: docId)
+          .where('source', isEqualTo: 'host')
           .limit(1)
           .get();
       
       if (passesQuery.docs.isNotEmpty) {
         final passData = passesQuery.docs.first.data();
-        // Check if pass was generated by host
-        if (passData['source'] == 'host' && passData['photoBase64'] != null) {
+        if (passData['photoBase64'] != null) {
           setState(() {
             photoBase64 = passData['photoBase64'];
             isLoadingPass = false;

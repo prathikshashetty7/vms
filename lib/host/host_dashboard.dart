@@ -132,6 +132,10 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
   int upcomingVisitors = 0;
   int totalPasses = 0;
   int pendingCheckouts = 0;
+  
+  // Recent activity data
+  List<Map<String, dynamic>> recentActivities = [];
+  bool loadingActivities = true;
 
   @override
   void initState() {
@@ -381,6 +385,9 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
         print('  - UPCOMING: ${data['v_name']}: v_date=$dateStr');
       }
       
+      // Fetch recent activities
+      await _fetchRecentActivities(hostDocId, deptId);
+      
     } catch (e) {
       print('Error fetching dashboard stats: $e');
       // Set default values on error
@@ -391,6 +398,555 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
         pendingCheckouts = 0;
       });
     }
+  }
+
+  Future<void> _fetchRecentActivities(String? hostDocId, String? deptId) async {
+    if (hostDocId == null || deptId == null) {
+      setState(() {
+        loadingActivities = false;
+        recentActivities = [];
+      });
+      return;
+    }
+
+    try {
+      List<Map<String, dynamic>> activities = [];
+      
+      // 1. Fetch new visitor assignments (from visitor collection)
+      final visitorQuery = await FirebaseFirestore.instance
+          .collection('visitor')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('v_date', descending: true)
+          .limit(10)
+          .get();
+      
+      for (final doc in visitorQuery.docs) {
+        final data = doc.data();
+        final visitorName = data['v_name'] ?? 'Unknown Visitor';
+        final visitDate = data['v_date'];
+        final purpose = data['purpose'] ?? 'Meeting';
+        final company = data['v_company_name'] ?? '';
+        
+        String timeStr = 'Unknown';
+        if (visitDate != null) {
+          if (visitDate is Timestamp) {
+            final dt = visitDate.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (visitDate is DateTime) {
+            timeStr = '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'visitor_assigned',
+          'title': 'New visitor assigned',
+          'subtitle': '$visitorName from $company - $purpose, $timeStr',
+          'icon': Icons.person_add,
+          'timestamp': visitDate,
+          'visitorName': visitorName,
+          'company': company,
+          'purpose': purpose,
+        });
+      }
+      
+      // 2. Fetch manual registrations assigned to this host
+      final manualRegQuery = await FirebaseFirestore.instance
+          .collection('manual_registrations')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('timestamp', descending: true)
+          .limit(10)
+          .get();
+      
+      for (final doc in manualRegQuery.docs) {
+        final data = doc.data();
+        final visitorName = data['fullName'] ?? 'Unknown Visitor';
+        final timestamp = data['timestamp'];
+        final purpose = data['purpose'] ?? 'Meeting';
+        final company = data['company'] ?? '';
+        
+        String timeStr = 'Unknown';
+        if (timestamp != null) {
+          if (timestamp is Timestamp) {
+            final dt = timestamp.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (timestamp is DateTime) {
+            timeStr = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'manual_registration',
+          'title': 'Manual visitor registration',
+          'subtitle': '$visitorName from $company - $purpose, $timeStr',
+          'icon': Icons.person_add_alt_1,
+          'timestamp': timestamp,
+          'visitorName': visitorName,
+          'company': company,
+          'purpose': purpose,
+        });
+      }
+      
+      // 3. Fetch recent check-ins and check-outs for this host's visitors
+      final checkInOutQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .orderBy('created_at', descending: true)
+          .limit(15)
+          .get();
+      
+      for (final doc in checkInOutQuery.docs) {
+        final data = doc.data();
+        final visitorId = data['visitor_id'];
+        
+        if (visitorId != null) {
+          // Get visitor details to check if they belong to this host
+          final visitorDoc = await FirebaseFirestore.instance
+              .collection('visitor')
+              .doc(visitorId)
+              .get();
+          
+          if (visitorDoc.exists) {
+            final visitorData = visitorDoc.data()!;
+            final visitorEmpId = visitorData['emp_id'];
+            final visitorDeptId = visitorData['departmentId'];
+            
+            // Check if this visitor belongs to this host and department
+            if (visitorEmpId == hostDocId && visitorDeptId == deptId) {
+              final visitorName = visitorData['v_name'] ?? 'Unknown Visitor';
+              final status = data['status'] ?? 'Unknown';
+              final createdAt = data['created_at'];
+              
+              String timeStr = 'Unknown';
+              if (createdAt != null) {
+                if (createdAt is Timestamp) {
+                  final dt = createdAt.toDate();
+                  timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                } else if (createdAt is DateTime) {
+                  timeStr = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+                }
+              }
+              
+              String title = '';
+              IconData icon = Icons.person;
+              
+              if (status.toLowerCase() == 'checked in') {
+                title = 'Visitor checked in';
+                icon = Icons.login;
+              } else if (status.toLowerCase() == 'checked out') {
+                title = 'Visitor checked out';
+                icon = Icons.logout;
+              }
+              
+              activities.add({
+                'type': 'check_in_out',
+                'title': title,
+                'subtitle': '$visitorName, $timeStr',
+                'icon': icon,
+                'timestamp': createdAt,
+                'visitorName': visitorName,
+                'status': status,
+              });
+            }
+          }
+        }
+      }
+      
+      // 4. Fetch recent pass creations by this host
+      final passesQuery = await FirebaseFirestore.instance
+          .collection('passes')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('created_at', descending: true)
+          .limit(10)
+          .get();
+      
+      for (final doc in passesQuery.docs) {
+        final data = doc.data();
+        final visitorId = data['visitorId'];
+        final createdAt = data['created_at'];
+        
+        String visitorName = 'Unknown Visitor';
+        if (visitorId != null) {
+          final visitorDoc = await FirebaseFirestore.instance
+              .collection('visitor')
+              .doc(visitorId)
+              .get();
+          
+          if (visitorDoc.exists) {
+            visitorName = visitorDoc.data()?['v_name'] ?? 'Unknown Visitor';
+          }
+        }
+        
+        String timeStr = 'Unknown';
+        if (createdAt != null) {
+          if (createdAt is Timestamp) {
+            final dt = createdAt.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (createdAt is DateTime) {
+            timeStr = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'pass_created',
+          'title': 'Pass created for visitor',
+          'subtitle': '$visitorName, $timeStr',
+          'icon': Icons.qr_code,
+          'timestamp': createdAt,
+          'visitorName': visitorName,
+        });
+      }
+      
+      // 5. Sort all activities by timestamp (most recent first)
+      activities.sort((a, b) {
+        final aTimestamp = a['timestamp'];
+        final bTimestamp = b['timestamp'];
+        
+        if (aTimestamp == null && bTimestamp == null) return 0;
+        if (aTimestamp == null) return 1;
+        if (bTimestamp == null) return -1;
+        
+        DateTime aTime, bTime;
+        if (aTimestamp is Timestamp) {
+          aTime = aTimestamp.toDate();
+        } else if (aTimestamp is DateTime) {
+          aTime = aTimestamp;
+        } else {
+          return 1;
+        }
+        
+        if (bTimestamp is Timestamp) {
+          bTime = bTimestamp.toDate();
+        } else if (bTimestamp is DateTime) {
+          bTime = bTimestamp;
+        } else {
+          return 1;
+        }
+        
+        return bTime.compareTo(aTime); // Most recent first
+      });
+      
+      // 6. Take only the most recent 5 activities for dashboard
+      activities = activities.take(5).toList();
+      
+      setState(() {
+        recentActivities = activities;
+        loadingActivities = false;
+      });
+      
+      print('DEBUG: Fetched ${activities.length} recent activities');
+      for (final activity in activities) {
+        print('  - ${activity['title']}: ${activity['subtitle']}');
+      }
+      
+    } catch (e) {
+      print('Error fetching recent activities: $e');
+      setState(() {
+        loadingActivities = false;
+        recentActivities = [];
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchAllActivities(String? hostDocId, String? deptId) async {
+    if (hostDocId == null || deptId == null) {
+      return [];
+    }
+
+    try {
+      List<Map<String, dynamic>> activities = [];
+      
+      // 1. Fetch all visitor assignments
+      final visitorQuery = await FirebaseFirestore.instance
+          .collection('visitor')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('v_date', descending: true)
+          .limit(50)
+          .get();
+      
+      for (final doc in visitorQuery.docs) {
+        final data = doc.data();
+        final visitorName = data['v_name'] ?? 'Unknown Visitor';
+        final visitDate = data['v_date'];
+        final purpose = data['purpose'] ?? 'Meeting';
+        final company = data['v_company_name'] ?? '';
+        
+        String timeStr = 'Unknown';
+        if (visitDate != null) {
+          if (visitDate is Timestamp) {
+            final dt = visitDate.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (visitDate is DateTime) {
+            timeStr = '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'visitor_assigned',
+          'title': 'New visitor assigned',
+          'subtitle': '$visitorName from $company - $purpose, $timeStr',
+          'icon': Icons.person_add,
+          'timestamp': visitDate,
+          'visitorName': visitorName,
+          'company': company,
+          'purpose': purpose,
+        });
+      }
+      
+      // 2. Fetch all manual registrations
+      final manualRegQuery = await FirebaseFirestore.instance
+          .collection('manual_registrations')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('timestamp', descending: true)
+          .limit(50)
+          .get();
+      
+      for (final doc in manualRegQuery.docs) {
+        final data = doc.data();
+        final visitorName = data['fullName'] ?? 'Unknown Visitor';
+        final timestamp = data['timestamp'];
+        final purpose = data['purpose'] ?? 'Meeting';
+        final company = data['company'] ?? '';
+        
+        String timeStr = 'Unknown';
+        if (timestamp != null) {
+          if (timestamp is Timestamp) {
+            final dt = timestamp.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (timestamp is DateTime) {
+            timeStr = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'manual_registration',
+          'title': 'Manual visitor registration',
+          'subtitle': '$visitorName from $company - $purpose, $timeStr',
+          'icon': Icons.person_add_alt_1,
+          'timestamp': timestamp,
+          'visitorName': visitorName,
+          'company': company,
+          'purpose': purpose,
+        });
+      }
+      
+      // 3. Fetch all check-ins and check-outs
+      final checkInOutQuery = await FirebaseFirestore.instance
+          .collection('checked_in_out')
+          .orderBy('created_at', descending: true)
+          .limit(100)
+          .get();
+      
+      for (final doc in checkInOutQuery.docs) {
+        final data = doc.data();
+        final visitorId = data['visitor_id'];
+        
+        if (visitorId != null) {
+          final visitorDoc = await FirebaseFirestore.instance
+              .collection('visitor')
+              .doc(visitorId)
+              .get();
+          
+          if (visitorDoc.exists) {
+            final visitorData = visitorDoc.data()!;
+            final visitorEmpId = visitorData['emp_id'];
+            final visitorDeptId = visitorData['departmentId'];
+            
+            if (visitorEmpId == hostDocId && visitorDeptId == deptId) {
+              final visitorName = visitorData['v_name'] ?? 'Unknown Visitor';
+              final status = data['status'] ?? 'Unknown';
+              final createdAt = data['created_at'];
+              
+              String timeStr = 'Unknown';
+              if (createdAt != null) {
+                if (createdAt is Timestamp) {
+                  final dt = createdAt.toDate();
+                  timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                } else if (createdAt is DateTime) {
+                  timeStr = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+                }
+              }
+              
+              String title = '';
+              IconData icon = Icons.person;
+              
+              if (status.toLowerCase() == 'checked in') {
+                title = 'Visitor checked in';
+                icon = Icons.login;
+              } else if (status.toLowerCase() == 'checked out') {
+                title = 'Visitor checked out';
+                icon = Icons.logout;
+              }
+              
+              activities.add({
+                'type': 'check_in_out',
+                'title': title,
+                'subtitle': '$visitorName, $timeStr',
+                'icon': icon,
+                'timestamp': createdAt,
+                'visitorName': visitorName,
+                'status': status,
+              });
+            }
+          }
+        }
+      }
+      
+      // 4. Fetch all pass creations
+      final passesQuery = await FirebaseFirestore.instance
+          .collection('passes')
+          .where('emp_id', isEqualTo: hostDocId)
+          .where('departmentId', isEqualTo: deptId)
+          .orderBy('created_at', descending: true)
+          .limit(50)
+          .get();
+      
+      for (final doc in passesQuery.docs) {
+        final data = doc.data();
+        final visitorId = data['visitorId'];
+        final createdAt = data['created_at'];
+        
+        String visitorName = 'Unknown Visitor';
+        if (visitorId != null) {
+          final visitorDoc = await FirebaseFirestore.instance
+              .collection('visitor')
+              .doc(visitorId)
+              .get();
+          
+          if (visitorDoc.exists) {
+            visitorName = visitorDoc.data()?['v_name'] ?? 'Unknown Visitor';
+          }
+        }
+        
+        String timeStr = 'Unknown';
+        if (createdAt != null) {
+          if (createdAt is Timestamp) {
+            final dt = createdAt.toDate();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+          } else if (createdAt is DateTime) {
+            timeStr = '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+          }
+        }
+        
+        activities.add({
+          'type': 'pass_created',
+          'title': 'Pass created for visitor',
+          'subtitle': '$visitorName, $timeStr',
+          'icon': Icons.qr_code,
+          'timestamp': createdAt,
+          'visitorName': visitorName,
+        });
+      }
+      
+      // 5. Sort all activities by timestamp (most recent first)
+      activities.sort((a, b) {
+        final aTimestamp = a['timestamp'];
+        final bTimestamp = b['timestamp'];
+        
+        if (aTimestamp == null && bTimestamp == null) return 0;
+        if (aTimestamp == null) return 1;
+        if (bTimestamp == null) return -1;
+        
+        DateTime aTime, bTime;
+        if (aTimestamp is Timestamp) {
+          aTime = aTimestamp.toDate();
+        } else if (aTimestamp is DateTime) {
+          aTime = aTimestamp;
+        } else {
+          return 1;
+        }
+        
+        if (bTimestamp is Timestamp) {
+          bTime = bTimestamp.toDate();
+        } else if (bTimestamp is DateTime) {
+          bTime = bTimestamp;
+        } else {
+          return 1;
+        }
+        
+        return bTime.compareTo(aTime);
+      });
+      
+      return activities;
+    } catch (e) {
+      print('Error fetching all activities: $e');
+      return [];
+    }
+  }
+
+  void _showAllActivitiesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.notifications_active, color: Color(0xFF6CA4FE)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'All Recent Activity',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF091016),
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _fetchAllActivities(hostDocId, hostDeptId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    
+                    final activities = snapshot.data ?? [];
+                    if (activities.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No recent activity found.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      );
+                    }
+                    
+                    return ListView.separated(
+                      itemCount: activities.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                      itemBuilder: (context, index) {
+                        final activity = activities[index];
+                        return _ActivityItem(
+                          icon: activity['icon'] ?? Icons.person,
+                          title: activity['title'] ?? 'Activity',
+                          subtitle: activity['subtitle'] ?? 'Unknown',
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showProfileDialog() {
@@ -472,46 +1028,32 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                 ),
               ],
             ),
-            child: loading
-                ? const Center(child: CircularProgressIndicator())
-                : Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              hostName != null && hostName!.isNotEmpty
-                                  ? 'Welcome, $hostName!'
-                                  : 'Welcome, Host!',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF091016),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (hostDept != null && hostDept!.isNotEmpty)
-                              Text(
-                                'Department: $hostDept',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          setState(() { loading = true; });
-                          await _fetchHostDetails();
-                        },
-                        icon: const Icon(Icons.refresh, color: Color(0xFF6CA4FE)),
-                        tooltip: 'Refresh Dashboard',
-                      ),
-                    ],
-                  ),
+                         child: loading
+                 ? const Center(child: CircularProgressIndicator())
+                 : Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text(
+                         hostName != null && hostName!.isNotEmpty
+                             ? 'Welcome, $hostName!'
+                             : 'Welcome, Host!',
+                         style: const TextStyle(
+                           fontSize: 22,
+                           fontWeight: FontWeight.bold,
+                           color: Color(0xFF091016),
+                         ),
+                       ),
+                       const SizedBox(height: 8),
+                       if (hostDept != null && hostDept!.isNotEmpty)
+                         Text(
+                           'Department: $hostDept',
+                           style: const TextStyle(
+                             fontSize: 16,
+                             color: Colors.black54,
+                           ),
+                         ),
+                     ],
+                   ),
           ),
           const SizedBox(height: 30),
           // Stat Cards Grid
@@ -624,24 +1166,50 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                       const SizedBox(width: 8),
                       Text('Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF091016), fontFamily: 'Poppins')),
                       const Spacer(),
-                      TextButton(
-                        onPressed: () {},
-                        child: Text('See more', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold)),
-                      ),
+                                             TextButton(
+                         onPressed: () => _showAllActivitiesDialog(),
+                         child: Text('See more', style: TextStyle(color: Color(0xFF6CA4FE), fontWeight: FontWeight.bold)),
+                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const _ActivityItem(
-                    icon: Icons.person,
-                    title: 'Visitor checked in',
-                    subtitle: 'Amit, 9:00 AM',
-                  ),
-                  Divider(height: 18, color: Color(0xFFE0E0E0)),
-                  const _ActivityItem(
-                    icon: Icons.person,
-                    title: 'Visitor checked out',
-                    subtitle: 'Rahul, 7:30 AM',
-                  ),
+                  if (loadingActivities)
+                    const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6CA4FE)),
+                        ),
+                      ),
+                    )
+                  else if (recentActivities.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Center(
+                        child: Text(
+                          'No recent activity',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...recentActivities.map((activity) {
+                      return Column(
+                        children: [
+                          _ActivityItem(
+                            icon: activity['icon'] ?? Icons.person,
+                            title: activity['title'] ?? 'Activity',
+                            subtitle: activity['subtitle'] ?? 'Unknown',
+                          ),
+                          if (activity != recentActivities.last)
+                            const Divider(height: 18, color: Color(0xFFE0E0E0)),
+                        ],
+                      );
+                    }).toList(),
                 ],
               ),
             ),
