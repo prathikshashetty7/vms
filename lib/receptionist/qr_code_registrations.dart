@@ -631,7 +631,7 @@ List<String> _currentHosts = ['Select Host'];
                                         'timestamp': FieldValue.serverTimestamp(),
                                         'photo': photoData,
                                         'pass_no': passNo,
-                                        'group': 'qr_code',
+                                        'source': 'qr_code',
                                         'visitor_id': visitorId, // Use existing visitor ID
                                       });
 
