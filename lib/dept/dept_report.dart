@@ -193,16 +193,30 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       
       // First, try to fetch visitor details from manual_registrations collection
       Map<String, dynamic> visitorDetails = {};
+      bool isFromManualRegistrations = false;
       try {
         final manualRegQuery = await FirebaseFirestore.instance
             .collection('manual_registrations')
             .where('visitor_id', isEqualTo: visitorId)
-            .orderBy('timestamp', descending: true)
-            .limit(1)
             .get();
         
         if (manualRegQuery.docs.isNotEmpty) {
-          visitorDetails = manualRegQuery.docs.first.data();
+          // Sort by timestamp to get the most recent record
+          final sortedDocs = manualRegQuery.docs.toList()
+            ..sort((a, b) {
+              final aTimestamp = a.data()['timestamp'] as Timestamp?;
+              final bTimestamp = b.data()['timestamp'] as Timestamp?;
+              if (aTimestamp == null && bTimestamp == null) return 0;
+              if (aTimestamp == null) return 1;
+              if (bTimestamp == null) return -1;
+              return bTimestamp.compareTo(aTimestamp); // Most recent first
+            });
+          
+          visitorDetails = sortedDocs.first.data();
+          isFromManualRegistrations = true;
+          print('Found manual_registrations data for visitor_id: $visitorId');
+        } else {
+          print('No manual_registrations found for visitor_id: $visitorId');
         }
       } catch (e) {
         print('Error fetching from manual_registrations: $e');
@@ -211,7 +225,49 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
       // If not found in manual_registrations, use visitor collection data
       if (visitorDetails.isEmpty) {
         visitorDetails = visitorDoc;
+        isFromManualRegistrations = false;
+        print('Using visitor collection data for visitor_id: $visitorId');
       }
+      
+      // Fetch host name using emp_id
+      String hostName = visitorDetails['host_name'] ?? visitorDetails['host'] ?? '';
+      if (hostName.isEmpty && (visitorDetails['emp_id'] ?? '').toString().isNotEmpty) {
+        try {
+          final hostDoc = await FirebaseFirestore.instance
+              .collection('host')
+              .doc(visitorDetails['emp_id'])
+              .get();
+          
+          if (hostDoc.exists) {
+            final hostData = hostDoc.data() as Map<String, dynamic>?;
+            hostName = hostData?['emp_name'] ?? hostData?['name'] ?? '';
+          }
+        } catch (e) {
+          print('Error fetching host details: $e');
+        }
+      }
+      
+      // Fetch department name using departmentId
+      String departmentName = visitorDetails['department'] ?? visitorDetails['dept_name'] ?? '';
+      if (departmentName.isEmpty && (visitorDetails['departmentId'] ?? '').toString().isNotEmpty) {
+        try {
+          final deptDoc = await FirebaseFirestore.instance
+              .collection('department')
+              .doc(visitorDetails['departmentId'])
+              .get();
+          
+          if (deptDoc.exists) {
+            final deptData = deptDoc.data() as Map<String, dynamic>?;
+            departmentName = deptData?['d_name'] ?? deptData?['name'] ?? '';
+          }
+        } catch (e) {
+          print('Error fetching department details: $e');
+        }
+      }
+      
+      // Update visitor details with fetched host and department names
+      visitorDetails['host_name'] = hostName;
+      visitorDetails['department'] = departmentName;
       
       // Query checked_in_out collection for this visitor using visitor_id
       final checkInOutQuery = await FirebaseFirestore.instance
@@ -263,11 +319,13 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
           'status': status,
           'check_in_date': checkInOutData['check_in_date'],
           'visitor_details': visitorDetails, // Include the fetched visitor details
+          'is_from_manual_registrations': isFromManualRegistrations, // Flag to indicate data source
         };
       }
       
       return {
         'visitor_details': visitorDetails, // Return visitor details even if no check-in/out data
+        'is_from_manual_registrations': isFromManualRegistrations, // Flag to indicate data source
       };
     } catch (e) {
       print('Error fetching check-in/out details: $e');
@@ -299,11 +357,30 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
     if (timestamp is Timestamp) {
-      return DateFormat('h:mm a').format(timestamp.toDate());
+      // Convert to Indian Standard Time (IST) - UTC+5:30
+      final utcDateTime = timestamp.toDate();
+      final istDateTime = utcDateTime.add(const Duration(hours: 5, minutes: 30));
+      return DateFormat('h:mm a').format(istDateTime);
     } else if (timestamp is DateTime) {
-      return DateFormat('h:mm a').format(timestamp);
+      // Convert to Indian Standard Time (IST) - UTC+5:30
+      final istDateTime = timestamp.add(const Duration(hours: 5, minutes: 30));
+      return DateFormat('h:mm a').format(istDateTime);
     }
     return timestamp.toString();
+  }
+
+  String _formatVisitDate(dynamic visitDate) {
+    if (visitDate == null) return 'N/A';
+    if (visitDate is Timestamp) {
+      final dt = visitDate.toDate();
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } else if (visitDate is DateTime) {
+      return DateFormat('dd/MM/yyyy').format(visitDate);
+    } else if (visitDate is String) {
+      // If it's already a formatted string, return as is
+      return visitDate;
+    }
+    return visitDate.toString();
   }
 
   Color _getStatusColor(String status) {
@@ -340,6 +417,8 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
     // Get visitor details from the checkInOutData
     final visitorDetails = checkInOutData['visitor_details'] ?? doc;
     final String? photoBase64 = visitorDetails['photoBase64'] as String?;
+    final String status = checkInOutData['status'] ?? 'Not Checked In';
+    final bool isFromManualRegistrations = checkInOutData['is_from_manual_registrations'] ?? false;
         
     showDialog(
       context: context,
@@ -391,49 +470,79 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
-                              _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
-                              _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
-                              _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
-                              _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
-                              _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
-                              _detailRow('Do you have appointment?', visitorDetails['appointment'] ?? ''),
-                              _detailRow('Host Name', visitorDetails['host'] ?? visitorDetails['host_name'] ?? ''),
-                              _detailRow('Department', visitorDetails['department'] ?? ''),
-                              _detailRow('Accompanied by others?', visitorDetails['accompanying'] ?? ''),
-                              if ((visitorDetails['accompanying'] ?? '').toString().toLowerCase() == 'yes')
-                                _detailRow('Number of Accompanied', visitorDetails['accompanyingCount'] ?? ''),
-                              _detailRow('Carrying Laptop?', visitorDetails['laptop'] ?? ''),
-                              if ((visitorDetails['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorDetails['laptopDetails'] ?? '').toString().isNotEmpty)
-                                _detailRow('Laptop Details', visitorDetails['laptopDetails']),
-                              _detailRow('Pass Number', visitorDetails['pass_no']?.toString() ?? ''),
+                              // Show different details based on status and data source
+                              if (status.toLowerCase() == 'not checked in') ...[
+                                // Basic details for not checked in visitors
+                                _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                _detailRow('Host Name', visitorDetails['host'] ?? visitorDetails['host_name'] ?? ''),
+                                _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                _detailRow('Visit Date', _formatVisitDate(visitorDetails['v_date'] ?? visitorDetails['visitDate'])),
+                              ] else ...[
+                                // Check if data is from manual_registrations or visitor collection
+                                if (isFromManualRegistrations) ...[
+                                  // Full details for checked in visitors from manual_registrations
+                                  _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                  _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                  _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                  _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                  _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                  _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                  _detailRow('Host Name', visitorDetails['host'] ?? visitorDetails['host_name'] ?? ''),
+                                  _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                  _detailRow('Do you have appointment?', visitorDetails['appointment'] ?? ''),
+                                  _detailRow('Accompanied by others?', visitorDetails['accompanying'] ?? ''),
+                                  if ((visitorDetails['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                    _detailRow('Number of accompanying', visitorDetails['accompanyingCount'] ?? ''),
+                                  _detailRow('Do you have laptop?', visitorDetails['laptop'] ?? ''),
+                                  if ((visitorDetails['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorDetails['laptopDetails'] ?? '').toString().isNotEmpty)
+                                    _detailRow('Laptop number', visitorDetails['laptopDetails']),
+                                ] else ...[
+                                  // Basic details for checked in visitors from visitor collection (fallback)
+                                  _detailRow('Full Name', visitorDetails['fullName'] ?? visitorDetails['v_name'] ?? ''),
+                                  _detailRow('Email', visitorDetails['email'] ?? visitorDetails['v_email'] ?? ''),
+                                  _detailRow('Mobile Number', visitorDetails['mobile'] ?? visitorDetails['v_contactno'] ?? ''),
+                                  _detailRow('Designation', visitorDetails['designation'] ?? visitorDetails['v_designation'] ?? ''),
+                                  _detailRow('Company Name', visitorDetails['company'] ?? visitorDetails['v_company_name'] ?? ''),
+                                  _detailRow('Purpose of Visit', visitorDetails['purpose'] ?? ''),
+                                  _detailRow('Host Name', visitorDetails['host'] ?? visitorDetails['host_name'] ?? ''),
+                                  _detailRow('Department Name', visitorDetails['department'] ?? visitorDetails['dept_name'] ?? ''),
+                                ],
+                              ],
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Card(
-                        color: Colors.grey[50],
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Check-in/Out Details',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-                              ),
-                              const SizedBox(height: 8),
-                              _detailRow('Status', checkInOutData['status'] ?? 'Not Checked In'),
-                              _detailRow('Check-in Date', checkInOutData['check_in_date'] ?? 'N/A'),
-                              _detailRow('Check-in Time', checkInOutData['check_in_time'] ?? 'N/A'),
-                              _detailRow('Check-out Time', checkInOutData['check_out_time'] ?? 'N/A'),
-                            ],
+                      // Only show Check-in/Out Details for checked in visitors
+                      if (status.toLowerCase() != 'not checked in') ...[
+                        const SizedBox(height: 12),
+                        Card(
+                          color: Colors.grey[50],
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Check-in/Out Details',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                _detailRow('Status', status),
+                                _detailRow('Check-in Date', checkInOutData['check_in_date'] ?? 'N/A'),
+                                _detailRow('Check-in Time', checkInOutData['check_in_time'] ?? 'N/A'),
+                                _detailRow('Check-out Time', checkInOutData['check_out_time'] ?? 'N/A'),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 18),
                       Align(
                         alignment: Alignment.centerRight,
@@ -458,11 +567,11 @@ class _DeptReportState extends State<DeptReport> with AutomaticKeepAliveClientMi
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
         children: [
           Text('$label: ', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-          Expanded(
+          Flexible(
             child: Text(value, style: TextStyle(color: Colors.black87)),
           ),
         ],

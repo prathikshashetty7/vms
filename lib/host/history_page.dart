@@ -58,16 +58,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     try {
       // First, try to fetch visitor details from manual_registrations collection
       Map<String, dynamic> visitorDetails = {};
+      bool isFromManualRegistrations = false;
       try {
         final manualRegQuery = await FirebaseFirestore.instance
             .collection('manual_registrations')
             .where('visitor_id', isEqualTo: visitorId)
-            .orderBy('timestamp', descending: true)
-            .limit(1)
             .get();
         
         if (manualRegQuery.docs.isNotEmpty) {
-          visitorDetails = manualRegQuery.docs.first.data();
+          // Sort by timestamp to get the most recent record
+          final sortedDocs = manualRegQuery.docs.toList()
+            ..sort((a, b) {
+              final aTimestamp = a.data()['timestamp'] as Timestamp?;
+              final bTimestamp = b.data()['timestamp'] as Timestamp?;
+              if (aTimestamp == null && bTimestamp == null) return 0;
+              if (aTimestamp == null) return 1;
+              if (bTimestamp == null) return -1;
+              return bTimestamp.compareTo(aTimestamp); // Most recent first
+            });
+          
+          visitorDetails = sortedDocs.first.data();
+          isFromManualRegistrations = true;
+          print('Found manual_registrations data for visitor_id: $visitorId');
+        } else {
+          print('No manual_registrations found for visitor_id: $visitorId');
         }
       } catch (e) {
         print('Error fetching from manual_registrations: $e');
@@ -83,7 +97,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (visitorDoc.exists) {
           visitorDetails = visitorDoc.data() ?? {};
         }
+        isFromManualRegistrations = false;
+        print('Using visitor collection data for visitor_id: $visitorId');
       }
+      
+      // Add flag to indicate data source
+      visitorDetails['is_from_manual_registrations'] = isFromManualRegistrations;
       
       return visitorDetails;
     } catch (e) {
@@ -119,6 +138,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (doc['visitor_id'] != null) {
       visitorData = await _getVisitorDetails(doc['visitor_id']);
     }
+    final bool isFromManualRegistrations = visitorData['is_from_manual_registrations'] ?? false;
     showDialog(
       context: context,
       builder: (context) {
@@ -164,24 +184,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
-                              _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
-                              _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
-                              _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
-                              _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
-                              _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
-                              _detailRow('Do you have appointment?', visitorData['appointment'] ?? ''),
-                              _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
+                              // Show different details based on data source
+                              if (isFromManualRegistrations) ...[
+                                // Full details for manual_registrations data
+                                _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
+                                _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
+                                _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
+                                _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
+                                _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
+                                _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
+                                _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
+                                _detailRow('Department Name', visitorData['department'] ?? visitorData['dept_name'] ?? ''),
+                                _detailRow('Do you have appointment?', visitorData['appointment'] ?? ''),
+                                _detailRow('Accompanied by others?', visitorData['accompanying'] ?? ''),
+                                if ((visitorData['accompanying'] ?? '').toString().toLowerCase() == 'yes')
+                                  _detailRow('Number of accompanying', visitorData['accompanyingCount'] ?? ''),
+                                _detailRow('Do you have laptop?', visitorData['laptop'] ?? ''),
+                                if ((visitorData['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorData['laptopDetails'] ?? '').toString().isNotEmpty)
+                                  _detailRow('Laptop number', visitorData['laptopDetails']),
+                              ] else ...[
+                                // Basic details for visitor collection data
+                                _detailRow('Full Name', visitorData['fullName'] ?? visitorData['v_name'] ?? ''),
+                                _detailRow('Email', visitorData['email'] ?? visitorData['v_email'] ?? ''),
+                                _detailRow('Mobile Number', visitorData['mobile'] ?? visitorData['v_contactno'] ?? ''),
+                                _detailRow('Designation', visitorData['designation'] ?? visitorData['v_designation'] ?? ''),
+                                _detailRow('Company Name', visitorData['company'] ?? visitorData['v_company_name'] ?? ''),
+                                _detailRow('Purpose of Visit', visitorData['purpose'] ?? ''),
+                                _detailRow('Host Name', visitorData['host'] ?? visitorData['host_name'] ?? ''),
+                                _detailRow('Department Name', visitorData['department'] ?? visitorData['dept_name'] ?? ''),
+                              ],
+                              // Check-in/out details (always shown)
                               _detailRow('Check-in Time', doc['check_in_time'] != null ? _formatTimestamp(doc['check_in_time']) : 'N/A'),
                               _detailRow('Check-out Time', doc['check_out_time'] != null ? _formatTimestamp(doc['check_out_time']) : 'N/A'),
-                              _detailRow('Department', visitorData['department'] ?? ''),
-                              _detailRow('Accompanied by others?', visitorData['accompanying'] ?? ''),
-                              if ((visitorData['accompanying'] ?? '').toString().toLowerCase() == 'yes')
-                                _detailRow('Number of Accompanied', visitorData['accompanyingCount'] ?? ''),
-                              _detailRow('Carrying Laptop?', visitorData['laptop'] ?? ''),
-                              if ((visitorData['laptop'] ?? '').toString().toLowerCase() == 'yes' && (visitorData['laptopDetails'] ?? '').toString().isNotEmpty)
-                                _detailRow('Laptop Details', visitorData['laptopDetails']),
-                              _detailRow('Pass Number', visitorData['pass_no']?.toString() ?? ''),
                             ],
                           ),
                         ),
@@ -210,11 +244,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
         children: [
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-          Expanded(
+          Flexible(
             child: Text(value, style: const TextStyle(color: Colors.black87)),
           ),
         ],
@@ -271,22 +305,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           );
                         }
                         
-                        final visitorData = visitorSnapshot.data ?? {};
-                        final name = visitorData['fullName'] ?? visitorData['v_name'] ?? '';
-                        final hostNameValue = visitorData['host'] ?? visitorData['host_name'] ?? hostName ?? '';
-                        final vDate = visitorData['v_date'] ?? visitorData['visitDate'];
-                        
-                        String dateStr = 'N/A';
-                        if (vDate != null) {
-                          if (vDate is Timestamp) {
-                            final dt = vDate.toDate();
-                            dateStr = DateFormat('dd/MM/yyyy').format(dt);
-                          } else if (vDate is DateTime) {
-                            dateStr = DateFormat('dd/MM/yyyy').format(vDate);
-                          } else {
-                            dateStr = vDate.toString();
-                          }
-                        }
+                                                 final visitorData = visitorSnapshot.data ?? {};
+                         final name = visitorData['fullName'] ?? visitorData['v_name'] ?? '';
+                         final hostNameValue = visitorData['host'] ?? visitorData['host_name'] ?? hostName ?? '';
+                         
+                         // Get date from checked_in_out collection
+                         String dateStr = 'N/A';
+                         final checkInDate = v['check_in_date'];
+                         if (checkInDate != null) {
+                           if (checkInDate is Timestamp) {
+                             final dt = checkInDate.toDate();
+                             dateStr = DateFormat('dd/MM/yyyy').format(dt);
+                           } else if (checkInDate is DateTime) {
+                             dateStr = DateFormat('dd/MM/yyyy').format(checkInDate);
+                           } else if (checkInDate is String) {
+                             dateStr = checkInDate;
+                           } else {
+                             dateStr = checkInDate.toString();
+                           }
+                         }
                         
                         // Get check-in and check-out times from the checked_in_out collection
                         final checkin = v['check_in_time'] != null ? _formatTimestamp(v['check_in_time']) : 'N/A';
