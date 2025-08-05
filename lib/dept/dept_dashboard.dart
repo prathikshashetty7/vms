@@ -229,7 +229,7 @@ class _DeptHomePage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
             child: _DeptAnalytics(currentDepartmentId: currentDepartmentId),
           ),
-          // Appointments Line Chart
+          // Weekly Department Visitors Chart
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Card(
@@ -242,53 +242,36 @@ class _DeptHomePage extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const Text('Weekly Department Visitors', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 180,
-                      child: LineChart(
-                        LineChartData(
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: [
-                                FlSpot(0, 5),
-                                FlSpot(1, 8),
-                                FlSpot(2, 6),
-                                FlSpot(3, 10),
-                                FlSpot(4, 7),
-                              ],
-                              isCurved: true,
-                              color: Colors.blue,
-                              barWidth: 4,
-                              dotData: FlDotData(show: true),
-                            ),
-                          ],
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                getTitlesWidget: (value, meta) {
-                                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-                                  if (value % 1 == 0 && value.toInt() >= 0 && value.toInt() < days.length) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(days[value.toInt()]),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                                interval: 1,
+                      child: _WeeklyDepartmentVisitorsChart(currentDepartmentId: currentDepartmentId),
+                    ),
+                  ],
                               ),
                             ),
                           ),
-                          borderData: FlBorderData(show: false),
-                          gridData: FlGridData(show: false),
-                          minX: 0,
-                          maxX: 4,
-                          minY: 0,
-                        ),
-                      ),
+          ),
+          // Recent Department Visitors
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Card(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              elevation: 4,
+              color: Colors.white,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Recent Visitors', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 300,
+                      child: _RecentDepartmentVisitorsList(currentDepartmentId: currentDepartmentId),
                     ),
                   ],
                 ),
@@ -301,51 +284,146 @@ class _DeptHomePage extends StatelessWidget {
   }
 }
 
-Widget appointmentsLineChart() {
-  final List<FlSpot> mockData = [
-    FlSpot(0, 5),
-    FlSpot(1, 8),
-    FlSpot(2, 6),
-    FlSpot(3, 10),
-    FlSpot(4, 7),
-  ];
-  final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+class _WeeklyDepartmentVisitorsChart extends StatelessWidget {
+  final String? currentDepartmentId;
+  
+  const _WeeklyDepartmentVisitorsChart({this.currentDepartmentId});
 
-  return Card(
-    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-    elevation: 4,
-    color: Colors.white, // Set background to white
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const Text('Appointments This Week', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 180,
-            child: LineChart(
+  @override
+  Widget build(BuildContext context) {
+    if (currentDepartmentId == null) {
+      return const Center(child: Text('Department not found'));
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('passes').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No visitor data available'));
+        }
+
+        final passes = snapshot.data!.docs;
+        final List<FlSpot> weeklyData = [];
+        final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        // Calculate current week's start (Monday)
+        final now = DateTime.now();
+        final weekStart = now.subtract(Duration(days: now.weekday - 1));
+        
+        // Generate data for each day of the week
+        for (int i = 0; i < 7; i++) {
+          final day = weekStart.add(Duration(days: i));
+          int dayVisitors = 0;
+          
+          for (var pass in passes) {
+            final data = pass.data() as Map<String, dynamic>;
+            final passDepartmentId = data['departmentId'];
+            
+            // Only count visitors for this specific department
+            if (passDepartmentId == currentDepartmentId) {
+              final visitDate = data['v_date'];
+              if (visitDate != null) {
+                try {
+                  DateTime parsedDate;
+                  
+                  if (visitDate is Timestamp) {
+                    parsedDate = visitDate.toDate();
+                  } else {
+                    final dateStr = visitDate.toString();
+                    if (dateStr.contains('at')) {
+                      final datePart = dateStr.split('at')[0].trim();
+                      parsedDate = DateTime.parse(datePart);
+                    } else {
+                      parsedDate = DateTime.parse(dateStr);
+                    }
+                  }
+                  
+                  // Check if it's the same day
+                  if (parsedDate.year == day.year && 
+                      parsedDate.month == day.month && 
+                      parsedDate.day == day.day) {
+                    dayVisitors++;
+                  }
+                } catch (e) {
+                  // Skip invalid dates
+                }
+              }
+            }
+          }
+          
+          weeklyData.add(FlSpot(i.toDouble(), dayVisitors.toDouble()));
+        }
+
+        return LineChart(
               LineChartData(
                 lineBarsData: [
                   LineChartBarData(
-                    spots: mockData,
+                spots: weeklyData,
                     isCurved: true,
                     color: Colors.blue,
                     barWidth: 4,
-                    dotData: FlDotData(show: true),
+                dotData: FlDotData(
+                  show: true,
+                  getDotPainter: (spot, percent, barData, index) {
+                    return FlDotCirclePainter(
+                      radius: 4,
+                      color: Colors.blue,
+                      strokeWidth: 2,
+                      strokeColor: Colors.white,
+                    );
+                  },
+                ),
+                belowBarData: BarAreaData(
+                  show: true,
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.blue.withOpacity(0.3),
+                      Colors.blue.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
                   ),
                 ],
                 titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  interval: 1,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                  reservedSize: 32,
+                ),
+              ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        // Only show label if value is an integer and in range
-                        if (value.toInt() >= 0 && value.toInt() < days.length && value == value.toInt()) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < days.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(days[value.toInt()]),
+                        child: Text(
+                          days[index],
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
                           );
                         }
                         return const SizedBox.shrink();
@@ -353,20 +431,211 @@ Widget appointmentsLineChart() {
                       interval: 1,
                     ),
                   ),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: false),
-                minX: 0,
-                maxX: 4,
-                minY: 0,
-                // Optionally set maxY if you want to control y-axis
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(
+              show: true,
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: 1,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 1,
               ),
+            ),
+                minX: 0,
+            maxX: 6,
+                minY: 0,
+            maxY: weeklyData.isNotEmpty ? weeklyData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) + 1.0 : 10.0,
+            lineTouchData: LineTouchData(
+              enabled: true,
+              touchTooltipData: LineTouchTooltipData(
+                tooltipBgColor: Colors.blue.shade600,
+                getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                  return touchedBarSpots.map((barSpot) {
+                    return LineTooltipItem(
+                      '${days[barSpot.x.toInt()]}: ${barSpot.y.toInt()} visitors',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }).toList();
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RecentDepartmentVisitorsList extends StatelessWidget {
+  final String? currentDepartmentId;
+  
+  const _RecentDepartmentVisitorsList({this.currentDepartmentId});
+
+  @override
+  Widget build(BuildContext context) {
+    if (currentDepartmentId == null) {
+      return const Center(child: Text('Department not found'));
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('passes')
+          .where('departmentId', isEqualTo: currentDepartmentId)
+          .orderBy('v_date', descending: true)
+          .limit(8)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline, size: 48, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No recent visitors',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final visitors = snapshot.data!.docs;
+        
+        return ListView.builder(
+          itemCount: visitors.length,
+          itemBuilder: (context, index) {
+            final visitor = visitors[index];
+            final data = visitor.data() as Map<String, dynamic>;
+            final visitDate = data['v_date'];
+            
+            // Format the date and time properly
+            String formattedDateTime = 'N/A';
+            if (visitDate != null) {
+              try {
+                DateTime parsedDate;
+                
+                if (visitDate is Timestamp) {
+                  parsedDate = visitDate.toDate();
+                } else {
+                  final dateStr = visitDate.toString();
+                  if (dateStr.contains('at')) {
+                    final datePart = dateStr.split('at')[0].trim();
+                    parsedDate = DateTime.parse(datePart);
+                  } else {
+                    parsedDate = DateTime.parse(dateStr);
+                  }
+                }
+                
+                formattedDateTime = '${parsedDate.day} ${_getMonthName(parsedDate.month)} ${parsedDate.year}, ${parsedDate.hour.toString().padLeft(2, '0')}:${parsedDate.minute.toString().padLeft(2, '0')} ${parsedDate.hour >= 12 ? 'PM' : 'AM'}';
+              } catch (e) {
+                formattedDateTime = 'N/A';
+              }
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200, width: 1),
+              ),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      color: Colors.blue.shade700,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Visitor details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data['v_name'] ?? 'Unknown Visitor',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'To meet: ${data['host_name'] ?? 'Unknown'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Purpose: ${data['purpose'] ?? 'N/A'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
             ),
           ),
         ],
       ),
     ),
-  );
+                  // Date and time
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formattedDateTime,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
 }
 
 class _DeptAnalytics extends StatelessWidget {
