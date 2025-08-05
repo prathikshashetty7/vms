@@ -833,8 +833,9 @@ class _VisitorDetailsDialog extends StatelessWidget {
                           'group': 'manual',
                         };
                         await FirebaseFirestore.instance.collection('passes').add(passData);
-                        // Show success message
+                        // Show success message and close dialog
                         if (context.mounted) {
+                          Navigator.of(context).pop(); // Close the dialog
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Pass generated successfully for ${data['fullName']}'),
