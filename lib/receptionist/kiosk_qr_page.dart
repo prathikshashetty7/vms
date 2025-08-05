@@ -164,7 +164,7 @@ class _KioskRegistrationsPageState extends State<KioskRegistrationsPage> {
 
   Widget _buildKioskVisitorList(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('manual_registrations').where('group', isEqualTo: 'kiosk').snapshots(),
+      stream: FirebaseFirestore.instance.collection('manual_registrations').where('source', isEqualTo: 'kiosk').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -1379,6 +1379,29 @@ class _KioskVisitorDetailsDialog extends StatelessWidget {
                         'registration_type': 'kiosk',
                         'group': 'kiosk',
                       };
+                      
+                      // Save to manual_registrations collection with source: 'kiosk'
+                      await FirebaseFirestore.instance.collection('manual_registrations').add({
+                        'fullName': data['fullName'] ?? '',
+                        'mobile': data['mobile'] ?? '',
+                        'email': data['email'] ?? '',
+                        'designation': data['designation'] ?? '',
+                        'company': data['company'] ?? '',
+                        'host': data['host'] ?? '',
+                        'purpose': data['purpose'] ?? '',
+                        'purposeOther': data['purposeOther'] ?? '',
+                        'appointment': data['appointment'] ?? 'Yes',
+                        'department': data['department'] ?? '',
+                        'accompanying': data['accompanying'] ?? 'No',
+                        'accompanyingCount': data['accompanyingCount'] ?? '',
+                        'laptop': data['laptop'] ?? 'No',
+                        'laptopDetails': data['laptopDetails'] ?? '',
+                        'timestamp': FieldValue.serverTimestamp(),
+                        'photo': data['photo'] ?? '',
+                        'pass_no': passNo,
+                        'source': 'kiosk',
+                      });
+                      
                       await FirebaseFirestore.instance.collection('passes').add(passData);
                       // Show success message
                       if (context.mounted) {
